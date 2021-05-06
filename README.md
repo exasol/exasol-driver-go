@@ -51,8 +51,8 @@ Limitations: Only single ips or dns is supported
 
 Supported Driver Properties
 
-| Property   |     Value     |                                         Description |
-| ---------- | :-----------: | --------------------------------------------------: |
+| Property    |     Value     |                                         Description |
+| :---------- | :-----------: | --------------------------------------------------: |
 | user |  string  |           DB username |
 | password |  string  |          DB password |
 | autocommit |  0=off, 1=on  |           Switches autocommit on or off. Default: 1 |
@@ -60,6 +60,8 @@ Supported Driver Properties
 | fetchsize   | numeric, >0 | Amount of data in kB which should be obtained by Exasol during a fetch. The JVM can run out of memory if the value is too high. Default: 2000|
 | clientname |  string  | Tells the server what the application is called.. Default: Go client |
 | clientversion |  string  | Tells the server the version of the application. Default: "" |
+
+
 ## Examples
 
 See [./examples](https://github.com/Nightapes/go-exasol/blob/main/examples)
