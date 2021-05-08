@@ -52,15 +52,13 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 	case err := <-channel:
 		return err
 	}
-
-	return nil
 }
 
 func (c *connection) asyncSend(request interface{}) (func(interface{}) error, error) {
 	message, err := json.Marshal(request)
 	log.Printf("Do request %s", message)
 	if err != nil {
-		errorLogger.Printf("could not marshal request, %w", err)
+		errorLogger.Printf("could not marshal request, %s", err)
 		return nil, driver.ErrBadConn
 	}
 
@@ -68,7 +66,10 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 	if c.config.Compression {
 		var b bytes.Buffer
 		w := zlib.NewWriter(&b)
-		w.Write(message)
+		_, err = w.Write(message)
+		if err != nil {
+			return nil, err
+		}
 		w.Close()
 		message = b.Bytes()
 		messageType = websocket.BinaryMessage
@@ -76,7 +77,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
-		errorLogger.Printf("could not send request, %w", err)
+		errorLogger.Printf("could not send request, %s", err)
 		return nil, driver.ErrBadConn
 	}
 
@@ -84,7 +85,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 		_, message, err := c.websocket.ReadMessage()
 		if err != nil {
-			errorLogger.Printf("could not receive data, %w", err)
+			errorLogger.Printf("could not receive data, %s", err)
 			return driver.ErrBadConn
 		}
 
@@ -93,13 +94,19 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 			b := bytes.NewReader(message)
 			r, err := zlib.NewReader(b)
 			if err != nil {
-				errorLogger.Printf("could not decode compressed data, %w", err)
+				errorLogger.Printf("could not decode compressed data, %s", err)
+				return driver.ErrBadConn
 			}
-			json.NewDecoder(r).Decode(result)
+			err = json.NewDecoder(r).Decode(result)
+			if err != nil {
+				errorLogger.Printf("could not decode data, %s", err)
+				return driver.ErrBadConn
+			}
+
 		} else {
 			err = json.Unmarshal(message, result)
 			if err != nil {
-				errorLogger.Printf("could not receive data, %w", err)
+				errorLogger.Printf("could not receive data, %s", err)
 				return driver.ErrBadConn
 			}
 		}
