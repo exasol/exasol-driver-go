@@ -18,8 +18,10 @@ type Config struct {
 	ApiVersion       int
 	ClientName       string
 	ClientVersion    string
+	Schema           string
 	Autocommit       bool
 	FetchSize        int
+	Compression      bool
 	ResultSetMaxRows int
 	Timeout          time.Time
 	Encryption       bool

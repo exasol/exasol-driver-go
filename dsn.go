@@ -2,6 +2,7 @@ package exasol
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,14 +28,15 @@ func ParseDSN(dsn string) (*Config, error) {
 	}
 
 	config := &Config{
-		Host:       hostPort[0],
-		Port:       hostPort[1],
-		ApiVersion: 1,
-		Autocommit: true,
-		Encryption: true,
-		ClientName: "Go client",
-		Params:     map[string]string{},
-		FetchSize:  2000,
+		Host:        hostPort[0],
+		Port:        hostPort[1],
+		ApiVersion:  2,
+		Autocommit:  true,
+		Encryption:  true,
+		Compression: false,
+		ClientName:  "Go client",
+		Params:      map[string]string{},
+		FetchSize:   128 * 1024,
 	}
 
 	paramsString := ""
@@ -46,8 +48,8 @@ func ParseDSN(dsn string) (*Config, error) {
 		return config, nil
 	}
 
-	reg := regexp.MustCompile("[\\w];")
-	params := SplitAfter(paramsString, reg)
+	reg := regexp.MustCompile(`[\w]; `)
+	params := splitAfter(paramsString, reg)
 	for _, param := range params {
 		param = strings.TrimRight(param, ";")
 		paramKeyValue := strings.SplitN(param, "=", 2)
@@ -57,19 +59,21 @@ func ParseDSN(dsn string) (*Config, error) {
 
 		switch paramKeyValue[0] {
 		case "password":
-			config.Password = Unescape(paramKeyValue[1], ";")
+			config.Password = unescape(paramKeyValue[1], ";")
 		case "user":
-			config.User = Unescape(paramKeyValue[1], ";")
+			config.User = unescape(paramKeyValue[1], ";")
 		case "autocommit":
 			config.Autocommit = paramKeyValue[1] == "1"
 		case "encryption":
 			config.Encryption = paramKeyValue[1] == "1"
 		case "compression":
-			config.Encryption = paramKeyValue[1] == "1"
+			config.Compression = paramKeyValue[1] == "1"
 		case "clientname":
 			config.ClientName = paramKeyValue[1]
 		case "clientversion":
 			config.ClientVersion = paramKeyValue[1]
+		case "schema":
+			config.Schema = paramKeyValue[1]
 		case "fetchsize":
 			value, err := strconv.Atoi(paramKeyValue[1])
 			if err != nil {
@@ -79,22 +83,23 @@ func ParseDSN(dsn string) (*Config, error) {
 		case "resultSetMaxRows":
 			value, err := strconv.Atoi(paramKeyValue[1])
 			if err != nil {
-				return nil, fmt.Errorf("invalid fetch size")
+				return nil, fmt.Errorf("invalid max row value")
 			}
+			log.Println("Set max row", value)
 			config.ResultSetMaxRows = value
 		default:
-			config.Params[paramKeyValue[0]] = Unescape(paramKeyValue[1], ";")
+			config.Params[paramKeyValue[0]] = unescape(paramKeyValue[1], ";")
 		}
 	}
 
 	return config, nil
 }
 
-func Unescape(s, char string) string {
+func unescape(s, char string) string {
 	return strings.ReplaceAll(s, `\`+char, char)
 }
 
-func SplitAfter(s string, re *regexp.Regexp) []string {
+func splitAfter(s string, re *regexp.Regexp) []string {
 	var (
 		r []string
 		p int

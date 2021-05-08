@@ -5,7 +5,7 @@ type rowCount struct {
 }
 
 func (res *rowCount) LastInsertId() (int64, error) {
-	panic("not implemented")
+	return 0, ErrNoLastInsertID
 }
 
 func (res *rowCount) RowsAffected() (int64, error) {

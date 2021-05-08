@@ -63,14 +63,14 @@ type SQLQueryColumn struct {
 }
 
 type SQLQueryColumnType struct {
-	Type              string `json:"type"`
-	Precision         int    `json:"precision"`
-	Scale             int    `json:"scale"`
-	Size              int    `json:"size"`
-	CharacterSet      string `json:"characterSet"`
-	WithLocalTimeZone bool   `json:"withLocalTimeZone"`
-	Fraction          int    `json:"fraction"`
-	SRID              int    `json:"srid"`
+	Type              string  `json:"type"`
+	Precision         *int64  `json:"precision,omitempty"`
+	Scale             *int64  `json:"scale,omitempty"`
+	Size              *int64  `json:"size,omitempty"`
+	CharacterSet      *string `json:"characterSet,omitempty"`
+	WithLocalTimeZone *bool   `json:"withLocalTimeZone,omitempty"`
+	Fraction          *int    `json:"fraction,omitempty"`
+	SRID              *int    `json:"srid,omitempty"`
 }
 
 type CreatePreparedStatementResponse struct {
