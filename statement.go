@@ -1,6 +1,7 @@
 package exasol
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"log"
@@ -13,11 +14,51 @@ type statement struct {
 	numInput        int
 }
 
+func (s *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	values, err := namedValueToValue(args)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.executePreparedStatement(ctx, values)
+	if err != nil {
+		return nil, err
+	}
+	return toRow(result, s.connection)
+}
+
+func (s *statement) Query(args []driver.Value) (driver.Rows, error) {
+	result, err := s.executePreparedStatement(context.Background(), args)
+	if err != nil {
+		return nil, err
+	}
+	return toRow(result, s.connection)
+}
+
+func (s *statement) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	values, err := namedValueToValue(args)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.executePreparedStatement(context.Background(), values)
+	if err != nil {
+		return nil, err
+	}
+	return toResult(result)
+}
+
+func (s *statement) Exec(args []driver.Value) (driver.Result, error) {
+	result, err := s.executePreparedStatement(context.Background(), args)
+	if err != nil {
+		return nil, err
+	}
+	return toResult(result)
+}
+
 func (s *statement) Close() error {
 	if s.connection.isClosed {
 		return driver.ErrBadConn
 	}
-	return s.connection.send(&ClosePreparedStatementCommand{
+	return s.connection.send(context.Background(), &ClosePreparedStatementCommand{
 		Command:         Command{"closePreparedStatement"},
 		StatementHandle: s.statementHandle,
 	}, nil)
@@ -25,14 +66,6 @@ func (s *statement) Close() error {
 
 func (s *statement) NumInput() int {
 	return s.numInput
-}
-
-func (s *statement) Exec(args []driver.Value) (driver.Result, error) {
-	result, err := s.executePreparedStatement(args)
-	if err != nil {
-		return nil, err
-	}
-	return toResult(result)
 }
 
 func toResult(result *SQLQueriesResponse) (driver.Result, error) {
@@ -47,7 +80,7 @@ func toResult(result *SQLQueriesResponse) (driver.Result, error) {
 	}, err
 }
 
-func (s *statement) executePreparedStatement(args []driver.Value) (*SQLQueriesResponse, error) {
+func (s *statement) executePreparedStatement(ctx context.Context, args []driver.Value) (*SQLQueriesResponse, error) {
 	log.Println("executePreparedStatement")
 	columns := s.columns
 	if len(args)%len(columns) != 0 {
@@ -69,12 +102,12 @@ func (s *statement) executePreparedStatement(args []driver.Value) (*SQLQueriesRe
 		NumColumns:      len(columns),
 		NumRows:         len(data[0]),
 		Data:            data,
-		/*	Attributes: Attributes{
-			ResultSetMaxRows: s.connection.Config.ResultSetMaxRows,
-		},*/
+		Attributes: Attributes{
+			ResultSetMaxRows: s.connection.config.ResultSetMaxRows,
+		},
 	}
 	result := &SQLQueriesResponse{}
-	err := s.connection.send(command, result)
+	err := s.connection.send(ctx, command, result)
 	if err != nil {
 		return nil, err
 	}
@@ -84,20 +117,12 @@ func (s *statement) executePreparedStatement(args []driver.Value) (*SQLQueriesRe
 	return result, err
 }
 
-func (s *statement) Query(args []driver.Value) (driver.Rows, error) {
-	result, err := s.executePreparedStatement(args)
-	if err != nil {
-		return nil, err
-	}
-	return toRow(result)
-}
-
-func toRow(result *SQLQueriesResponse) (driver.Rows, error) {
+func toRow(result *SQLQueriesResponse, con *connection) (driver.Rows, error) {
 	resultSet := &SQLQueryResponseResultSet{}
 	err := json.Unmarshal(result.Results[0], resultSet)
 	if err != nil {
 		return nil, err
 	}
 
-	return &queryResults{data: &resultSet.ResultSet}, err
+	return &queryResults{data: &resultSet.ResultSet, con: con}, err
 }

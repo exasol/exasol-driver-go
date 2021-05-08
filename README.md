@@ -69,5 +69,3 @@ See [./examples](https://github.com/Nightapes/go-exasol/blob/main/examples)
 ## TODO
 
 * Add tests
-* Add ci
-* Add compression

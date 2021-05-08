@@ -11,7 +11,7 @@ type connector struct {
 
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	conn := &connection{
-		Config:   c.config,
+		config:   c.config,
 		ctx:      ctx,
 		isClosed: true,
 	}
@@ -20,7 +20,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		return nil, err
 	}
 
-	err = conn.login()
+	err = conn.login(ctx)
 	if err != nil {
 		return nil, err
 	}

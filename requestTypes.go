@@ -61,7 +61,7 @@ type Attributes struct {
 	TimestampUtcEnabled         bool   `json:"timestampUtcEnabled,omitempty"`
 	Timezone                    string `json:"timezone,omitempty"`
 	TimeZoneBehavior            string `json:"timeZoneBehavior,omitempty"`
-	//ResultSetMaxRows            int    `json:"resultSetMaxRows,omitempty"`
+	ResultSetMaxRows            int    `json:"resultSetMaxRows,omitempty"`
 }
 
 type AuthCommand struct {
