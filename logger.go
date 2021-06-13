@@ -11,6 +11,7 @@ var errorLogger = Logger(log.New(os.Stderr, "[exasol] ", log.LstdFlags|log.Lshor
 // Logger is used to log critical error messages.
 type Logger interface {
 	Print(v ...interface{})
+	Printf(format string, v ...interface{})
 }
 
 // SetLogger is used to set the logger for critical errors.
