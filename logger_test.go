@@ -18,7 +18,7 @@ func TestErrorsSetLogger(t *testing.T) {
 	logger := log.New(buffer, "prefix: ", 0)
 
 	// print
-	SetLogger(logger)
+	_ = SetLogger(logger)
 	errorLogger.Print("test")
 
 	// check result
