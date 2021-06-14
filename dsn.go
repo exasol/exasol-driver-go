@@ -48,7 +48,7 @@ func ParseDSN(dsn string) (*Config, error) {
 		return config, nil
 	}
 
-	reg := regexp.MustCompile(`[\w]; `)
+	reg := regexp.MustCompile(`[\w];`)
 	params := splitAfter(paramsString, reg)
 	for _, param := range params {
 		param = strings.TrimRight(param, ";")
