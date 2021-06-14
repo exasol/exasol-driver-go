@@ -2,8 +2,6 @@ package exasol
 
 import (
 	"errors"
-	"log"
-	"os"
 )
 
 // Various errors the driver might return. Can change between driver versions.
@@ -16,5 +14,3 @@ var (
 	ErrNoLastInsertID          = errors.New("no LastInsertId not available ")
 	ErrNamedValuesNotSupported = errors.New("named parameters not supported")
 )
-
-var errorLogger = log.New(os.Stderr, "[exasol] ", log.LstdFlags|log.Lshortfile)
