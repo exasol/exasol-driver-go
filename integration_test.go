@@ -40,7 +40,9 @@ func (suite *IntegrationTestSuite) TestConnect() {
 func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
 	exasol, err := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol;encryption=0")
 	suite.NoError(err)
-	suite.EqualError(exasol.Ping(), "dial tcp 127.0.0.1:1234: connect: connection refused")
+	err = exasol.Ping()
+	suite.Error(err)
+	suite.Contains(err.Error(), "connect: connection refuse")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
