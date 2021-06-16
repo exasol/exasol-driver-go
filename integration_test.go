@@ -56,7 +56,8 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
-	suite.exasolContainer.Terminate(suite.ctx)
+	err := suite.exasolContainer.Terminate(suite.ctx)
+	onError(err)
 }
 
 func getContext() context.Context {
