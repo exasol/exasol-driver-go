@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/nightapes/go-exasol"
+	_ "github.com/exasol/go-exasol"
 )
 
 func main2() {

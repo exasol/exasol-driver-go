@@ -13,21 +13,31 @@ func ParseDSN(dsn string) (*Config, error) {
 		return nil, fmt.Errorf("invalid connection string, must start with 'exa:'")
 	}
 
-	cleanDsn := strings.Replace(dsn, "exa:", "", 1)
-
-	items := strings.SplitN(cleanDsn, ";", 2)
-	if len(items) > 2 {
-		return nil, fmt.Errorf("invalid connection string format")
-	}
-
-	conn := items[0]
-	hostPort := strings.Split(conn, ":")
+	splitDsn := splitIntoConnectionStringAndParameters(dsn)
+	hostPort := extractHostAndPort(splitDsn[0])
 
 	if len(hostPort) != 2 {
-		return nil, fmt.Errorf("invalid host or port, expect host:port format")
+		return nil, fmt.Errorf("invalid host or port, expected format: <host>:<port>")
 	}
 
-	config := &Config{
+	if len(splitDsn) < 2 {
+		return getBasicConfig(hostPort), nil
+	} else {
+		return getConfigWithParameters(hostPort, splitDsn[1])
+	}
+}
+
+func splitIntoConnectionStringAndParameters(dsn string) []string {
+	cleanDsn := strings.Replace(dsn, "exa:", "", 1)
+	return strings.SplitN(cleanDsn, ";", 2)
+}
+
+func extractHostAndPort(connectionString string) []string {
+	return strings.Split(connectionString, ":")
+}
+
+func getBasicConfig(hostPort []string) *Config {
+	return &Config{
 		Host:        hostPort[0],
 		Port:        hostPort[1],
 		ApiVersion:  2,
@@ -38,61 +48,60 @@ func ParseDSN(dsn string) (*Config, error) {
 		Params:      map[string]string{},
 		FetchSize:   128 * 1024,
 	}
+}
 
-	paramsString := ""
-	if len(items) > 1 {
-		paramsString = items[1]
-	}
-
-	if paramsString == "" {
-		return config, nil
-	}
-
-	reg := regexp.MustCompile(`[\w];`)
-	params := splitAfter(paramsString, reg)
-	for _, param := range params {
-		param = strings.TrimRight(param, ";")
-		paramKeyValue := strings.SplitN(param, "=", 2)
-		if len(paramKeyValue) != 2 {
-			return nil, fmt.Errorf("invalid parameter %s", param)
+func getConfigWithParameters(hostPort []string, parametersString string) (*Config, error) {
+	config := getBasicConfig(hostPort)
+	parameters := extractParameters(parametersString)
+	for _, parameter := range parameters {
+		parameter = strings.TrimRight(parameter, ";")
+		keyValuePair := strings.SplitN(parameter, "=", 2)
+		if len(keyValuePair) != 2 {
+			return nil, fmt.Errorf("invalid parameter %s, expected format <parameter>=<value>", parameter)
 		}
+		key := keyValuePair[0]
+		value := keyValuePair[1]
 
-		switch paramKeyValue[0] {
+		switch key {
 		case "password":
-			config.Password = unescape(paramKeyValue[1], ";")
+			config.Password = unescape(value, ";")
 		case "user":
-			config.User = unescape(paramKeyValue[1], ";")
+			config.User = unescape(value, ";")
 		case "autocommit":
-			config.Autocommit = paramKeyValue[1] == "1"
+			config.Autocommit = value == "1"
 		case "encryption":
-			config.Encryption = paramKeyValue[1] == "1"
+			config.Encryption = value == "1"
 		case "compression":
-			config.Compression = paramKeyValue[1] == "1"
+			config.Compression = value == "1"
 		case "clientname":
-			config.ClientName = paramKeyValue[1]
+			config.ClientName = value
 		case "clientversion":
-			config.ClientVersion = paramKeyValue[1]
+			config.ClientVersion = value
 		case "schema":
-			config.Schema = paramKeyValue[1]
+			config.Schema = value
 		case "fetchsize":
-			value, err := strconv.Atoi(paramKeyValue[1])
+			value, err := strconv.Atoi(value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid fetch size")
+				return nil, fmt.Errorf("invalid `fetchsize` value, numeric expected")
 			}
 			config.FetchSize = value
-		case "resultSetMaxRows":
-			value, err := strconv.Atoi(paramKeyValue[1])
+		case "resultsetmaxrows":
+			value, err := strconv.Atoi(value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid max row value")
+				return nil, fmt.Errorf("invalid `resultsetmaxrows` value, numeric expected")
 			}
 			log.Println("Set max row", value)
 			config.ResultSetMaxRows = value
 		default:
-			config.Params[paramKeyValue[0]] = unescape(paramKeyValue[1], ";")
+			config.Params[key] = unescape(value, ";")
 		}
 	}
-
 	return config, nil
+}
+
+func extractParameters(parametersString string) []string {
+	reg := regexp.MustCompile(`[\w];`)
+	return splitAfter(parametersString, reg)
 }
 
 func unescape(s, char string) string {

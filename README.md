@@ -1,12 +1,12 @@
-# go-exasol [ALPHA]
+# Exasol Go Client [ALPHA]
 
-A go library for connection to [Exasol](https://www.exasol.com/)
+This repository contains a Go library for connection to the [Exasol](https://www.exasol.com/) database.
 
-This library uses the standard golang [sql driver interface ](https://golang.org/pkg/database/sql/) for easy use.
+This library uses the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
 
 ## Usage
 
-### Create connection
+### Create Connection
 
 ```go
 package main
@@ -17,31 +17,31 @@ import (
 	"log"
 	"strings"
 
-	_ "github.com/nightapes/go-exasol"
+	_ "github.com/exasol/go-exasol"
 )
 
 func main() {
-    db, err := sql.Open("exasol", "exa:localhost:8563;user=sys;password=<password>")
-    ...
+	exasol, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
+	...
 }
 ```
 
-### Execute a statement
+### Execute Statement
 
 ```go
-result, err := db.Exec(`
+result, err := exasol.Exec(`
     INSERT INTO t
     (Name, AValue)
     VALUES('MyName', '12');`)
 ```
 
-### Query a statement
+### Query Statement
 
 ```go
-rows, err := db.Query("SELECT * FROM t")
+rows, err := exasol.Query("SELECT * FROM t")
 ```
 
-## Connection string
+## Connection String
 
 The golang Driver uses the following URL structure for Exasol:
 
@@ -49,23 +49,21 @@ The golang Driver uses the following URL structure for Exasol:
 
 Limitations: Only single ips or dns is supported
 
-Supported Driver Properties
+### Supported Driver Properties
 
-| Property    |     Value     |                                         Description |
-| :---------- | :-----------: | --------------------------------------------------: |
-| user |  string  |           DB username |
-| password |  string  |          DB password |
-| autocommit |  0=off, 1=on  |           Switches autocommit on or off. Default: 1 |
-| encryption |  0=off, 1=on  | Switches automatic encryption on or off. Default: 1 |
-| fetchsize   | numeric, >0 | Amount of data in kB which should be obtained by Exasol during a fetch. The JVM can run out of memory if the value is too high. Default: 2000|
-| clientname |  string  | Tells the server what the application is called.. Default: Go client |
-| clientversion |  string  | Tells the server the version of the application. Default: "" |
-
+| Property         | Value         | Default   | Description                                     |
+| :--------------: | :-----------: | :-------: | :---------------------------------------------- |
+| autocommit       |  0=off, 1=on  | 1         | Switch autocommit on or off.                    |
+| clientname       |  string       | Go client | Tell the server the application name.           |
+| clientversion    |  string       |           | Tell the server the version of the application. |
+| compression      |  0=off, 1=on  | 0         | Switch data compression on or off.              |
+| encryption       |  0=off, 1=on  | 1         | Switch automatic encryption on or off.          |
+| fetchsize        | numeric, >0   | 128*1024  | Amount of data in kB which should be obtained by Exasol during a fetch. The JVM can run out of memory if the value is too high. |
+| password         |  string       |           | Exasol password.                                |
+| resultsetmaxrows |  numeric      |           | Set the max amount of rows in the result set.   |
+| schema           |  string       |           | Exasol schema name.                             |
+| user             |  string       |           | Exasol username.                                |
 
 ## Examples
 
-See [./examples](https://github.com/Nightapes/go-exasol/blob/main/examples)
-
-## TODO
-
-* Add tests
+See [examples](examples)
