@@ -49,17 +49,20 @@ The golang Driver uses the following URL structure for Exasol:
 
 Limitations: Only single ips or dns is supported
 
-Supported Driver Properties
+### Supported Driver Properties
 
-| Property      | Value         | Default   | Description                                      |
-| :-----------: | :-----------: | :-------: | :----------------------------------------------- |
-| user          |  string       |           | Exasol username                                  |
-| password      |  string       |           | Exasol password                                  |
-| autocommit    |  0=off, 1=on  | 1         | Switches autocommit on or off.                   |
-| encryption    |  0=off, 1=on  | 1         | Switches automatic encryption on or off.         |
-| fetchsize     | numeric, >0   | 2000      | Amount of data in kB which should be obtained by Exasol during a fetch. The JVM can run out of memory if the value is too high.  |
-| clientname    |  string       | Go client | Tells the server the application name.           |
-| clientversion |  string       | ""        | Tells the server the version of the application. |
+| Property         | Value         | Default   | Description                                     |
+| :--------------: | :-----------: | :-------: | :---------------------------------------------- |
+| autocommit       |  0=off, 1=on  | 1         | Switch autocommit on or off.                    |
+| clientname       |  string       | Go client | Tell the server the application name.           |
+| clientversion    |  string       |           | Tell the server the version of the application. |
+| compression      |  0=off, 1=on  | 0         | Switch data compression on or off.              |
+| encryption       |  0=off, 1=on  | 1         | Switch automatic encryption on or off.          |
+| fetchsize        | numeric, >0   | 128*1024  | Amount of data in kB which should be obtained by Exasol during a fetch. The JVM can run out of memory if the value is too high. |
+| password         |  string       |           | Exasol password.                                |
+| resultsetmaxrows |  numeric      |           | Set the max amount of rows in the result set.   |
+| schema           |  string       |           | Exasol schema name.                             |
+| user             |  string       |           | Exasol username.                                |
 
 ## Examples
 

@@ -12,18 +12,23 @@ import (
 
 type IntegrationTestSuite struct {
 	suite.Suite
+	ctx             context.Context
+	exasolContainer testcontainers.Container
+	port            string
 }
 
-func TestSuite(t *testing.T) {
+func TestIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
 }
 
-var ctx = getContext()
-var exasolContainer = runExasolContainer()
-var exasolPort = getExasolPort(exasolContainer)
+func (suite *IntegrationTestSuite) SetupSuite() {
+	suite.ctx = getContext()
+	suite.exasolContainer = runExasolContainer(suite.ctx)
+	suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
+}
 
 func (suite *IntegrationTestSuite) TestConnect() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+exasolPort+";user=sys;password=exasol;encryption=0")
+	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
 	suite.NoError(err)
 	rows, err := exasol.Query("SELECT 2 FROM DUAL")
 	suite.NoError(err)
@@ -39,26 +44,26 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+exasolPort+";user=wrongUser;password=exasol;encryption=0")
+	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=wrongUser;password=exasol;encryption=0")
 	suite.NoError(err)
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+exasolPort+";user=sys;password=wrongPassword;encryption=0")
+	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=wrongPassword;encryption=0")
 	suite.NoError(err)
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
-	exasolContainer.Terminate(ctx)
+	suite.exasolContainer.Terminate(suite.ctx)
 }
 
 func getContext() context.Context {
 	return context.Background()
 }
 
-func runExasolContainer() testcontainers.Container {
+func runExasolContainer(ctx context.Context) testcontainers.Container {
 	request := testcontainers.ContainerRequest{
 		Image:        "exasol/docker-db:7.0.7",
 		ExposedPorts: []string{"8563", "2580"},
@@ -73,7 +78,7 @@ func runExasolContainer() testcontainers.Container {
 	return exasolContainer
 }
 
-func getExasolPort(exasolContainer testcontainers.Container) string {
+func getExasolPort(exasolContainer testcontainers.Container, ctx context.Context) string {
 	port, err := exasolContainer.MappedPort(ctx, "8563")
 	onError(err)
 	return port.Port()
