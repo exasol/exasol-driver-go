@@ -7,6 +7,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
+	"strings"
 	"testing"
 )
 
@@ -55,6 +56,42 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
 	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=wrongPassword;encryption=0")
 	suite.NoError(err)
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
+}
+
+func (suite *IntegrationTestSuite) TestExecAndQuery() {
+	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	suite.NoError(err)
+	_, err = exasol.Exec("CREATE SCHEMA TEST_SCHEMA_1")
+	suite.NoError(err)
+	_, err = exasol.Exec("CREATE TABLE TEST_SCHEMA_1.TEST_TABLE(x INT)")
+	suite.NoError(err)
+	_, err = exasol.Exec("INSERT INTO TEST_SCHEMA_1.TEST_TABLE VALUES (15)")
+	suite.NoError(err)
+	rows, err := exasol.Query("SELECT x FROM TEST_SCHEMA_1.TEST_TABLE")
+	suite.NoError(err)
+	rows.Next()
+	var testValue string
+	err = rows.Scan(&testValue)
+	suite.NoError(err)
+	suite.Equal("15", testValue)
+}
+
+func (suite *IntegrationTestSuite) TestExecuteWithError() {
+	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	suite.NoError(err)
+	_, err = exasol.Exec("CREATE SCHEMAA TEST_SCHEMA")
+	suite.Error(err)
+	suite.True(strings.Contains(err.Error(), "syntax error"))
+}
+
+func (suite *IntegrationTestSuite) TestQueryWithError() {
+	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	suite.NoError(err)
+	_, err = exasol.Exec("CREATE SCHEMA TEST_SCHEMA_2")
+	suite.NoError(err)
+	_, err = exasol.Query("SELECT x FROM TEST_SCHEMA_2.TEST_TABLE")
+	suite.Error(err)
+	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABL not found"))
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
