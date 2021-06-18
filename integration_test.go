@@ -91,7 +91,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	suite.NoError(err)
 	_, err = exasol.Query("SELECT x FROM TEST_SCHEMA_2.TEST_TABLE")
 	suite.Error(err)
-	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABL not found"))
+	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABLE not found"))
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
