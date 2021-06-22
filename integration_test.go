@@ -29,69 +29,97 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
-	suite.NoError(err)
-	rows, err := exasol.Query("SELECT 2 FROM DUAL")
-	suite.NoError(err)
-	columns, err := rows.Columns()
-	suite.NoError(err)
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	rows, _ := exasol.Query("SELECT 2 FROM DUAL")
+	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
-	exasol, err := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol;encryption=0")
-	suite.NoError(err)
-	err = exasol.Ping()
+	exasol, _ := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol;encryption=0")
+	err := exasol.Ping()
 	suite.Error(err)
 	suite.Contains(err.Error(), "connect: connection refuse")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=wrongUser;password=exasol;encryption=0")
-	suite.NoError(err)
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=wrongUser;password=exasol;encryption=0")
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=wrongPassword;encryption=0")
-	suite.NoError(err)
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=wrongPassword;encryption=0")
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
-	suite.NoError(err)
-	_, err = exasol.Exec("CREATE SCHEMA TEST_SCHEMA_1")
-	suite.NoError(err)
-	_, err = exasol.Exec("CREATE TABLE TEST_SCHEMA_1.TEST_TABLE(x INT)")
-	suite.NoError(err)
-	_, err = exasol.Exec("INSERT INTO TEST_SCHEMA_1.TEST_TABLE VALUES (15)")
-	suite.NoError(err)
-	rows, err := exasol.Query("SELECT x FROM TEST_SCHEMA_1.TEST_TABLE")
-	suite.NoError(err)
-	rows.Next()
-	var testValue string
-	err = rows.Scan(&testValue)
-	suite.NoError(err)
-	suite.Equal("15", testValue)
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	schemaName := "TEST_SCHEMA_1"
+	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = exasol.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	_, _ = exasol.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
+	rows, _ := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
-	suite.NoError(err)
-	_, err = exasol.Exec("CREATE SCHEMAA TEST_SCHEMA")
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	_, err := exasol.Exec("CREATE SCHEMAA TEST_SCHEMA")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "syntax error"))
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithError() {
-	exasol, err := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
-	suite.NoError(err)
-	_, err = exasol.Exec("CREATE SCHEMA TEST_SCHEMA_2")
-	suite.NoError(err)
-	_, err = exasol.Query("SELECT x FROM TEST_SCHEMA_2.TEST_TABLE")
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	schemaName := "TEST_SCHEMA_2"
+	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
+	_, err := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABLE not found"))
+}
+
+func (suite *IntegrationTestSuite) TestPreparedStatement() {
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	schemaName := "TEST_SCHEMA_3"
+	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = exasol.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	preparedStatement, _ := exasol.Prepare("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (?)")
+	_, _ = preparedStatement.Exec(15)
+	preparedStatement, _ = exasol.Prepare("SELECT x FROM " + schemaName + ".TEST_TABLE WHERE x = ?")
+	rows, _ := preparedStatement.Query(15)
+	suite.assertSingleValueResult(rows, "15")
+}
+
+func (suite *IntegrationTestSuite) TestBeginWithCommit() {
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0;autocommit=0")
+	schemaName := "TEST_SCHEMA_4"
+	transaction, _ := exasol.Begin()
+	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
+	_ = transaction.Commit()
+	rows, _ := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	suite.assertSingleValueResult(rows, "15")
+}
+
+func (suite *IntegrationTestSuite) TestBeginWithRollback() {
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0;autocommit=0")
+	schemaName := "TEST_SCHEMA_5"
+	transaction, _ := exasol.Begin()
+	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
+	_ = transaction.Rollback()
+	_, err := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	suite.Error(err)
+	suite.True(strings.Contains(err.Error(), "object "+schemaName+".TEST_TABLE not found"))
+}
+
+func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
+	rows.Next()
+	var testValue string
+	_ = rows.Scan(&testValue)
+	suite.Equal(expected, testValue)
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
