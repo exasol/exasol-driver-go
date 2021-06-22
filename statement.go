@@ -15,7 +15,7 @@ type statement struct {
 }
 
 func (s *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	values, err := namedValueToValue(args)
+	values, err := namedValuesToValues(args)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (s *statement) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func (s *statement) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
-	values, err := namedValueToValue(args)
+	values, err := namedValuesToValues(args)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (s *statement) executePreparedStatement(ctx context.Context, args []driver.
 		return nil, err
 	}
 	if result.NumResults == 0 {
-		return nil, ErrMalformData
+		return nil, ErrMalformedData
 	}
 	return result, err
 }
