@@ -3,6 +3,7 @@ package exasol_test
 import (
 	"context"
 	"database/sql"
+	_ "github.com/exasol/exasol-driver-go"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
