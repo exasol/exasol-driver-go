@@ -14,3 +14,10 @@ func namedValuesToValues(namedValues []driver.NamedValue) ([]driver.Value, error
 	}
 	return values, nil
 }
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}

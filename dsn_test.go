@@ -1,9 +1,10 @@
 package exasol
 
 import (
-	"github.com/stretchr/testify/suite"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
 )
 
 type DsnTestSuite struct {
@@ -15,7 +16,7 @@ func TestDsnSuite(t *testing.T) {
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
-	dsn, err := ParseDSN("exa:localhost:1234")
+	dsn, err := parseDSN("exa:localhost:1234")
 	suite.NoError(err)
 	suite.Equal(dsn.User, "")
 	suite.Equal(dsn.Password, "")
@@ -35,7 +36,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
-	dsn, err := ParseDSN(
+	dsn, err := parseDSN(
 		"exa:localhost:1234;user=sys;password=exasol;" +
 			"autocommit=0;" +
 			"encryption=0;" +
@@ -64,7 +65,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters2() {
-	dsn, err := ParseDSN(
+	dsn, err := parseDSN(
 		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0")
 	suite.NoError(err)
 	suite.Equal(dsn.User, "sys")
@@ -77,31 +78,54 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters2() {
 }
 
 func (suite *DsnTestSuite) TestInvalidPrefix() {
-	dsn, err := ParseDSN("exaa:localhost:1234")
+	dsn, err := parseDSN("exaa:localhost:1234")
 	suite.Nil(dsn)
 	suite.EqualError(err, "invalid connection string, must start with 'exa:'")
 }
 
 func (suite *DsnTestSuite) TestInvalidHostPortFormat() {
-	dsn, err := ParseDSN("exa:localhost")
+	dsn, err := parseDSN("exa:localhost")
 	suite.Nil(dsn)
 	suite.EqualError(err, "invalid host or port, expected format: <host>:<port>")
 }
 
 func (suite *DsnTestSuite) TestInvalidParameter() {
-	dsn, err := ParseDSN("exa:localhost:1234;user")
+	dsn, err := parseDSN("exa:localhost:1234;user")
 	suite.Nil(dsn)
 	suite.EqualError(err, "invalid parameter user, expected format <parameter>=<value>")
 }
 
 func (suite *DsnTestSuite) TestInvalidFetchsize() {
-	dsn, err := ParseDSN("exa:localhost:1234;fetchsize=size")
+	dsn, err := parseDSN("exa:localhost:1234;fetchsize=size")
 	suite.Nil(dsn)
 	suite.EqualError(err, "invalid `fetchsize` value, numeric expected")
 }
 
 func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
-	dsn, err := ParseDSN("exa:localhost:1234;resultsetmaxrows=size")
+	dsn, err := parseDSN("exa:localhost:1234;resultsetmaxrows=size")
 	suite.Nil(dsn)
 	suite.EqualError(err, "invalid `resultsetmaxrows` value, numeric expected")
+}
+
+func (suite *DriverTestSuite) TestConfigToDsnDefaultValues() {
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol", NewConfig("sys", "exasol").String())
+	dsn, err := parseDSN(
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0")
+	suite.NoError(err)
+	suite.Equal(dsn.User, "sys")
+	suite.Equal(dsn.Password, "exasol")
+	suite.Equal(dsn.Host, "localhost")
+	suite.Equal(dsn.Port, 1234)
+	suite.Equal(dsn.Autocommit, true)
+	suite.Equal(dsn.Encryption, true)
+	suite.Equal(dsn.Compression, false)
+}
+
+func (suite *DriverTestSuite) TestConfigToDsn() {
+	config := NewConfig("sys", "exasol")
+	config.Compression(true)
+	config.Encryption(true)
+	config.Autocommit(true)
+	config.Insecure(true)
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;insecure=1", config.String())
 }

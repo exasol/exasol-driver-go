@@ -8,22 +8,108 @@ import (
 	"strings"
 )
 
-func ParseDSN(dsn string) (*Config, error) {
+type DSNConfig struct {
+	host          string
+	port          int
+	user          string
+	password      string
+	autocommit    *bool
+	encryption    *bool
+	compression   *bool
+	clientName    string
+	clientVersion string
+	fetchSize     int
+	insecure      *bool
+}
+
+func NewConfig(user, password string) *DSNConfig {
+	return &DSNConfig{
+		host:     "localhost",
+		port:     8563,
+		user:     user,
+		password: password,
+	}
+}
+
+func (c *DSNConfig) Compression(enabled bool) *DSNConfig {
+	c.compression = &enabled
+	return c
+}
+func (c *DSNConfig) Encryption(enabled bool) *DSNConfig {
+	c.encryption = &enabled
+	return c
+}
+func (c *DSNConfig) Autocommit(enabled bool) *DSNConfig {
+	c.autocommit = &enabled
+	return c
+}
+func (c *DSNConfig) Insecure(enabled bool) *DSNConfig {
+	c.insecure = &enabled
+	return c
+}
+func (c *DSNConfig) FetchSize(size int) *DSNConfig {
+	c.fetchSize = size
+	return c
+}
+func (c *DSNConfig) ClientName(name string) *DSNConfig {
+	c.clientName = name
+	return c
+}
+func (c *DSNConfig) ClientVersion(version string) *DSNConfig {
+	c.clientVersion = version
+	return c
+}
+func (c *DSNConfig) Host(host string) *DSNConfig {
+	c.host = host
+	return c
+}
+func (c *DSNConfig) Port(port int) *DSNConfig {
+	c.port = port
+	return c
+}
+
+func (c *DSNConfig) String() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("exa:%s:%d;user=%s;password=%s;", c.host, c.port, c.user, c.password))
+	if c.autocommit != nil {
+		sb.WriteString(fmt.Sprintf("autocommit=%d;", boolToInt(*c.autocommit)))
+	}
+	if c.compression != nil {
+		sb.WriteString(fmt.Sprintf("compression=%d;", boolToInt(*c.compression)))
+	}
+	if c.encryption != nil {
+		sb.WriteString(fmt.Sprintf("encryption=%d;", boolToInt(*c.encryption)))
+	}
+	if c.insecure != nil {
+		sb.WriteString(fmt.Sprintf("insecure=%d;", boolToInt(*c.insecure)))
+	}
+	if c.fetchSize != 0 {
+		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
+	}
+	if c.clientName != "" {
+		sb.WriteString(fmt.Sprintf("clientname=%s;", c.clientName))
+	}
+	if c.clientVersion != "" {
+		sb.WriteString(fmt.Sprintf("clientversion=%s;", c.clientVersion))
+	}
+	return strings.TrimRight(sb.String(), ";")
+}
+
+func parseDSN(dsn string) (*config, error) {
 	if !strings.HasPrefix(dsn, "exa:") {
 		return nil, fmt.Errorf("invalid connection string, must start with 'exa:'")
 	}
 
 	splitDsn := splitIntoConnectionStringAndParameters(dsn)
-	hostPort := extractHostAndPort(splitDsn[0])
-
-	if len(hostPort) != 2 {
-		return nil, fmt.Errorf("invalid host or port, expected format: <host>:<port>")
+	host, port, err := extractHostAndPort(splitDsn[0])
+	if err != nil {
+		return nil, err
 	}
 
 	if len(splitDsn) < 2 {
-		return getBasicConfig(hostPort), nil
+		return getDefaultConfig(host, port), nil
 	} else {
-		return getConfigWithParameters(hostPort, splitDsn[1])
+		return getConfigWithParameters(host, port, splitDsn[1])
 	}
 }
 
@@ -32,26 +118,35 @@ func splitIntoConnectionStringAndParameters(dsn string) []string {
 	return strings.SplitN(cleanDsn, ";", 2)
 }
 
-func extractHostAndPort(connectionString string) []string {
-	return strings.Split(connectionString, ":")
+func extractHostAndPort(connectionString string) (string, int, error) {
+	hostPort := strings.Split(connectionString, ":")
+	if len(hostPort) != 2 {
+		return "", 0, fmt.Errorf("invalid host or port, expected format: <host>:<port>")
+	}
+	port, err := strconv.Atoi(hostPort[1])
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid `port` value, numeric port expected")
+	}
+	return hostPort[0], port, nil
 }
 
-func getBasicConfig(hostPort []string) *Config {
-	return &Config{
-		Host:        hostPort[0],
-		Port:        hostPort[1],
+func getDefaultConfig(host string, port int) *config {
+	return &config{
+		Host:        host,
+		Port:        port,
 		ApiVersion:  2,
 		Autocommit:  true,
 		Encryption:  true,
 		Compression: false,
+		Insecure:    false,
 		ClientName:  "Go client",
 		Params:      map[string]string{},
 		FetchSize:   128 * 1024,
 	}
 }
 
-func getConfigWithParameters(hostPort []string, parametersString string) (*Config, error) {
-	config := getBasicConfig(hostPort)
+func getConfigWithParameters(host string, port int, parametersString string) (*config, error) {
+	config := getDefaultConfig(host, port)
 	parameters := extractParameters(parametersString)
 	for _, parameter := range parameters {
 		parameter = strings.TrimRight(parameter, ";")
@@ -71,6 +166,8 @@ func getConfigWithParameters(hostPort []string, parametersString string) (*Confi
 			config.Autocommit = value == "1"
 		case "encryption":
 			config.Encryption = value == "1"
+		case "insecure":
+			config.Insecure = value == "1"
 		case "compression":
 			config.Compression = value == "1"
 		case "clientname":

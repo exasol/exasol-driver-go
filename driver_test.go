@@ -1,9 +1,10 @@
 package exasol
 
 import (
-	"github.com/stretchr/testify/suite"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 type DriverTestSuite struct {

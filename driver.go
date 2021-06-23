@@ -9,11 +9,11 @@ import (
 
 type ExasolDriver struct{}
 
-type Config struct {
+type config struct {
 	User             string
 	Password         string
 	Host             string
-	Port             string
+	Port             int
 	Params           map[string]string // Connection parameters
 	ApiVersion       int
 	ClientName       string
@@ -25,6 +25,7 @@ type Config struct {
 	ResultSetMaxRows int
 	Timeout          time.Time
 	Encryption       bool
+	Insecure         bool
 }
 
 func init() {
@@ -32,7 +33,7 @@ func init() {
 }
 
 func (e ExasolDriver) Open(dsn string) (driver.Conn, error) {
-	config, err := ParseDSN(dsn)
+	config, err := parseDSN(dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,7 @@ func (e ExasolDriver) Open(dsn string) (driver.Conn, error) {
 }
 
 func (e ExasolDriver) OpenConnector(dsn string) (driver.Connector, error) {
-	config, err := ParseDSN(dsn)
+	config, err := parseDSN(dsn)
 	if err != nil {
 		return nil, err
 	}
