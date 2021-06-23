@@ -30,15 +30,58 @@ func main() {
 
 ```go
 result, err := exasol.Exec(`
-    INSERT INTO t
-    (Name, AValue)
-    VALUES('MyName', '12');`)
+    INSERT INTO CUSTOMERS
+    (NAME, CITY)
+    VALUES('Bob', 'Berlin');`)
 ```
 
 ### Query Statement
 
 ```go
-rows, err := exasol.Query("SELECT * FROM t")
+rows, err := exasol.Query("SELECT * FROM CUSTOMERS")
+```
+
+### Use Prepared Statements
+
+```go
+preparedStatement, err := exasol.Prepare(`
+    INSERT INTO CUSTOMERS
+    (NAME, CITY)
+    VALUES(?, ?)`)
+result, err = preparedStatement.Exec("Bob", "Berlin")
+```
+
+```go
+preparedStatement, err := exasol.Prepare("SELECT * FROM CUSTOMERS WHERE NAME = ?")
+rows, err := preparedStatement.Query("Bob")
+```
+
+## Transaction Commit and Rollback
+
+To control a transaction state manually, you would need to disable autocommit (enabled by default):
+
+```go
+exasol, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
+```
+
+After that you can begin a transaction:
+
+```go
+transaction, err := exasol.Begin()
+result, err := transaction.Exec( ... )
+result2, err := transaction.Exec( ... )
+```
+
+To commit a transaction use `Commit()`:
+
+```go
+err = transaction.Commit()
+```
+
+To rollback a transaction use `Rollback()`:
+
+```go
+err = transaction.Rollback()
 ```
 
 ## Connection String

@@ -29,7 +29,7 @@ type connection struct {
 }
 
 func (c *connection) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	values, err := namedValueToValue(args)
+	values, err := namedValuesToValues(args)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (c *connection) QueryContext(ctx context.Context, query string, args []driv
 }
 
 func (c *connection) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
-	values, err := namedValueToValue(args)
+	values, err := namedValuesToValues(args)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePrep
 		return nil, err
 	}
 	if result.NumResults == 0 {
-		return nil, ErrMalformData
+		return nil, ErrMalformedData
 	}
 
 	return result, c.closePreparedStatement(ctx, s)
@@ -221,7 +221,7 @@ func (c *connection) simpleExec(ctx context.Context, query string) (*SQLQueriesR
 		return nil, err
 	}
 	if result.NumResults == 0 {
-		return nil, ErrMalformData
+		return nil, ErrMalformedData
 	}
 	return result, err
 }
