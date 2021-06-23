@@ -44,7 +44,7 @@ rows, err := exasol.Query("SELECT * FROM CUSTOMERS")
 ### Use Prepared Statements
 
 ```go
-preparedStatement, err := exasol.Exec(`
+preparedStatement, err := exasol.Prepare(`
     INSERT INTO CUSTOMERS
     (NAME, CITY)
     VALUES(?, ?)`)
@@ -61,7 +61,7 @@ rows, err := preparedStatement.Query("Bob")
 To control a transaction state manually, you would need to disable autocommit (enabled by default):
 
 ```go
-    exasol, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
+exasol, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
 ```
 
 After that you can begin a transaction:

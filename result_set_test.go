@@ -16,10 +16,10 @@ func TestResultSetSuite(t *testing.T) {
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
-		{DataType: SQLQueryColumnType{Type: "boolean"}}, //
-		{DataType: SQLQueryColumnType{Type: "char"}},    //
-		{DataType: SQLQueryColumnType{}},                //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
+		{DataType: SQLQueryColumnType{Type: "boolean"}},
+		{DataType: SQLQueryColumnType{Type: "char"}},
+		{DataType: SQLQueryColumnType{}},
 	}}
 	queryResults := queryResults{data: &data}
 	suite.Equal("boolean", queryResults.ColumnTypeDatabaseTypeName(0))
@@ -30,7 +30,7 @@ func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScale() {
 	expectedPrecision := int64(10)
 	expectedScale := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
 		{DataType: SQLQueryColumnType{Precision: &expectedPrecision, Scale: &expectedScale}},
 	}}
 	queryResults := queryResults{data: &data}
@@ -42,7 +42,7 @@ func (suite *ResultSetTestSuite) TestColumnTypePrecisionScale() {
 
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutPrecision() {
 	expectedScale := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
 		{DataType: SQLQueryColumnType{Scale: &expectedScale}},
 	}}
 	queryResults := queryResults{data: &data}
@@ -54,7 +54,7 @@ func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutPrecision() 
 
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutScale() {
 	expectedScale := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
 		{DataType: SQLQueryColumnType{Scale: &expectedScale}},
 	}}
 	queryResults := queryResults{data: &data}
@@ -76,8 +76,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeScanTypeVarchar() {
 }
 
 func (suite *ResultSetTestSuite) assertColumnType(columnType string, sqlType interface{}) {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
-		{DataType: SQLQueryColumnType{Type: columnType}}, //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
+		{DataType: SQLQueryColumnType{Type: columnType}},
 	}}
 	queryResults := queryResults{data: &data}
 	suite.Equal(reflect.TypeOf(sqlType), queryResults.ColumnTypeScanType(0))
@@ -117,8 +117,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeScanTypeDefault() {
 
 func (suite *ResultSetTestSuite) TestColumnTypeLength() {
 	expectedLength := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
-		{DataType: SQLQueryColumnType{Size: &expectedLength}}, //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
+		{DataType: SQLQueryColumnType{Size: &expectedLength}},
 	}}
 	queryResults := queryResults{data: &data}
 	length, ok := queryResults.ColumnTypeLength(0)
@@ -127,8 +127,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeLength() {
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeLengthInvalid() {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
-		{DataType: SQLQueryColumnType{}}, //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
+		{DataType: SQLQueryColumnType{}},
 	}}
 	queryResults := queryResults{data: &data}
 	length, ok := queryResults.ColumnTypeLength(0)
@@ -137,10 +137,10 @@ func (suite *ResultSetTestSuite) TestColumnTypeLengthInvalid() {
 }
 
 func (suite *ResultSetTestSuite) TestColumns() {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{ //
-		{Name: "col_1"}, //
-		{Name: "col_2"}, //
-		{Name: "col_3"}, //
+	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
+		{Name: "col_1"},
+		{Name: "col_2"},
+		{Name: "col_3"},
 	}}
 	queryResults := queryResults{data: &data}
 	suite.Equal([]string{"col_1", "col_2", "col_3"}, queryResults.Columns())
