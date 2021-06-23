@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 	"testing"
+	"time"
 )
 
 type IntegrationTestSuite struct {
@@ -90,7 +91,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	suite.assertSingleValueResult(rows, "15")
 }
 
-func (suite *IntegrationTestSuite) TestBeginWithCommit() {
+func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0;autocommit=0")
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := exasol.Begin()
@@ -102,7 +103,7 @@ func (suite *IntegrationTestSuite) TestBeginWithCommit() {
 	suite.assertSingleValueResult(rows, "15")
 }
 
-func (suite *IntegrationTestSuite) TestBeginWithRollback() {
+func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0;autocommit=0")
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := exasol.Begin()
@@ -113,6 +114,36 @@ func (suite *IntegrationTestSuite) TestBeginWithRollback() {
 	_, err := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "object "+schemaName+".TEST_TABLE not found"))
+}
+
+func (suite *IntegrationTestSuite) TestPingWithContext() {
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	suite.NoError(exasol.PingContext(ctx))
+	cancel()
+}
+
+func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	schemaName := "TEST_SCHEMA_6"
+	_, _ = exasol.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = exasol.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
+	_, _ = exasol.ExecContext(ctx, "INSERT INTO "+schemaName+".TEST_TABLE VALUES (15)")
+	rows, _ := exasol.QueryContext(ctx, "SELECT x FROM "+schemaName+".TEST_TABLE")
+	cancel()
+	suite.assertSingleValueResult(rows, "15")
+}
+
+func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
+	exasol, _ := sql.Open("exasol", "exa:localhost:"+suite.port+";user=sys;password=exasol;encryption=0;autocommit=0")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	schemaName := "TEST_SCHEMA_7"
+	transaction, _ := exasol.BeginTx(ctx, nil)
+	_, _ = transaction.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	cancel()
+	_, err := transaction.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
+	suite.EqualError(err, "context canceled")
 }
 
 func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {

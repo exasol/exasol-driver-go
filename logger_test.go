@@ -2,6 +2,7 @@ package exasol
 
 import (
 	"bytes"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 )
@@ -25,4 +26,8 @@ func TestErrorsSetLogger(t *testing.T) {
 	if actual := buffer.String(); actual != expected {
 		t.Errorf("expected %q, got %q", expected, actual)
 	}
+}
+
+func TestLoggerIsNil(t *testing.T) {
+	assert.EqualError(t, SetLogger(nil), "logger is nil")
 }

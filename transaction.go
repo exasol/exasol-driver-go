@@ -10,12 +10,12 @@ type transaction struct {
 }
 
 func (t *transaction) Commit() error {
+	if t.connection == nil {
+		return ErrInvalidConn
+	}
 	if t.connection.isClosed {
 		errorLogger.Print(ErrClosed)
 		return driver.ErrBadConn
-	}
-	if t.connection == nil {
-		return ErrInvalidConn
 	}
 	_, err := t.connection.simpleExec(context.Background(), "COMMIT")
 	t.connection = nil
@@ -23,12 +23,12 @@ func (t *transaction) Commit() error {
 }
 
 func (t *transaction) Rollback() error {
+	if t.connection == nil {
+		return ErrInvalidConn
+	}
 	if t.connection.isClosed {
 		errorLogger.Print(ErrClosed)
 		return driver.ErrBadConn
-	}
-	if t.connection == nil {
-		return ErrInvalidConn
 	}
 	_, err := t.connection.simpleExec(context.Background(), "ROLLBACK")
 	t.connection = nil
