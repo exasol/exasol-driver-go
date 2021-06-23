@@ -1,4 +1,4 @@
-module github.com/exasol/go-exasol
+module github.com/exasol/exasol-driver-go
 
 go 1.13
 

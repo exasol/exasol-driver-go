@@ -1,4 +1,4 @@
-# Exasol Go Client [ALPHA]
+# Exasol Go SQL Driver [ALPHA]
 
 This repository contains a Go library for connection to the [Exasol](https://www.exasol.com/) database.
 
@@ -13,11 +13,8 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
-	"strings"
-
-	_ "github.com/exasol/go-exasol"
+	
+	_ "github.com/exasol/exasol-driver-go"
 )
 
 func main() {

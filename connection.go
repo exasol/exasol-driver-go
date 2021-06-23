@@ -271,7 +271,7 @@ func (c *connection) login(ctx context.Context) error {
 		Password:       b64Pass,
 		UseCompression: false,
 		ClientName:     c.config.ClientName,
-		DriverName:     fmt.Sprintf("go-exasol-client %s", driverVersion),
+		DriverName:     fmt.Sprintf("exasol-driver-go %s", driverVersion),
 		ClientOs:       runtime.GOOS,
 		ClientVersion:  c.config.ClientName,
 		ClientRuntime:  runtime.Version(),
