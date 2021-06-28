@@ -8,7 +8,7 @@ This library uses the standard Golang [SQL driver interface](https://golang.org/
 
 ### Create Connection
 
-#### with exasol dsn 
+#### With exasol dsn 
 
 ```go
 package main
@@ -25,7 +25,7 @@ func main() {
 }
 ```
 
-#### with exasol config
+#### With exasol config
 
 ```go
 package main
@@ -37,7 +37,7 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("exasol", exasol.NewConfig("username", "password").Port(8563).String())
+	db, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port(<port>).Host("<host>").String())
 	...
 }
 ```
@@ -127,3 +127,16 @@ Limitations: Only single ips or dns is supported
 ## Examples
 
 See [examples](examples)
+
+
+## Testing / Development
+
+Run unit tests only:
+
+`go test ./... -short`  
+
+Run unit tests and integration tests:
+
+For running the integrations tests you need [Docker](https://www.docker.com/) installed.
+
+`go test ./... `  

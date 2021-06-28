@@ -3,6 +3,7 @@ package exasol_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"strings"
 	"testing"
@@ -27,6 +28,9 @@ func TestIntegrationSuite(t *testing.T) {
 }
 
 func (suite *IntegrationTestSuite) SetupSuite() {
+	if testing.Short() {
+		return
+	}
 	suite.ctx = getContext()
 	suite.exasolContainer = runExasolContainer(suite.ctx)
 	suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
@@ -36,13 +40,16 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	if testing.Short() {
 		suite.T().Skip("skipping integration test")
 	}
-	db, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
+	db, _ := sql.Open("exasol", fmt.Sprintf("exa:localhost:%d;user=sys;password=exasol;encryption=0", suite.port))
 	rows, _ := db.Query("SELECT 2 FROM DUAL")
 	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol")
 	err := exasol.Ping()
 	suite.Error(err)
@@ -50,16 +57,25 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("wronguser", "exasol").Insecure(true).Port(suite.port).String())
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "wrongpassword").Insecure(true).Port(suite.port).String())
 	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_1"
 	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
@@ -70,6 +86,9 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 }
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
 	_, err := exasol.Exec("CREATE SCHEMAA TEST_SCHEMA")
 	suite.Error(err)
@@ -77,6 +96,9 @@ func (suite *IntegrationTestSuite) TestExecuteWithError() {
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithError() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_2"
 	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
@@ -86,6 +108,9 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_3"
 	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
@@ -98,6 +123,9 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndCommit() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Autocommit(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := exasol.Begin()
@@ -110,6 +138,9 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndRollback() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Autocommit(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := exasol.Begin()
@@ -123,6 +154,9 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	suite.NoError(exasol.PingContext(ctx))
@@ -130,6 +164,9 @@ func (suite *IntegrationTestSuite) TestPingWithContext() {
 }
 
 func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
@@ -142,6 +179,9 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 }
 
 func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
+	if testing.Short() {
+		suite.T().Skip("skipping integration test")
+	}
 	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).Autocommit(false).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_7"
@@ -160,6 +200,9 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
+	if testing.Short() {
+		return
+	}
 	err := suite.exasolContainer.Terminate(suite.ctx)
 	onError(err)
 }
