@@ -70,7 +70,6 @@ func (c *connection) connect() error {
 			Host:   uri,
 		}
 		var ws *websocket.Conn
-		log.Printf("Connect to %s", u.String())
 		ws, _, err = defaultDialer.DialContext(c.ctx, u.String(), nil)
 		if err == nil {
 			c.websocket = ws
