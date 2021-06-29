@@ -9,35 +9,86 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-func (c *connection) connect() error {
-	uri := fmt.Sprintf("%s:%d", c.config.Host, c.config.Port)
+func (c *connection) resolveHosts() ([]string, error) {
+	var hosts []string
+	hostRangeRegex := regexp.MustCompile(`^((.+?)(\d+))\.\.(\d+)$`)
 
-	scheme := "ws"
+	for _, host := range strings.Split(c.config.Host, ",") {
+		if hostRangeRegex.MatchString(host) {
+			matches := hostRangeRegex.FindStringSubmatch(host)
+			prefix := matches[2]
+
+			start, err := strconv.Atoi(matches[3])
+			if err != nil {
+				return nil, err
+			}
+
+			stop, err := strconv.Atoi(matches[4])
+			if err != nil {
+				return nil, err
+			}
+
+			if stop < start {
+				return nil, fmt.Errorf("invalid range limits")
+			}
+
+			for i := start; i <= stop; i++ {
+				hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
+			}
+		} else {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts, nil
+}
+
+func (c *connection) getURIScheme() string {
 	if c.config.Encryption {
-		scheme = "wss"
+		return "wss"
+	} else {
+		return "ws"
 	}
+}
 
-	u := url.URL{
-		Scheme: scheme,
-		Host:   uri,
-	}
-	log.Printf("Connect to %s", u.String())
-	dialer := *websocket.DefaultDialer
-	dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: c.config.Insecure}
-
-	ws, _, err := dialer.DialContext(c.ctx, u.String(), nil)
+func (c *connection) connect() error {
+	hosts, err := c.resolveHosts()
 	if err != nil {
 		return err
 	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(hosts), func(i, j int) {
+		hosts[i], hosts[j] = hosts[j], hosts[i]
+	})
 
-	c.websocket = ws
-	c.websocket.EnableWriteCompression(false)
-	return nil
+	for _, host := range hosts {
+		uri := fmt.Sprintf("%s:%d", host, c.config.Port)
+
+		u := url.URL{
+			Scheme: c.getURIScheme(),
+			Host:   uri,
+		}
+		dialer := *websocket.DefaultDialer
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: c.config.Insecure}
+
+		var ws *websocket.Conn
+		ws, _, err = dialer.DialContext(c.ctx, u.String(), nil)
+		if err == nil {
+			c.websocket = ws
+			c.websocket.EnableWriteCompression(false)
+			break
+		}
+	}
+	return err
 }
 
 func (c *connection) send(ctx context.Context, request, response interface{}) error {
