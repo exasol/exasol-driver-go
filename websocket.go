@@ -62,6 +62,9 @@ func (c *connection) getURIScheme() string {
 
 func (c *connection) connect() error {
 	hosts, err := c.resolveHosts()
+	if err != nil {
+		return err
+	}
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
@@ -84,9 +87,9 @@ func (c *connection) connect() error {
 
 		c.websocket = ws
 		c.websocket.EnableWriteCompression(false)
-		return nil
+		break
 	}
-	return err
+	return nil
 }
 
 func (c *connection) send(ctx context.Context, request, response interface{}) error {
