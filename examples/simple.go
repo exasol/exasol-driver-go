@@ -8,25 +8,28 @@ import (
 	_ "github.com/exasol/exasol-driver-go"
 )
 
-func main2() {
+func main() {
 
 	fmt.Printf("Drivers=%#v\n", sql.Drivers())
-	db, err := sql.Open("exasol", "exa:localhost:8563;user=sys;password=<password>")
+	database, err := sql.Open("exasol", "exa:localhost:8563;user=sys;password=<password>")
+	onError(err)
+	defer database.Close()
+
+	err = database.Ping()
 	onError(err)
 
-	err = db.Ping()
+	rows, err := database.Query("SELECT * FROM t")
 	onError(err)
+	defer rows.Close()
 
-	rows, err := db.Query("SELECT * FROM t")
-	onError(err)
 	printColumns(rows)
 	printRows(rows)
 
-	result, err := db.Exec(`
+	result, err := database.Exec(`
 		INSERT INTO t
 		(Name, AValue)
 		VALUES('MyName', '12');`)
 	onError(err)
 	log.Println(result.RowsAffected())
-	db.Close()
+
 }

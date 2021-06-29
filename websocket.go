@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"context"
+	"crypto/tls"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 )
 
 func (c *connection) connect() error {
-	uri := fmt.Sprintf("%s:%s", c.config.Host, c.config.Port)
+	uri := fmt.Sprintf("%s:%d", c.config.Host, c.config.Port)
 
 	scheme := "ws"
 	if c.config.Encryption {
@@ -26,10 +27,14 @@ func (c *connection) connect() error {
 		Host:   uri,
 	}
 	log.Printf("Connect to %s", u.String())
-	ws, _, err := defaultDialer.DialContext(c.ctx, u.String(), nil)
+	dialer := *websocket.DefaultDialer
+	dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: c.config.Insecure}
+
+	ws, _, err := dialer.DialContext(c.ctx, u.String(), nil)
 	if err != nil {
 		return err
 	}
+
 	c.websocket = ws
 	c.websocket.EnableWriteCompression(false)
 	return nil
