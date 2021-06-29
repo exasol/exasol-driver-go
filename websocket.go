@@ -52,6 +52,14 @@ func (c *connection) resolveHosts() ([]string, error) {
 	return hosts, nil
 }
 
+func (c *connection) getURIScheme() string {
+	if c.config.Encryption {
+		return "wss"
+	} else {
+		return "ws"
+	}
+}
+
 func (c *connection) connect() error {
 	hosts, err := c.resolveHosts()
 	rand.Seed(time.Now().UnixNano())
@@ -62,13 +70,8 @@ func (c *connection) connect() error {
 	for _, host := range hosts {
 		uri := fmt.Sprintf("%s:%d", host, c.config.Port)
 
-		scheme := "ws"
-		if c.config.Encryption {
-			scheme = "wss"
-		}
-
 		u := url.URL{
-			Scheme: scheme,
+			Scheme: c.getURIScheme(),
 			Host:   uri,
 		}
 		dialer := *websocket.DefaultDialer
