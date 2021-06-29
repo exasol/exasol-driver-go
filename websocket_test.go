@@ -14,7 +14,7 @@ func TestWebsocketSuite(t *testing.T) {
 }
 
 func (suite *WebsocketTestSuite) TestSingleHostResolve() {
-	config := Config{Host: "localhost"}
+	config := config{Host: "localhost"}
 	connection := connection{config: &config}
 
 	hosts, err := connection.resolveHosts()
@@ -24,7 +24,7 @@ func (suite *WebsocketTestSuite) TestSingleHostResolve() {
 }
 
 func (suite *WebsocketTestSuite) TestMultipleHostResolve() {
-	config := Config{Host: "exasol1,127.0.0.1,exasol3"}
+	config := config{Host: "exasol1,127.0.0.1,exasol3"}
 	connection := connection{config: &config}
 
 	hosts, err := connection.resolveHosts()
@@ -36,7 +36,7 @@ func (suite *WebsocketTestSuite) TestMultipleHostResolve() {
 }
 
 func (suite *WebsocketTestSuite) TestHostRangeResolve() {
-	config := Config{Host: "exasol1..3"}
+	config := config{Host: "exasol1..3"}
 	connection := connection{config: &config}
 
 	hosts, err := connection.resolveHosts()
@@ -48,7 +48,7 @@ func (suite *WebsocketTestSuite) TestHostRangeResolve() {
 }
 
 func (suite *WebsocketTestSuite) TestIPRangeResolve() {
-	config := Config{Host: "127.0.0.1..3"}
+	config := config{Host: "127.0.0.1..3"}
 	connection := connection{config: &config}
 
 	hosts, err := connection.resolveHosts()
