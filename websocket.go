@@ -8,31 +8,77 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
+func (c *connection) resolveHosts() ([]string, error) {
+	var hosts []string
+	hostRangeRegex := regexp.MustCompile(`^((.+?)(\d+))\.\.(\d+)$`)
+
+	for _, host := range strings.Split(c.config.Host, ",") {
+		if hostRangeRegex.MatchString(host) {
+			matches := hostRangeRegex.FindStringSubmatch(host)
+			prefix := matches[2]
+
+			start, err := strconv.Atoi(matches[3])
+			if err != nil {
+				return nil, err
+			}
+
+			stop, err := strconv.Atoi(matches[4])
+			if err != nil {
+				return nil, err
+			}
+
+			if stop < start {
+				return nil, fmt.Errorf("invalid range limits")
+			}
+
+			for i := start; i <= stop; i++ {
+				hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
+			}
+		} else {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts, nil
+}
 func (c *connection) connect() error {
-	uri := fmt.Sprintf("%s:%s", c.config.Host, c.config.Port)
 
-	scheme := "ws"
-	if c.config.Encryption {
-		scheme = "wss"
-	}
+	hosts, err := c.resolveHosts()
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(hosts), func(i, j int) {
+		hosts[i], hosts[j] = hosts[j], hosts[i]
+	})
+	for _, host := range hosts {
+		uri := fmt.Sprintf("%s:%s", host, c.config.Port)
 
-	u := url.URL{
-		Scheme: scheme,
-		Host:   uri,
+		scheme := "ws"
+		if c.config.Encryption {
+			scheme = "wss"
+		}
+
+		u := url.URL{
+			Scheme: scheme,
+			Host:   uri,
+		}
+		var ws *websocket.Conn
+		log.Printf("Connect to %s", u.String())
+		ws, _, err = defaultDialer.DialContext(c.ctx, u.String(), nil)
+		if err == nil {
+			c.websocket = ws
+			c.websocket.EnableWriteCompression(false)
+			return nil
+		}
 	}
-	log.Printf("Connect to %s", u.String())
-	ws, _, err := defaultDialer.DialContext(c.ctx, u.String(), nil)
-	if err != nil {
-		return err
-	}
-	c.websocket = ws
-	c.websocket.EnableWriteCompression(false)
-	return nil
+	return err
 }
 
 func (c *connection) send(ctx context.Context, request, response interface{}) error {
