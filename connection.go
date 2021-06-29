@@ -17,12 +17,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	defaultDialer = *websocket.DefaultDialer
-)
-
 type connection struct {
-	config    *Config
+	config    *config
 	websocket *websocket.Conn
 	ctx       context.Context
 	isClosed  bool

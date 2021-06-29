@@ -6,7 +6,7 @@ import (
 )
 
 type connector struct {
-	config *Config
+	config *config
 }
 
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {

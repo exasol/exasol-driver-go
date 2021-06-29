@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"context"
+	"crypto/tls"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -50,15 +51,16 @@ func (c *connection) resolveHosts() ([]string, error) {
 	}
 	return hosts, nil
 }
-func (c *connection) connect() error {
 
+func (c *connection) connect() error {
 	hosts, err := c.resolveHosts()
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
+
 	for _, host := range hosts {
-		uri := fmt.Sprintf("%s:%s", host, c.config.Port)
+		uri := fmt.Sprintf("%s:%d", host, c.config.Port)
 
 		scheme := "ws"
 		if c.config.Encryption {
@@ -69,13 +71,17 @@ func (c *connection) connect() error {
 			Scheme: scheme,
 			Host:   uri,
 		}
-		var ws *websocket.Conn
-		ws, _, err = defaultDialer.DialContext(c.ctx, u.String(), nil)
-		if err == nil {
-			c.websocket = ws
-			c.websocket.EnableWriteCompression(false)
-			return nil
+		dialer := *websocket.DefaultDialer
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: c.config.Insecure}
+
+		ws, _, err := dialer.DialContext(c.ctx, u.String(), nil)
+		if err != nil {
+			return err
 		}
+
+		c.websocket = ws
+		c.websocket.EnableWriteCompression(false)
+		return nil
 	}
 	return err
 }
