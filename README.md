@@ -8,7 +8,7 @@ This library uses the standard Golang [SQL driver interface](https://golang.org/
 
 ### Create Connection
 
-#### With exasol dsn 
+#### With Exasol DSN
 
 ```go
 package main
@@ -20,12 +20,12 @@ import (
 )
 
 func main() {
-	exasol, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
+	database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
 	...
 }
 ```
 
-#### With exasol config
+#### With Exasol Config
 
 ```go
 package main
@@ -37,7 +37,7 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port(<port>).Host("<host>").String())
+	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port(<port>).Host("<host>").String())
 	...
 }
 ```
@@ -77,7 +77,7 @@ rows, err := preparedStatement.Query("Bob")
 To control a transaction state manually, you would need to disable autocommit (enabled by default):
 
 ```go
-exasol, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
+database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
 ```
 
 After that you can begin a transaction:
