@@ -104,9 +104,9 @@ err = transaction.Rollback()
 
 The golang Driver uses the following URL structure for Exasol:
 
-`exa:<host>:<port>[;<prop_1>=<value_1>]...[;<prop_n>=<value_n>]`
+`exa:<host>[,<host_1>]...[,<host_n>]:<port>[;<prop_1>=<value_1>]...[;<prop_n>=<value_n>]`
 
-Limitations: Only single ips or dns is supported
+Host-Range-Syntax is supported (e.g. exasol1..exasol3).
 
 ### Supported Driver Properties
 
