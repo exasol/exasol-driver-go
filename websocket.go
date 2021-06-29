@@ -80,16 +80,15 @@ func (c *connection) connect() error {
 		dialer := *websocket.DefaultDialer
 		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: c.config.Insecure}
 
-		ws, _, err := dialer.DialContext(c.ctx, u.String(), nil)
-		if err != nil {
-			return err
+		var ws *websocket.Conn
+		ws, _, err = dialer.DialContext(c.ctx, u.String(), nil)
+		if err == nil {
+			c.websocket = ws
+			c.websocket.EnableWriteCompression(false)
+			break
 		}
-
-		c.websocket = ws
-		c.websocket.EnableWriteCompression(false)
-		break
 	}
-	return nil
+	return err
 }
 
 func (c *connection) send(ctx context.Context, request, response interface{}) error {
