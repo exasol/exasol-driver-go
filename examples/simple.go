@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-
 	fmt.Printf("Drivers=%#v\n", sql.Drivers())
 	database, err := sql.Open("exasol", "exa:localhost:8563;user=sys;password=<password>")
 	onError(err)
@@ -18,7 +17,7 @@ func main() {
 	err = database.Ping()
 	onError(err)
 
-	rows, err := database.Query("SELECT * FROM t")
+	rows, err := database.Query("SELECT * FROM CUSTOMERS")
 	onError(err)
 	defer rows.Close()
 
@@ -26,10 +25,9 @@ func main() {
 	printRows(rows)
 
 	result, err := database.Exec(`
-		INSERT INTO t
-		(Name, AValue)
-		VALUES('MyName', '12');`)
+		INSERT INTO CUSTOMERS
+		(NAME, CITY)
+		VALUES('Bob', 'Berlin');`)
 	onError(err)
 	log.Println(result.RowsAffected())
-
 }

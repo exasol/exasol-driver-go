@@ -19,7 +19,6 @@ func printColumns(rows *sql.Rows) {
 }
 
 func printRows(rows *sql.Rows) {
-
 	cols, _ := rows.Columns()
 	for rows.Next() {
 		columns := make([]string, len(cols))
