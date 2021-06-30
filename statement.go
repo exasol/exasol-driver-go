@@ -38,7 +38,7 @@ func (s *statement) ExecContext(ctx context.Context, args []driver.NamedValue) (
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.executePreparedStatement(context.Background(), values)
+	result, err := s.executePreparedStatement(ctx, values)
 	if err != nil {
 		return nil, err
 	}

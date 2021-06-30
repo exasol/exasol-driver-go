@@ -52,23 +52,28 @@ func (c *connection) PrepareContext(ctx context.Context, query string) (driver.S
 		errorLogger.Print(ErrClosed)
 		return nil, driver.ErrBadConn
 	}
-
-	result := &CreatePreparedStatementResponse{}
-
-	err := c.send(ctx, &CreatePreparedStatementCommand{
-		Command: Command{"createPreparedStatement"},
-		SQLText: query,
-	}, result)
+	response := &CreatePreparedStatementResponse{}
+	err := c.createPreparedStatement(ctx, query, response)
 	if err != nil {
 		return nil, err
 	}
+	return c.createStatement(response), nil
+}
 
+func (c *connection) createPreparedStatement(ctx context.Context, query string, response *CreatePreparedStatementResponse) error {
+	return c.send(ctx, &CreatePreparedStatementCommand{
+		Command: Command{"createPreparedStatement"},
+		SQLText: query,
+	}, response)
+}
+
+func (c *connection) createStatement(result *CreatePreparedStatementResponse) *statement {
 	return &statement{
 		connection:      c,
 		statementHandle: result.StatementHandle,
 		numInput:        result.ParameterData.NumColumns,
 		columns:         result.ParameterData.Columns,
-	}, nil
+	}
 }
 
 func (c *connection) Prepare(query string) (driver.Stmt, error) {
@@ -100,24 +105,24 @@ func (c *connection) query(ctx context.Context, query string, args []driver.Valu
 
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
-		result, err := c.simpleExec(ctx, query)
-		if err != nil {
-			return nil, err
-		}
-		return toRow(result, c)
+		return c.executeSimpleWithRows(ctx, query)
 	}
 
-	prepResponse := &CreatePreparedStatementResponse{}
-
-	err := c.send(ctx, &CreatePreparedStatementCommand{
-		Command: Command{"createPreparedStatement"},
-		SQLText: query,
-	}, prepResponse)
+	response := &CreatePreparedStatementResponse{}
+	err := c.createPreparedStatement(ctx, query, response)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := c.executePreparedStatement(ctx, prepResponse, args)
+	result, err := c.executePreparedStatement(ctx, response, args)
+	if err != nil {
+		return nil, err
+	}
+	return toRow(result, c)
+}
+
+func (c *connection) executeSimpleWithRows(ctx context.Context, query string) (driver.Rows, error) {
+	result, err := c.simpleExec(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +162,6 @@ func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePrep
 	if result.NumResults == 0 {
 		return nil, ErrMalformedData
 	}
-
 	return result, c.closePreparedStatement(ctx, s)
 }
 
@@ -176,15 +180,10 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
-		result, err := c.simpleExec(ctx, query)
-		if err != nil {
-			return nil, err
-		}
-		return toResult(result)
+		return c.executeSimpleWithResult(ctx, query)
 	}
 
 	prepResponse := &CreatePreparedStatementResponse{}
-
 	err := c.send(ctx, &CreatePreparedStatementCommand{
 		Command: Command{"createPreparedStatement"},
 		SQLText: query,
@@ -194,6 +193,14 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 	}
 
 	result, err := c.executePreparedStatement(ctx, prepResponse, args)
+	if err != nil {
+		return nil, err
+	}
+	return toResult(result)
+}
+
+func (c *connection) executeSimpleWithResult(ctx context.Context, query string) (driver.Result, error) {
+	result, err := c.simpleExec(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +266,6 @@ func (c *connection) login(ctx context.Context) error {
 	b64Pass := base64.StdEncoding.EncodeToString(encPass)
 
 	authRequest := AuthCommand{
-
 		Username:       c.config.User,
 		Password:       b64Pass,
 		UseCompression: false,

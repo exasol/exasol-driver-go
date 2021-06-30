@@ -1,5 +1,13 @@
 # Exasol Go SQL Driver [ALPHA]
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
+
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=bugs)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=code_smells)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=coverage)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
+
+
 This repository contains a Go library for connection to the [Exasol](https://www.exasol.com/) database.
 
 This library uses the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
