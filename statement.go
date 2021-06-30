@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/json"
-	"log"
 )
 
 type statement struct {
@@ -81,7 +80,6 @@ func toResult(result *SQLQueriesResponse) (driver.Result, error) {
 }
 
 func (s *statement) executePreparedStatement(ctx context.Context, args []driver.Value) (*SQLQueriesResponse, error) {
-	log.Println("executePreparedStatement")
 	columns := s.columns
 	if len(args)%len(columns) != 0 {
 		return nil, ErrInvalidValuesCount

@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"math/big"
 	"os/user"
 	"runtime"
@@ -49,8 +48,7 @@ func (c *connection) Query(query string, args []driver.Value) (driver.Rows, erro
 }
 
 func (c *connection) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	log.Printf("Prepare")
-	if c.isClosed {
+		if c.isClosed {
 		errorLogger.Print(ErrClosed)
 		return nil, driver.ErrBadConn
 	}
@@ -127,7 +125,6 @@ func (c *connection) query(ctx context.Context, query string, args []driver.Valu
 }
 
 func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePreparedStatementResponse, args []driver.Value) (*SQLQueriesResponse, error) {
-	log.Println("executePreparedStatement")
 	columns := s.ParameterData.Columns
 	if len(args)%len(columns) != 0 {
 		return nil, ErrInvalidValuesCount
