@@ -2,7 +2,6 @@ package exasol
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -187,7 +186,6 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 			if err != nil {
 				return nil, fmt.Errorf("invalid `resultsetmaxrows` value, numeric expected")
 			}
-			log.Println("Set max row", value)
 			config.ResultSetMaxRows = value
 		default:
 			config.Params[key] = unescape(value, ";")
