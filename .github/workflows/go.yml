@@ -30,7 +30,7 @@ jobs:
         run: go test -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
-        if: matrix.go == '1.16'
+        if: matrix.go == '1.16' && github.repository_owner == 'exasol'
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
