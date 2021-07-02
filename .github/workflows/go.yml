@@ -2,8 +2,9 @@ name: Go
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
+
 jobs:
   build:
     strategy:
@@ -29,9 +30,10 @@ jobs:
           version: v1.39
 
       - name: test
-        run: go test ./...
+        run: go test -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
+        if: matrix.go == '1.16' && github.repository_owner == 'exasol'
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
