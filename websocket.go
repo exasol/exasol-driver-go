@@ -8,7 +8,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/url"
 	"regexp"
@@ -112,7 +111,6 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 
 func (c *connection) asyncSend(request interface{}) (func(interface{}) error, error) {
 	message, err := json.Marshal(request)
-	log.Printf("Do request %s", message)
 	if err != nil {
 		errorLogger.Printf("could not marshal request, %s", err)
 		return nil, driver.ErrBadConn
@@ -170,8 +168,6 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 		if result.Status != "ok" {
 			return fmt.Errorf("[%s] %s", result.Exception.SQLCode, result.Exception.Text)
 		}
-
-		log.Printf("Result %s", result.ResponseData)
 
 		if response == nil {
 			return nil
