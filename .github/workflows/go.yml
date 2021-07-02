@@ -1,9 +1,7 @@
 name: Go
 on:
   push:
-    branches:
-      - master
-  pull_request:
+
 jobs:
   build:
     strategy:
@@ -29,7 +27,7 @@ jobs:
           version: v1.39
 
       - name: test
-        run: go test ./...
+        run: go test -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
