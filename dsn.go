@@ -99,8 +99,8 @@ func parseDSN(dsn string) (*config, error) {
 		return nil, fmt.Errorf("invalid connection string, must start with 'exa:'")
 	}
 
-	splitDsn := splitIntoConnectionStringAndParameters(dsn) //
-	host, port, err := extractHostAndPort(splitDsn[0])      //
+	splitDsn := splitIntoConnectionStringAndParameters(dsn)
+	host, port, err := extractHostAndPort(splitDsn[0])
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +113,8 @@ func parseDSN(dsn string) (*config, error) {
 }
 
 func splitIntoConnectionStringAndParameters(dsn string) []string {
-	cleanDsn := strings.Replace(dsn, "exa:", "", 1) //
-	return strings.SplitN(cleanDsn, ";", 2)         //
+	cleanDsn := strings.Replace(dsn, "exa:", "", 1)
+	return strings.SplitN(cleanDsn, ";", 2)
 }
 
 func extractHostAndPort(connectionString string) (string, int, error) {
