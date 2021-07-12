@@ -37,124 +37,116 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
-
-	db, _ := sql.Open("exasol", fmt.Sprintf("exa:localhost:%d;user=sys;password=exasol;encryption=0", suite.port))
-	rows, _ := db.Query("SELECT 2 FROM DUAL")
+	database, _ := sql.Open("exasol", fmt.Sprintf("exa:localhost:%d;user=sys;password=exasol;secure=0", suite.port))
+	rows, _ := database.Query("SELECT 2 FROM DUAL")
 	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
-
-	exasol, _ := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol")
-	err := exasol.Ping()
+	database, _ := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol")
+	err := database.Ping()
 	suite.Error(err)
 	suite.Contains(err.Error(), "connect: connection refuse")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
-
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("wronguser", "exasol").Insecure(true).Port(suite.port).String())
-	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
+	database, _ := sql.Open("exasol", exasol.NewConfig("wronguser", "exasol").Secure(false).Port(suite.port).String())
+	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
-
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "wrongpassword").Insecure(true).Port(suite.port).String())
-	suite.EqualError(exasol.Ping(), "[08004] Connection exception - authentication failed.")
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "wrongpassword").Secure(false).Port(suite.port).String())
+	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
-
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_1"
-	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
-	_, _ = exasol.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
-	_, _ = exasol.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
-	rows, _ := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	_, _ = database.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
+	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
-
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
-	_, err := exasol.Exec("CREATE SCHEMAA TEST_SCHEMA")
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	_, err := database.Exec("CREATE SCHEMAA TEST_SCHEMA")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "syntax error"))
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithError() {
-
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_2"
-	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
-	_, err := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABLE not found"))
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
-
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_3"
-	_, _ = exasol.Exec("CREATE SCHEMA " + schemaName)
-	_, _ = exasol.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
-	preparedStatement, _ := exasol.Prepare("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (?)")
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	preparedStatement, _ := database.Prepare("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (?)")
 	_, _ = preparedStatement.Exec(15)
-	preparedStatement, _ = exasol.Prepare("SELECT x FROM " + schemaName + ".TEST_TABLE WHERE x = ?")
+	preparedStatement, _ = database.Prepare("SELECT x FROM " + schemaName + ".TEST_TABLE WHERE x = ?")
 	rows, _ := preparedStatement.Query(15)
 	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndCommit() {
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Autocommit(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Autocommit(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_4"
-	transaction, _ := exasol.Begin()
+	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
 	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Commit()
-	rows, _ := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndRollback() {
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Autocommit(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Autocommit(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_5"
-	transaction, _ := exasol.Begin()
+	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
 	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Rollback()
-	_, err := exasol.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "object "+schemaName+".TEST_TABLE not found"))
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	suite.NoError(exasol.PingContext(ctx))
+	suite.NoError(database.PingContext(ctx))
 	cancel()
 }
 
 func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
-	_, _ = exasol.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
-	_, _ = exasol.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
-	_, _ = exasol.ExecContext(ctx, "INSERT INTO "+schemaName+".TEST_TABLE VALUES (15)")
-	rows, _ := exasol.QueryContext(ctx, "SELECT x FROM "+schemaName+".TEST_TABLE")
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = database.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
+	_, _ = database.ExecContext(ctx, "INSERT INTO "+schemaName+".TEST_TABLE VALUES (15)")
+	rows, _ := database.QueryContext(ctx, "SELECT x FROM "+schemaName+".TEST_TABLE")
 	cancel()
 	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
-	exasol, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Insecure(true).Port(suite.port).Autocommit(false).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).Autocommit(false).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_7"
-	transaction, _ := exasol.BeginTx(ctx, nil)
+	transaction, _ := database.BeginTx(ctx, nil)
 	_, _ = transaction.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	cancel()
 	_, err := transaction.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
