@@ -25,7 +25,7 @@ type config struct {
 	ResultSetMaxRows int
 	Timeout          time.Time
 	Encryption       bool
-	Insecure         bool
+	Secure           bool
 }
 
 func init() {
