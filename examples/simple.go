@@ -3,14 +3,13 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/exasol/exasol-driver-go"
 	"log"
-
-	_ "github.com/exasol/exasol-driver-go"
 )
 
 func main() {
 	fmt.Printf("Drivers=%#v\n", sql.Drivers())
-	database, err := sql.Open("exasol", "exa:localhost:8563;user=sys;password=<password>")
+	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Host("<host>").Port(8563).String())
 	onError(err)
 	defer database.Close()
 

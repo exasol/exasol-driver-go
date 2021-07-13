@@ -7,7 +7,6 @@
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=code_smells)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=coverage)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
 
-
 This repository contains a Go library for connection to the [Exasol](https://www.exasol.com/) database.
 
 This library uses the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
@@ -16,24 +15,9 @@ This library uses the standard Golang [SQL driver interface](https://golang.org/
 
 ### Create Connection
 
-#### With Exasol DSN
-
-```go
-package main
-
-import (
-	"database/sql"
-	
-	_ "github.com/exasol/exasol-driver-go"
-)
-
-func main() {
-	database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
-	...
-}
-```
-
 #### With Exasol Config
+
+We recommend using a provided builder to build a connection string:
 
 ```go
 package main
@@ -46,6 +30,25 @@ import (
 
 func main() {
 	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port(<port>).Host("<host>").String())
+	...
+}
+```
+
+#### With Exasol DSN
+
+There is also a way to build the connection string without the builder:
+
+```go
+package main
+
+import (
+	"database/sql"
+	
+	_ "github.com/exasol/exasol-driver-go"
+)
+
+func main() {
+	database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
 	...
 }
 ```
@@ -125,7 +128,7 @@ Host-Range-Syntax is supported (e.g. exasol1..exasol3).
 | clientversion    |  string       |           | Tell the server the version of the application. |
 | compression      |  0=off, 1=on  | 0         | Switch data compression on or off.              |
 | encryption       |  0=off, 1=on  | 1         | Switch automatic encryption on or off.          |
-| secure           |  0=off, 1=on  | 1         | TLS/SSL verification. Disable it if you want to use a self-signed or invalid certificate (server side).                         |
+| usetls           |  0=off, 1=on  | 1         | TLS/SSL verification. Disable it if you want to use a self-signed or invalid certificate (server side).                         |
 | fetchsize        | numeric, >0   | 128*1024  | Amount of data in kB which should be obtained by Exasol during a fetch. The JVM can run out of memory if the value is too high. |
 | password         |  string       |           | Exasol password.                                |
 | resultsetmaxrows |  numeric      |           | Set the max amount of rows in the result set.   |
@@ -135,7 +138,6 @@ Host-Range-Syntax is supported (e.g. exasol1..exasol3).
 ## Examples
 
 See [examples](examples)
-
 
 ## Testing / Development
 

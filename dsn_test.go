@@ -126,6 +126,6 @@ func (suite *DriverTestSuite) TestConfigToDsn() {
 	config.Compression(true)
 	config.Encryption(true)
 	config.Autocommit(true)
-	config.Secure(false)
-	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;secure=0", config.String())
+	config.UseTLS(false)
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;usetls=0", config.String())
 }
