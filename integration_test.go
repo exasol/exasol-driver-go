@@ -37,7 +37,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
-	database, _ := sql.Open("exasol", fmt.Sprintf("exa:localhost:%d;user=sys;password=exasol;secure=0", suite.port))
+	database, _ := sql.Open("exasol", fmt.Sprintf("exa:localhost:%d;user=sys;password=exasol;usetls=0", suite.port))
 	rows, _ := database.Query("SELECT 2 FROM DUAL")
 	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
@@ -51,17 +51,17 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("wronguser", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("wronguser", "exasol").UseTLS(false).Port(suite.port).String())
 	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "wrongpassword").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "wrongpassword").UseTLS(false).Port(suite.port).String())
 	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_1"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
@@ -71,14 +71,14 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 }
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	_, err := database.Exec("CREATE SCHEMAA TEST_SCHEMA")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "syntax error"))
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithError() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_2"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
 	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
@@ -87,7 +87,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_3"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
@@ -99,7 +99,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndCommit() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Autocommit(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Autocommit(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
@@ -111,7 +111,7 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndRollback() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Autocommit(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Autocommit(false).Port(suite.port).String())
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
@@ -124,14 +124,14 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	suite.NoError(database.PingContext(ctx))
 	cancel()
 }
 
 func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
@@ -143,7 +143,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 }
 
 func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
-	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Secure(false).Port(suite.port).Autocommit(false).String())
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).Autocommit(false).String())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_7"
 	transaction, _ := database.BeginTx(ctx, nil)
