@@ -24,7 +24,7 @@ package main
 
 import (
 	"database/sql"
-	
+
 	"github.com/exasol/exasol-driver-go"
 )
 
@@ -135,15 +135,16 @@ Host-Range-Syntax is supported (e.g. exasol1..exasol3).
 | schema           |  string       |           | Exasol schema name.                             |
 | user             |  string       |           | Exasol username.                                |
 
-## Examples
+## Information for Users
 
-See [examples](examples)
+* [Examples](examples)
+* [Changelog](doc/changes/changelog.md)
 
 ## Testing / Development
 
 Run unit tests only:
 
-`go test ./... -short`  
+`go test ./... -short`
 
 Run unit tests and integration tests:
 

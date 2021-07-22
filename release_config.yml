@@ -1,0 +1,10 @@
+community-tags:
+  - driver
+  - GitHub
+  - go
+  - golang
+  - open source
+community-project-name: Exasol Go SQL Driver
+community-project-description: |
+  Exasol Go SQL Driver is a Go library for connecting to the Exasol database.
+  This library implements the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
