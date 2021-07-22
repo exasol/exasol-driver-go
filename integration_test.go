@@ -72,7 +72,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 
 func (suite *IntegrationTestSuite) TestFetch() {
 	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).FetchSize(200).String())
-	schemaName := "TEST_SCHEMA_1"
+	schemaName := "TEST_SCHEMA_FETCH"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	data := make([]string, 0)
@@ -91,7 +91,7 @@ func (suite *IntegrationTestSuite) TestFetch() {
 		}
 		result = append(result, x)
 	}
-	suite.Equal(len(result), 10000)
+	suite.Equal(10000, len(result))
 }
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
