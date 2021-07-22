@@ -90,7 +90,7 @@ func (results *queryResults) Next(dest []driver.Value) error {
 			return err
 		}
 
-		results.fetchedRows = results.fetchedRows + result.NumRowsInMessage
+		results.fetchedRows = results.fetchedRows + result.NumRows
 
 		if results.data.Data == nil {
 			results.data.Data = result.Data

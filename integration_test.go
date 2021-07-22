@@ -70,6 +70,30 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	suite.assertSingleValueResult(rows, "15")
 }
 
+func (suite *IntegrationTestSuite) TestFetch() {
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).FetchSize(200).String())
+	schemaName := "TEST_SCHEMA_1"
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	data := make([]string, 0)
+	for i := 0; i < 10000; i++ {
+		data = append(data, fmt.Sprintf("(%d)", i))
+	}
+	_, _ = database.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES " + strings.Join(data, ","))
+	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	result := make([]int, 0)
+	for rows.Next() {
+		var x int
+		if err := rows.Scan(&x); err != nil {
+			// Check for a scan error.
+			// Query rows will be closed with defer.
+			log.Fatal(err)
+		}
+		result = append(result, x)
+	}
+	suite.Equal(len(result), 10000)
+}
+
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
 	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port).String())
 	_, err := database.Exec("CREATE SCHEMAA TEST_SCHEMA")
