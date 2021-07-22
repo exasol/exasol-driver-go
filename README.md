@@ -7,7 +7,6 @@
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=code_smells)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=coverage)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
 
-
 This repository contains a Go library for connection to the [Exasol](https://www.exasol.com/) database.
 
 This library uses the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
@@ -23,7 +22,7 @@ package main
 
 import (
 	"database/sql"
-	
+
 	_ "github.com/exasol/exasol-driver-go"
 )
 
@@ -40,12 +39,12 @@ package main
 
 import (
 	"database/sql"
-	
+
 	"github.com/exasol/exasol-driver-go"
 )
 
 func main() {
-	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port(<port>).Host("<host>").String())
+	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port( < port >).Host("<host>").String())
 	...
 }
 ```
@@ -132,16 +131,16 @@ Host-Range-Syntax is supported (e.g. exasol1..exasol3).
 | schema           |  string       |           | Exasol schema name.                             |
 | user             |  string       |           | Exasol username.                                |
 
-## Examples
+## Information for Users
 
-See [examples](examples)
-
+* [Examples](examples)
+* [Changelog](doc/changes/changelog.md)
 
 ## Testing / Development
 
 Run unit tests only:
 
-`go test ./... -short`  
+`go test ./... -short`
 
 Run unit tests and integration tests:
 
