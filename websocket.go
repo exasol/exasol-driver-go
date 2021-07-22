@@ -77,7 +77,7 @@ func (c *connection) connect() error {
 			Host:   uri,
 		}
 		dialer := *websocket.DefaultDialer
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.Secure}
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.UseTLS}
 
 		var ws *websocket.Conn
 		ws, _, err = dialer.DialContext(c.ctx, u.String(), nil)

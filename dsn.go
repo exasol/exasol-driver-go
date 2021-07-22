@@ -18,7 +18,7 @@ type DSNConfig struct {
 	clientName    string
 	clientVersion string
 	fetchSize     int
-	secure        *bool
+	useTLS        *bool
 }
 
 func NewConfig(user, password string) *DSNConfig {
@@ -42,8 +42,8 @@ func (c *DSNConfig) Autocommit(enabled bool) *DSNConfig {
 	c.autocommit = &enabled
 	return c
 }
-func (c *DSNConfig) Secure(enabled bool) *DSNConfig {
-	c.secure = &enabled
+func (c *DSNConfig) UseTLS(enabled bool) *DSNConfig {
+	c.useTLS = &enabled
 	return c
 }
 func (c *DSNConfig) FetchSize(size int) *DSNConfig {
@@ -79,8 +79,8 @@ func (c *DSNConfig) String() string {
 	if c.encryption != nil {
 		sb.WriteString(fmt.Sprintf("encryption=%d;", boolToInt(*c.encryption)))
 	}
-	if c.secure != nil {
-		sb.WriteString(fmt.Sprintf("secure=%d;", boolToInt(*c.secure)))
+	if c.useTLS != nil {
+		sb.WriteString(fmt.Sprintf("usetls=%d;", boolToInt(*c.useTLS)))
 	}
 	if c.fetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
@@ -137,7 +137,7 @@ func getDefaultConfig(host string, port int) *config {
 		Autocommit:  true,
 		Encryption:  true,
 		Compression: false,
-		Secure:      true,
+		UseTLS:      true,
 		ClientName:  "Go client",
 		Params:      map[string]string{},
 		FetchSize:   128 * 1024,
@@ -165,8 +165,8 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 			config.Autocommit = value == "1"
 		case "encryption":
 			config.Encryption = value == "1"
-		case "secure":
-			config.Secure = value == "1"
+		case "usetls":
+			config.UseTLS = value == "1"
 		case "compression":
 			config.Compression = value == "1"
 		case "clientname":
