@@ -1,16 +1,19 @@
 package exasol
 
-import (
-	"errors"
+// Various errors the driver might return. Can change between driver versions.
+const (
+	ErrInvalidConn             = DriverErr("invalid connection")
+	ErrClosed                  = DriverErr("connection was closed")
+	ErrMalformedData           = DriverErr("malformed result")
+	ErrAutocommitEnabled       = DriverErr("begin not working when autocommit is enabled")
+	ErrInvalidValuesCount      = DriverErr("invalid value count for prepared status")
+	ErrNoLastInsertID          = DriverErr("no LastInsertId available")
+	ErrNamedValuesNotSupported = DriverErr("named parameters not supported")
+	ErrLoggerNil               = DriverErr("logger is nil")
 )
 
-// Various errors the driver might return. Can change between driver versions.
-var (
-	ErrInvalidConn             = errors.New("invalid connection")
-	ErrClosed                  = errors.New("connection was closed")
-	ErrMalformedData           = errors.New("malformed result")
-	ErrAutocommitEnabled       = errors.New("begin not working when autocommit is enabled")
-	ErrInvalidValuesCount      = errors.New("invalid value count for prepared status")
-	ErrNoLastInsertID          = errors.New("no LastInsertId available")
-	ErrNamedValuesNotSupported = errors.New("named parameters not supported")
-)
+type DriverErr string
+
+func (e DriverErr) Error() string {
+	return string(e)
+}
