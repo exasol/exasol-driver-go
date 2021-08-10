@@ -6,4 +6,4 @@ Code name:
 
 ## Refactoring
 
-* #26: Converted errors to constant values
+* #30: Converted errors to constant values
