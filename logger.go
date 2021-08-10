@@ -1,7 +1,6 @@
 package exasol
 
 import (
-	"errors"
 	"log"
 	"os"
 )
@@ -18,7 +17,7 @@ type Logger interface {
 // The initial logger is os.Stderr.
 func SetLogger(logger Logger) error {
 	if logger == nil {
-		return errors.New("logger is nil")
+		return ErrLoggerNil
 	}
 	errorLogger = logger
 	return nil
