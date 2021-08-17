@@ -7,3 +7,4 @@ Code name:
 ## Refactoring
 
 * #30: Converted errors to constant values
+* #32: Fix dsn parsing with special characters
