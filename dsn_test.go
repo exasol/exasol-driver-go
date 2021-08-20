@@ -90,6 +90,18 @@ func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars() {
 	suite.Equal(false, dsn.Compression)
 }
 
+func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars2() {
+	dsn, err := parseDSN(
+		`exa:localhost:1234;user=sys;password=exasol!,@#$%^&*!;autocommit=1;encryption=1;compression=0`)
+	suite.NoError(err)
+	suite.Equal("sys", dsn.User)
+	suite.Equal("exasol!,@#$%^&*!", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(true, dsn.Autocommit)
+	suite.Equal(true, dsn.Encryption)
+	suite.Equal(false, dsn.Compression)
+}
+
 func (suite *DsnTestSuite) TestInvalidPrefix() {
 	dsn, err := parseDSN("exaa:localhost:1234")
 	suite.Nil(dsn)
