@@ -18,21 +18,21 @@ func TestDsnSuite(t *testing.T) {
 func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	dsn, err := parseDSN("exa:localhost:1234")
 	suite.NoError(err)
-	suite.Equal(dsn.User, "")
-	suite.Equal(dsn.Password, "")
-	suite.Equal(dsn.Host, "localhost")
-	suite.Equal(dsn.Port, 1234)
-	suite.Equal(dsn.Params, map[string]string{})
-	suite.Equal(dsn.ApiVersion, 2)
-	suite.Equal(dsn.ClientName, "Go client")
-	suite.Equal(dsn.ClientVersion, "")
-	suite.Equal(dsn.Schema, "")
-	suite.Equal(dsn.Autocommit, true)
-	suite.Equal(dsn.FetchSize, 128*1024)
-	suite.Equal(dsn.Compression, false)
-	suite.Equal(dsn.ResultSetMaxRows, 0)
-	suite.Equal(dsn.Timeout, time.Time{})
-	suite.Equal(dsn.Encryption, true)
+	suite.Equal("", dsn.User)
+	suite.Equal("", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(1234, dsn.Port)
+	suite.Equal(map[string]string{}, dsn.Params)
+	suite.Equal(2, dsn.ApiVersion)
+	suite.Equal("Go client", dsn.ClientName)
+	suite.Equal("", dsn.ClientVersion)
+	suite.Equal("", dsn.Schema)
+	suite.Equal(true, dsn.Autocommit)
+	suite.Equal(128*1024, dsn.FetchSize)
+	suite.Equal(false, dsn.Compression)
+	suite.Equal(0, dsn.ResultSetMaxRows)
+	suite.Equal(time.Time{}, dsn.Timeout)
+	suite.Equal(true, dsn.Encryption)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
@@ -48,33 +48,58 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 			"resultsetmaxrows=100;" +
 			"mycustomparam=value")
 	suite.NoError(err)
-	suite.Equal(dsn.User, "sys")
-	suite.Equal(dsn.Password, "exasol")
-	suite.Equal(dsn.Host, "localhost")
-	suite.Equal(dsn.Port, 1234)
-	suite.Equal(dsn.ClientName, "Exasol Go client")
-	suite.Equal(dsn.ClientVersion, "1.0.0")
-	suite.Equal(dsn.Schema, "MY_SCHEMA")
-	suite.Equal(dsn.Autocommit, false)
-	suite.Equal(dsn.FetchSize, 1000)
-	suite.Equal(dsn.Compression, true)
-	suite.Equal(dsn.ResultSetMaxRows, 100)
-	suite.Equal(dsn.Timeout, time.Time{})
-	suite.Equal(dsn.Encryption, false)
-	suite.Equal(dsn.Params, map[string]string{"mycustomparam": "value"})
+	suite.Equal("sys", dsn.User)
+	suite.Equal("exasol", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(1234, dsn.Port)
+	suite.Equal("Exasol Go client", dsn.ClientName)
+	suite.Equal("1.0.0", dsn.ClientVersion)
+	suite.Equal("MY_SCHEMA", dsn.Schema)
+	suite.Equal(false, dsn.Autocommit)
+	suite.Equal(1000, dsn.FetchSize)
+	suite.Equal(true, dsn.Compression)
+	suite.Equal(100, dsn.ResultSetMaxRows)
+	suite.Equal(time.Time{}, dsn.Timeout)
+	suite.Equal(false, dsn.Encryption)
+	suite.Equal(map[string]string{"mycustomparam": "value"}, dsn.Params)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters2() {
 	dsn, err := parseDSN(
 		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0")
 	suite.NoError(err)
-	suite.Equal(dsn.User, "sys")
-	suite.Equal(dsn.Password, "exasol")
-	suite.Equal(dsn.Host, "localhost")
-	suite.Equal(dsn.Port, 1234)
-	suite.Equal(dsn.Autocommit, true)
-	suite.Equal(dsn.Encryption, true)
-	suite.Equal(dsn.Compression, false)
+	suite.Equal("sys", dsn.User)
+	suite.Equal("exasol", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(1234, dsn.Port)
+	suite.Equal(true, dsn.Autocommit)
+	suite.Equal(true, dsn.Encryption)
+	suite.Equal(false, dsn.Compression)
+}
+
+func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars() {
+	dsn, err := parseDSN(
+		`exa:localhost:1234;user=sys;password=exasol!,@#$%^&*\;;autocommit=1;encryption=1;compression=0`)
+	suite.NoError(err)
+	suite.Equal("sys", dsn.User)
+	suite.Equal("exasol!,@#$%^&*;", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(1234, dsn.Port)
+	suite.Equal(true, dsn.Autocommit)
+	suite.Equal(true, dsn.Encryption)
+	suite.Equal(false, dsn.Compression)
+}
+
+func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars2() {
+	dsn, err := parseDSN(
+		`exa:localhost:1234;user=sys;password=exasol!,@#$%^&*!;autocommit=1;encryption=1;compression=0`)
+	suite.NoError(err)
+	suite.Equal("sys", dsn.User)
+	suite.Equal("exasol!,@#$%^&*!", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(true, dsn.Autocommit)
+	suite.Equal(true, dsn.Encryption)
+	suite.Equal(false, dsn.Compression)
 }
 
 func (suite *DsnTestSuite) TestInvalidPrefix() {
@@ -112,13 +137,13 @@ func (suite *DriverTestSuite) TestConfigToDsnDefaultValues() {
 	dsn, err := parseDSN(
 		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0")
 	suite.NoError(err)
-	suite.Equal(dsn.User, "sys")
-	suite.Equal(dsn.Password, "exasol")
-	suite.Equal(dsn.Host, "localhost")
-	suite.Equal(dsn.Port, 1234)
-	suite.Equal(dsn.Autocommit, true)
-	suite.Equal(dsn.Encryption, true)
-	suite.Equal(dsn.Compression, false)
+	suite.Equal("sys", dsn.User)
+	suite.Equal("exasol", dsn.Password)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(1234, dsn.Port)
+	suite.Equal(true, dsn.Autocommit)
+	suite.Equal(true, dsn.Encryption)
+	suite.Equal(false, dsn.Compression)
 }
 
 func (suite *DriverTestSuite) TestConfigToDsn() {

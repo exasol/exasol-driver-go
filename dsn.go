@@ -2,7 +2,6 @@ package exasol
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -148,7 +147,6 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 	config := getDefaultConfig(host, port)
 	parameters := extractParameters(parametersString)
 	for _, parameter := range parameters {
-		parameter = strings.TrimRight(parameter, ";")
 		keyValuePair := strings.SplitN(parameter, "=", 2)
 		if len(keyValuePair) != 2 {
 			return nil, fmt.Errorf("invalid parameter %s, expected format <parameter>=<value>", parameter)
@@ -195,26 +193,16 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 }
 
 func extractParameters(parametersString string) []string {
-	reg := regexp.MustCompile(`[\w];`)
-	return splitAfter(parametersString, reg)
+	// Replace escaped separator with placeholder to avoid wrong split
+	replaced := strings.ReplaceAll(parametersString, `\;`, "{{,}}")
+	splitted := strings.Split(replaced, ";")
+	for i := 0; i < len(splitted); i++ {
+		// Revert escaped separator placeholder
+		splitted[i] = strings.ReplaceAll(splitted[i], "{{,}}", `\;`)
+	}
+	return splitted
 }
 
 func unescape(s, char string) string {
 	return strings.ReplaceAll(s, `\`+char, char)
-}
-
-func splitAfter(s string, re *regexp.Regexp) []string {
-	var (
-		r []string
-		p int
-	)
-	is := re.FindAllStringIndex(s, -1)
-	if is == nil {
-		return append(r, s)
-	}
-	for _, i := range is {
-		r = append(r, s[p:i[1]])
-		p = i[1]
-	}
-	return append(r, s[p:])
 }
