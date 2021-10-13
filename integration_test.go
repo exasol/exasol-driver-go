@@ -61,6 +61,16 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
 	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
+func (suite *IntegrationTestSuite) TestConnectWithCorrectCredentials() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	suite.NoError(database.Ping())
+}
+
+func (suite *IntegrationTestSuite) TestConnectWithTlsFails() {
+	database := suite.openConnection(suite.createDefaultConfig().UseTLS(true))
+	suite.EqualError(database.Ping(), "x509: certificate is not valid for any names, but wanted to match localhost")
+}
+
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_1"
