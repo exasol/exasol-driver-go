@@ -28,15 +28,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Go build
-        run: |
-          go clean
-          go build
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
           version: latest
+
+      - name: Go build
+        run: |
+          go clean
+          go build
 
       - name: test
         env:
