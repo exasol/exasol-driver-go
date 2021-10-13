@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -194,8 +195,14 @@ func getContext() context.Context {
 }
 
 func runExasolContainer(ctx context.Context) testcontainers.Container {
+
+	dbVersion := os.Getenv("DB_VERSION")
+	if dbVersion == "" {
+		dbVersion = "7.1.1"
+	}
+
 	request := testcontainers.ContainerRequest{
-		Image:        "exasol/docker-db:7.0.7",
+		Image:        fmt.Sprintf("exasol/docker-db:%s", dbVersion),
 		ExposedPorts: []string{"8563", "2580"},
 		WaitingFor:   wait.ForLog("All stages finished"),
 		Privileged:   true,

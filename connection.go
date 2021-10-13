@@ -275,9 +275,9 @@ func (c *connection) login(ctx context.Context) error {
 		ClientVersion:  c.config.ClientName,
 		ClientRuntime:  runtime.Version(),
 		Attributes: Attributes{
-			Autocommit:         c.config.Autocommit,
+			Autocommit:         boolToPtr(c.config.Autocommit),
 			CurrentSchema:      c.config.Schema,
-			CompressionEnabled: hasCompression,
+			CompressionEnabled: boolToPtr(hasCompression),
 		},
 	}
 
