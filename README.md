@@ -29,8 +29,11 @@ import (
 )
 
 func main() {
-	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").Port(<port>).Host("<host>").String())
-	...
+	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
+						.Port(<port>)
+						.Host("<host>")
+						.String())
+	// ...
 }
 ```
 
@@ -49,7 +52,7 @@ import (
 
 func main() {
 	database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
-	...
+	// ...
 }
 ```
 
@@ -89,6 +92,12 @@ To control a transaction state manually, you would need to disable autocommit (e
 
 ```go
 database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
+// or
+database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
+						.Port(<port>)
+						.Host("<host>")
+						.Autocommit(false)
+						.String())
 ```
 
 After that you can begin a transaction:
@@ -144,10 +153,14 @@ Host-Range-Syntax is supported (e.g. exasol1..exasol3).
 
 Run unit tests only:
 
-`go test ./... -short`
+```shell
+go test ./... -short
+```
 
 Run unit tests and integration tests:
 
 For running the integrations tests you need [Docker](https://www.docker.com/) installed.
 
-`go test ./... `  
+```shell
+go test ./...
+```
