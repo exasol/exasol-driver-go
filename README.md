@@ -23,17 +23,16 @@ We recommend using a provided builder to build a connection string:
 package main
 
 import (
-	"database/sql"
-
-	"github.com/exasol/exasol-driver-go"
+    "database/sql"
+    "github.com/exasol/exasol-driver-go"
 )
 
 func main() {
-	database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
-						.Port(<port>)
-						.Host("<host>")
-						.String())
-	// ...
+    database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
+                                              .Port(<port>)
+                                              .Host("<host>")
+                                              .String())
+    // ...
 }
 ```
 
@@ -45,14 +44,14 @@ There is also a way to build the connection string without the builder:
 package main
 
 import (
-	"database/sql"
-	
-	_ "github.com/exasol/exasol-driver-go"
+    "database/sql"
+    _ "github.com/exasol/exasol-driver-go"
 )
 
 func main() {
-	database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>")
-	// ...
+    database, err := sql.Open("exasol",
+            "exa:<host>:<port>;user=<username>;password=<password>")
+    // ...
 }
 ```
 
@@ -91,13 +90,14 @@ rows, err := preparedStatement.Query("Bob")
 To control a transaction state manually, you would need to disable autocommit (enabled by default):
 
 ```go
-database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
+database, err := sql.Open("exasol",
+                "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
 // or
 database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
-						.Port(<port>)
-						.Host("<host>")
-						.Autocommit(false)
-						.String())
+                                          .Port(<port>)
+                                          .Host("<host>")
+                                          .Autocommit(false)
+                                          .String())
 ```
 
 After that you can begin a transaction:
