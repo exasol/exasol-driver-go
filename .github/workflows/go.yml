@@ -9,8 +9,11 @@ jobs:
   build:
     strategy:
       matrix:
-        go: [ "1.13","1.14", "1.15", "1.16", "1.17" ]
-        db: ["7.0.7", "7.1.1"]
+        go: [ "1.13", "1.14", "1.15", "1.16", "1.17" ]
+        db: [ "7.0.7", "7.1.1" ]
+    env:
+      DEFAULT_GO: 1.17
+      DEFAULT_DB: 7.1.1
     name: Build with go version ${{ matrix.go }} and db  ${{ matrix.db }}
     runs-on: ubuntu-latest
     steps:
@@ -33,10 +36,10 @@ jobs:
       - name: test
         env:
           DB_VERSION: ${{ matrix.db }}
-        run: go test -coverprofile=coverage.out ./...
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
-        if: matrix.go == '1.16' && github.repository_owner == 'exasol'
+        if: matrix.go == env.DEFAULT_GO matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol'
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
