@@ -59,7 +59,7 @@ type Attributes struct {
 	QueryTimeout                int    `json:"queryTimeout,omitempty"`
 	SnapshotTransactionsEnabled *bool  `json:"snapshotTransactionsEnabled,omitempty"`
 	TimestampUtcEnabled         *bool  `json:"timestampUtcEnabled,omitempty"`
-	Timezone                    string `json:"timezone,omitempty,omitempty"`
+	Timezone                    string `json:"timezone,omitempty"`
 	TimeZoneBehavior            string `json:"timeZoneBehavior,omitempty"`
 	ResultSetMaxRows            int    `json:"resultSetMaxRows,omitempty"`
 }
