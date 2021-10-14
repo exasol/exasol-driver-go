@@ -126,7 +126,7 @@ The golang Driver uses the following URL structure for Exasol:
 
 `exa:<host>[,<host_1>]...[,<host_n>]:<port>[;<prop_1>=<value_1>]...[;<prop_n>=<value_n>]`
 
-Host-Range-Syntax is supported (e.g. exasol1..exasol3).
+Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exasol3` is not valid.
 
 ### Supported Driver Properties
 

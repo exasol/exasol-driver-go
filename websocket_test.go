@@ -19,8 +19,8 @@ func (suite *WebsocketTestSuite) TestSingleHostResolve() {
 
 	hosts, err := connection.resolveHosts()
 	suite.NoError(err)
-	suite.Equal(len(hosts), 1)
-	suite.Equal(hosts[0], "localhost")
+	suite.Equal(1, len(hosts))
+	suite.Equal("localhost", hosts[0])
 }
 
 func (suite *WebsocketTestSuite) TestMultipleHostResolve() {
@@ -29,22 +29,32 @@ func (suite *WebsocketTestSuite) TestMultipleHostResolve() {
 
 	hosts, err := connection.resolveHosts()
 	suite.NoError(err)
-	suite.Equal(len(hosts), 3)
-	suite.Equal(hosts[0], "exasol1")
-	suite.Equal(hosts[1], "127.0.0.1")
-	suite.Equal(hosts[2], "exasol3")
+	suite.Equal(3, len(hosts))
+	suite.Equal("exasol1", hosts[0])
+	suite.Equal("127.0.0.1", hosts[1])
+	suite.Equal("exasol3", hosts[2])
 }
 
-func (suite *WebsocketTestSuite) TestHostRangeResolve() {
+func (suite *WebsocketTestSuite) TestHostSuffixRangeResolve() {
 	config := config{Host: "exasol1..3"}
 	connection := connection{config: &config}
 
 	hosts, err := connection.resolveHosts()
 	suite.NoError(err)
-	suite.Equal(len(hosts), 3)
-	suite.Equal(hosts[0], "exasol1")
-	suite.Equal(hosts[1], "exasol2")
-	suite.Equal(hosts[2], "exasol3")
+	suite.Equal(3, len(hosts))
+	suite.Equal("exasol1", hosts[0])
+	suite.Equal("exasol2", hosts[1])
+	suite.Equal("exasol3", hosts[2])
+}
+
+func (suite *WebsocketTestSuite) TestResolvingHostRangeWithCompleteHostnameNotSupported() {
+	config := config{Host: "exasol1..exasol3"}
+	connection := connection{config: &config}
+
+	hosts, err := connection.resolveHosts()
+	suite.NoError(err)
+	suite.Equal(1, len(hosts))
+	suite.Equal("exasol1..exasol3", hosts[0])
 }
 
 func (suite *WebsocketTestSuite) TestIPRangeResolve() {
@@ -53,8 +63,8 @@ func (suite *WebsocketTestSuite) TestIPRangeResolve() {
 
 	hosts, err := connection.resolveHosts()
 	suite.NoError(err)
-	suite.Equal(len(hosts), 3)
-	suite.Equal(hosts[0], "127.0.0.1")
-	suite.Equal(hosts[1], "127.0.0.2")
-	suite.Equal(hosts[2], "127.0.0.3")
+	suite.Equal(3, len(hosts))
+	suite.Equal("127.0.0.1", hosts[0])
+	suite.Equal("127.0.0.2", hosts[1])
+	suite.Equal("127.0.0.3", hosts[2])
 }
