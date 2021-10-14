@@ -77,7 +77,7 @@ func (c *connection) connect() error {
 			Host:   uri,
 		}
 		dialer := *websocket.DefaultDialer
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.UseTLS, CipherSuites: []uint16{
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.ValidateServerCertificate, CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,

@@ -33,6 +33,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	suite.Equal(0, dsn.ResultSetMaxRows)
 	suite.Equal(time.Time{}, dsn.Timeout)
 	suite.Equal(true, dsn.Encryption)
+	suite.Equal(true, dsn.ValidateServerCertificate)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
@@ -126,31 +127,51 @@ func (suite *DsnTestSuite) TestInvalidFetchsize() {
 	suite.EqualError(err, "invalid `fetchsize` value, numeric expected")
 }
 
+func (suite *DsnTestSuite) TestInvalidValidateservercertificateUsesDefaultValue() {
+	dsn, err := parseDSN("exa:localhost:1234;validateservercertificate=false")
+	suite.NoError(err)
+	suite.Equal(true, dsn.ValidateServerCertificate)
+}
+
 func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
 	dsn, err := parseDSN("exa:localhost:1234;resultsetmaxrows=size")
 	suite.Nil(dsn)
 	suite.EqualError(err, "invalid `resultsetmaxrows` value, numeric expected")
 }
 
-func (suite *DriverTestSuite) TestConfigToDsnDefaultValues() {
-	suite.Equal("exa:localhost:8563;user=sys;password=exasol", NewConfig("sys", "exasol").String())
+func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	dsn, err := parseDSN(
-		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0")
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.User)
 	suite.Equal("exasol", dsn.Password)
 	suite.Equal("localhost", dsn.Host)
 	suite.Equal(1234, dsn.Port)
-	suite.Equal(true, dsn.Autocommit)
-	suite.Equal(true, dsn.Encryption)
-	suite.Equal(false, dsn.Compression)
+	suite.Equal(false, dsn.Autocommit)
+	suite.Equal(false, dsn.Encryption)
+	suite.Equal(true, dsn.Compression)
+	suite.Equal(false, dsn.ValidateServerCertificate)
 }
 
-func (suite *DriverTestSuite) TestConfigToDsn() {
+func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesTrue() {
 	config := NewConfig("sys", "exasol")
 	config.Compression(true)
 	config.Encryption(true)
 	config.Autocommit(true)
-	config.UseTLS(false)
-	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;usetls=0", config.String())
+	config.ValidateServerCertificate(true)
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;validateservercertificate=1", config.String())
+}
+
+func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesFalse() {
+	config := NewConfig("sys", "exasol")
+	config.Compression(false)
+	config.Encryption(false)
+	config.Autocommit(false)
+	config.ValidateServerCertificate(false)
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=0;compression=0;encryption=0;validateservercertificate=0", config.String())
+}
+
+func (suite *DriverTestSuite) TestConfigToDsnWithDefaultValues() {
+	config := NewConfig("sys", "exasol")
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol", config.String())
 }

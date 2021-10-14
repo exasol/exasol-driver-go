@@ -7,17 +7,17 @@ import (
 )
 
 type DSNConfig struct {
-	host          string
-	port          int
-	user          string
-	password      string
-	autocommit    *bool
-	encryption    *bool
-	compression   *bool
-	clientName    string
-	clientVersion string
-	fetchSize     int
-	useTLS        *bool
+	host                      string
+	port                      int
+	user                      string
+	password                  string
+	autocommit                *bool
+	encryption                *bool
+	compression               *bool
+	clientName                string
+	clientVersion             string
+	fetchSize                 int
+	validateServerCertificate *bool
 }
 
 func NewConfig(user, password string) *DSNConfig {
@@ -41,8 +41,8 @@ func (c *DSNConfig) Autocommit(enabled bool) *DSNConfig {
 	c.autocommit = &enabled
 	return c
 }
-func (c *DSNConfig) UseTLS(enabled bool) *DSNConfig {
-	c.useTLS = &enabled
+func (c *DSNConfig) ValidateServerCertificate(validate bool) *DSNConfig {
+	c.validateServerCertificate = &validate
 	return c
 }
 func (c *DSNConfig) FetchSize(size int) *DSNConfig {
@@ -78,8 +78,8 @@ func (c *DSNConfig) String() string {
 	if c.encryption != nil {
 		sb.WriteString(fmt.Sprintf("encryption=%d;", boolToInt(*c.encryption)))
 	}
-	if c.useTLS != nil {
-		sb.WriteString(fmt.Sprintf("usetls=%d;", boolToInt(*c.useTLS)))
+	if c.validateServerCertificate != nil {
+		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", boolToInt(*c.validateServerCertificate)))
 	}
 	if c.fetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
@@ -130,16 +130,16 @@ func extractHostAndPort(connectionString string) (string, int, error) {
 
 func getDefaultConfig(host string, port int) *config {
 	return &config{
-		Host:        host,
-		Port:        port,
-		ApiVersion:  2,
-		Autocommit:  true,
-		Encryption:  true,
-		Compression: false,
-		UseTLS:      true,
-		ClientName:  "Go client",
-		Params:      map[string]string{},
-		FetchSize:   128 * 1024,
+		Host:                      host,
+		Port:                      port,
+		ApiVersion:                2,
+		Autocommit:                true,
+		Encryption:                true,
+		Compression:               false,
+		ValidateServerCertificate: true,
+		ClientName:                "Go client",
+		Params:                    map[string]string{},
+		FetchSize:                 128 * 1024,
 	}
 }
 
@@ -163,8 +163,8 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 			config.Autocommit = value == "1"
 		case "encryption":
 			config.Encryption = value == "1"
-		case "usetls":
-			config.UseTLS = value == "1"
+		case "validateservercertificate":
+			config.ValidateServerCertificate = value != "0"
 		case "compression":
 			config.Compression = value == "1"
 		case "clientname":

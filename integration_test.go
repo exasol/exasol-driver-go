@@ -52,7 +52,7 @@ func getExasolPort(exasolContainer testcontainers.Container, ctx context.Context
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
-	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;usetls=0", suite.host, suite.port))
+	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;validateservercertificate=0", suite.host, suite.port))
 	rows, _ := database.Query("SELECT 2 FROM DUAL")
 	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
@@ -66,12 +66,12 @@ func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
-	database := suite.openConnection(exasol.NewConfig("wronguser", "exasol").UseTLS(false).Port(suite.port))
+	database := suite.openConnection(exasol.NewConfig("wronguser", "exasol").ValidateServerCertificate(false).Port(suite.port))
 	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
-	database := suite.openConnection(exasol.NewConfig("sys", "wrongpassword").UseTLS(false).Port(suite.port))
+	database := suite.openConnection(exasol.NewConfig("sys", "wrongpassword").ValidateServerCertificate(false).Port(suite.port))
 	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
 }
 
@@ -91,7 +91,7 @@ func (suite *IntegrationTestSuite) TestConnectWithoutCompression() {
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithTlsFails() {
-	database := suite.openConnection(suite.createDefaultConfig().UseTLS(true))
+	database := suite.openConnection(suite.createDefaultConfig().ValidateServerCertificate(true))
 	suite.EqualError(database.Ping(), "x509: certificate is not valid for any names, but wanted to match localhost")
 }
 
@@ -226,7 +226,7 @@ func (suite *IntegrationTestSuite) TearDownSuite() {
 }
 
 func (suite *IntegrationTestSuite) createDefaultConfig() *exasol.DSNConfig {
-	return exasol.NewConfig("sys", "exasol").UseTLS(false).Host(suite.host).Port(suite.port)
+	return exasol.NewConfig("sys", "exasol").ValidateServerCertificate(false).Host(suite.host).Port(suite.port)
 }
 
 func (suite *IntegrationTestSuite) openConnection(config *exasol.DSNConfig) *sql.DB {
