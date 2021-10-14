@@ -46,8 +46,8 @@ type ExecutePreparedStatementCommand struct {
 }
 
 type Attributes struct {
-	Autocommit                  bool   `json:"autocommit,omitempty"`
-	CompressionEnabled          bool   `json:"compressionEnabled,omitempty"`
+	Autocommit                  *bool  `json:"autocommit,omitempty"`
+	CompressionEnabled          *bool  `json:"compressionEnabled,omitempty"`
 	CurrentSchema               string `json:"currentSchema,omitempty"`
 	DateFormat                  string `json:"dateFormat,omitempty"`
 	DateLanguage                string `json:"dateLanguage,omitempty"`
@@ -55,10 +55,10 @@ type Attributes struct {
 	DefaultLikeEscapeCharacter  string `json:"defaultLikeEscapeCharacter,omitempty"`
 	FeedbackInterval            int    `json:"feedbackInterval,omitempty"`
 	NumericCharacters           string `json:"numericCharacters,omitempty"`
-	OpenTransaction             bool   `json:"openTransaction,omitempty"`
+	OpenTransaction             *bool  `json:"openTransaction,omitempty"`
 	QueryTimeout                int    `json:"queryTimeout,omitempty"`
-	SnapshotTransactionsEnabled bool   `json:"snapshotTransactionsEnabled,omitempty"`
-	TimestampUtcEnabled         bool   `json:"timestampUtcEnabled,omitempty"`
+	SnapshotTransactionsEnabled *bool  `json:"snapshotTransactionsEnabled,omitempty"`
+	TimestampUtcEnabled         *bool  `json:"timestampUtcEnabled,omitempty"`
 	Timezone                    string `json:"timezone,omitempty"`
 	TimeZoneBehavior            string `json:"timeZoneBehavior,omitempty"`
 	ResultSetMaxRows            int    `json:"resultSetMaxRows,omitempty"`

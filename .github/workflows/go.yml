@@ -9,8 +9,12 @@ jobs:
   build:
     strategy:
       matrix:
-        go: [ "1.13","1.14","1.15", "1.16" ]
-    name: Build with go version ${{ matrix.go }}
+        go: [ "1.16", "1.17" ]
+        db: [ "7.0.13", "7.1.1" ]
+    env:
+      DEFAULT_GO: "1.17"
+      DEFAULT_DB: "7.1.1"
+    name: Build with go version ${{ matrix.go }} and db  ${{ matrix.db }}
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
@@ -27,13 +31,20 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.39
+          version: latest
+
+      - name: Go build
+        run: |
+          go clean
+          go build
 
       - name: test
-        run: go test -coverprofile=coverage.out ./...
+        env:
+          DB_VERSION: ${{ matrix.db }}
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
-        if: matrix.go == '1.16' && github.repository_owner == 'exasol'
+        if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol'
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
