@@ -130,16 +130,16 @@ func extractHostAndPort(connectionString string) (string, int, error) {
 
 func getDefaultConfig(host string, port int) *config {
 	return &config{
-		Host:                      host,
-		Port:                      port,
-		ApiVersion:                2,
-		Autocommit:                true,
-		Encryption:                true,
-		Compression:               false,
-		ValidateServerCertificate: true,
-		ClientName:                "Go client",
-		Params:                    map[string]string{},
-		FetchSize:                 128 * 1024,
+		host:                      host,
+		port:                      port,
+		apiVersion:                2,
+		autocommit:                true,
+		encryption:                true,
+		compression:               false,
+		validateServerCertificate: true,
+		clientName:                "Go client",
+		params:                    map[string]string{},
+		fetchSize:                 128 * 1024,
 	}
 }
 
@@ -156,37 +156,37 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 
 		switch key {
 		case "password":
-			config.Password = unescape(value, ";")
+			config.password = unescape(value, ";")
 		case "user":
-			config.User = unescape(value, ";")
+			config.user = unescape(value, ";")
 		case "autocommit":
-			config.Autocommit = value == "1"
+			config.autocommit = value == "1"
 		case "encryption":
-			config.Encryption = value == "1"
+			config.encryption = value == "1"
 		case "validateservercertificate":
-			config.ValidateServerCertificate = value != "0"
+			config.validateServerCertificate = value != "0"
 		case "compression":
-			config.Compression = value == "1"
+			config.compression = value == "1"
 		case "clientname":
-			config.ClientName = value
+			config.clientName = value
 		case "clientversion":
-			config.ClientVersion = value
+			config.clientVersion = value
 		case "schema":
-			config.Schema = value
+			config.schema = value
 		case "fetchsize":
 			value, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid `fetchsize` value, numeric expected")
 			}
-			config.FetchSize = value
+			config.fetchSize = value
 		case "resultsetmaxrows":
 			value, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid `resultsetmaxrows` value, numeric expected")
 			}
-			config.ResultSetMaxRows = value
+			config.resultSetMaxRows = value
 		default:
-			config.Params[key] = unescape(value, ";")
+			config.params[key] = unescape(value, ";")
 		}
 	}
 	return config, nil

@@ -22,7 +22,7 @@ func (c *connection) resolveHosts() ([]string, error) {
 	var hosts []string
 	hostRangeRegex := regexp.MustCompile(`^((.+?)(\d+))\.\.(\d+)$`)
 
-	for _, host := range strings.Split(c.config.Host, ",") {
+	for _, host := range strings.Split(c.config.host, ",") {
 		if hostRangeRegex.MatchString(host) {
 			matches := hostRangeRegex.FindStringSubmatch(host)
 			prefix := matches[2]
@@ -52,7 +52,7 @@ func (c *connection) resolveHosts() ([]string, error) {
 }
 
 func (c *connection) getURIScheme() string {
-	if c.config.Encryption {
+	if c.config.encryption {
 		return "wss"
 	} else {
 		return "ws"
@@ -70,14 +70,14 @@ func (c *connection) connect() error {
 	})
 
 	for _, host := range hosts {
-		uri := fmt.Sprintf("%s:%d", host, c.config.Port)
+		uri := fmt.Sprintf("%s:%d", host, c.config.port)
 
 		u := url.URL{
 			Scheme: c.getURIScheme(),
 			Host:   uri,
 		}
 		dialer := *websocket.DefaultDialer
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.ValidateServerCertificate, CipherSuites: []uint16{
+		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.validateServerCertificate, CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
@@ -140,7 +140,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 	}
 
 	messageType := websocket.TextMessage
-	if c.config.Compression {
+	if c.config.compression {
 		var b bytes.Buffer
 		w := zlib.NewWriter(&b)
 		_, err = w.Write(message)
@@ -167,7 +167,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 		}
 
 		result := &BaseResponse{}
-		if c.config.Compression {
+		if c.config.compression {
 			b := bytes.NewReader(message)
 			r, err := zlib.NewReader(b)
 			if err != nil {
