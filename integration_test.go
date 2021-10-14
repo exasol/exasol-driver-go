@@ -22,6 +22,7 @@ type IntegrationTestSuite struct {
 	ctx             context.Context
 	exasolContainer testcontainers.Container
 	port            int
+	host            string
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -35,17 +36,30 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = getContext()
 	suite.exasolContainer = runExasolContainer(suite.ctx)
 	suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
+	suite.host = getExasolHost(suite.exasolContainer, suite.ctx)
+}
+
+func getExasolHost(exasolContainer testcontainers.Container, ctx context.Context) string {
+	host, err := exasolContainer.Host(ctx)
+	onError(err)
+	return host
+}
+
+func getExasolPort(exasolContainer testcontainers.Container, ctx context.Context) int {
+	port, err := exasolContainer.MappedPort(ctx, "8563")
+	onError(err)
+	return port.Int()
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
-	database, _ := sql.Open("exasol", fmt.Sprintf("exa:localhost:%d;user=sys;password=exasol;usetls=0", suite.port))
+	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;usetls=0", suite.host, suite.port))
 	rows, _ := database.Query("SELECT 2 FROM DUAL")
 	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
-	database, _ := sql.Open("exasol", "exa:localhost:1234;user=sys;password=exasol")
+	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:1234;user=sys;password=exasol", suite.host))
 	err := database.Ping()
 	suite.Error(err)
 	suite.Contains(err.Error(), "connect: connection refuse")
@@ -202,7 +216,7 @@ func (suite *IntegrationTestSuite) TearDownSuite() {
 }
 
 func (suite *IntegrationTestSuite) createDefaultConfig() *exasol.DSNConfig {
-	return exasol.NewConfig("sys", "exasol").UseTLS(false).Port(suite.port)
+	return exasol.NewConfig("sys", "exasol").UseTLS(false).Host(suite.host).Port(suite.port)
 }
 
 func (suite *IntegrationTestSuite) openConnection(config *exasol.DSNConfig) *sql.DB {
@@ -237,12 +251,6 @@ func runExasolContainer(ctx context.Context) testcontainers.Container {
 	})
 	onError(err)
 	return exasolContainer
-}
-
-func getExasolPort(exasolContainer testcontainers.Container, ctx context.Context) int {
-	port, err := exasolContainer.MappedPort(ctx, "8563")
-	onError(err)
-	return port.Int()
 }
 
 func onError(err error) {
