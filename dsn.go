@@ -18,6 +18,7 @@ type DSNConfig struct {
 	clientVersion             string
 	fetchSize                 int
 	validateServerCertificate *bool
+	certificateFingerprint    string
 }
 
 func NewConfig(user, password string) *DSNConfig {
@@ -43,6 +44,10 @@ func (c *DSNConfig) Autocommit(enabled bool) *DSNConfig {
 }
 func (c *DSNConfig) ValidateServerCertificate(validate bool) *DSNConfig {
 	c.validateServerCertificate = &validate
+	return c
+}
+func (c *DSNConfig) CertificateFingerprint(fingerprint string) *DSNConfig {
+	c.certificateFingerprint = fingerprint
 	return c
 }
 func (c *DSNConfig) FetchSize(size int) *DSNConfig {
@@ -80,6 +85,9 @@ func (c *DSNConfig) String() string {
 	}
 	if c.validateServerCertificate != nil {
 		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", boolToInt(*c.validateServerCertificate)))
+	}
+	if c.certificateFingerprint != "" {
+		sb.WriteString(fmt.Sprintf("certificateFingerprint=%s;", c.certificateFingerprint))
 	}
 	if c.fetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
@@ -165,6 +173,8 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 			config.encryption = value == "1"
 		case "validateservercertificate":
 			config.validateServerCertificate = value != "0"
+		case "certificatefingerprint":
+			config.certificateFingerprint = value
 		case "compression":
 			config.compression = value == "1"
 		case "clientname":

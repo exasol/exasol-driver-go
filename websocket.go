@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"compress/zlib"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"database/sql/driver"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -15,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	error_reporting_go "github.com/exasol/error-reporting-go"
 	"github.com/gorilla/websocket"
 )
 
@@ -77,30 +81,34 @@ func (c *connection) connect() error {
 			Host:   uri,
 		}
 		dialer := *websocket.DefaultDialer
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.validateServerCertificate, CipherSuites: []uint16{
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		dialer.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: !c.config.validateServerCertificate,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 
-			tls.TLS_AES_128_GCM_SHA256,
-			tls.TLS_AES_256_GCM_SHA384,
-			tls.TLS_CHACHA20_POLY1305_SHA256,
+				tls.TLS_AES_128_GCM_SHA256,
+				tls.TLS_AES_256_GCM_SHA384,
+				tls.TLS_CHACHA20_POLY1305_SHA256,
 
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-		}}
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			},
+			VerifyPeerCertificate: c.verifyPeerCertificate,
+		}
 
 		var ws *websocket.Conn
 		ws, _, err = dialer.DialContext(c.ctx, u.String(), nil)
@@ -111,6 +119,34 @@ func (c *connection) connect() error {
 		}
 	}
 	return err
+}
+
+func (c *connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+	expectedFingerprint := c.config.certificateFingerprint
+	if len(expectedFingerprint) == 0 {
+		return nil
+	}
+	if len(rawCerts) == 0 {
+		return error_reporting_go.ExaError("E-EGOD-1").Message("Server did not return certificates")
+	}
+	actualFingerprint := sha256Hex(rawCerts[0])
+	if !strings.EqualFold(expectedFingerprint, actualFingerprint) {
+		err := error_reporting_go.ExaError("E-EGOD-2")
+		err.Message("The server's certificate fingerprint {{server fingerprint}} does not match the expected fingerprint {{expected fingerprint}}")
+		err.ParameterWithDescription("server fingerprint", actualFingerprint, "The SHA256 sum of the server's certificate")
+		err.ParameterWithDescription("expected fingerprint", expectedFingerprint, "The expected fingerprint")
+		return err
+	}
+	return nil
+}
+
+func sha256Hex(data []byte) string {
+	sha256Sum := sha256.Sum256(data)
+	return bytesToHexString(sha256Sum[:])
+}
+
+func bytesToHexString(data []byte) string {
+	return hex.EncodeToString(data)
 }
 
 func (c *connection) send(ctx context.Context, request, response interface{}) error {

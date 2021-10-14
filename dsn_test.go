@@ -34,6 +34,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	suite.Equal(time.Time{}, dsn.timeout)
 	suite.Equal(true, dsn.encryption)
 	suite.Equal(true, dsn.validateServerCertificate)
+	suite.Equal("", dsn.certificateFingerprint)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
@@ -47,6 +48,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 			"schema=MY_SCHEMA;" +
 			"compression=1;" +
 			"resultsetmaxrows=100;" +
+			"certificatefingerprint=fingerprint;" +
 			"mycustomparam=value")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.user)
@@ -62,6 +64,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 	suite.Equal(100, dsn.resultSetMaxRows)
 	suite.Equal(time.Time{}, dsn.timeout)
 	suite.Equal(false, dsn.encryption)
+	suite.Equal("fingerprint", dsn.certificateFingerprint)
 	suite.Equal(map[string]string{"mycustomparam": "value"}, dsn.params)
 }
 
@@ -141,7 +144,7 @@ func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
 
 func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	dsn, err := parseDSN(
-		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0")
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0;certificatefingerprint=fingerprint")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.user)
 	suite.Equal("exasol", dsn.password)
@@ -151,6 +154,7 @@ func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	suite.Equal(false, dsn.encryption)
 	suite.Equal(true, dsn.compression)
 	suite.Equal(false, dsn.validateServerCertificate)
+	suite.Equal("fingerprint", dsn.certificateFingerprint)
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesTrue() {
