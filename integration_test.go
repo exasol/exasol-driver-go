@@ -80,6 +80,16 @@ func (suite *IntegrationTestSuite) TestConnectWithCorrectCredentials() {
 	suite.NoError(database.Ping())
 }
 
+func (suite *IntegrationTestSuite) TestConnectWithCompression() {
+	database := suite.openConnection(suite.createDefaultConfig().Compression(true))
+	suite.NoError(database.Ping())
+}
+
+func (suite *IntegrationTestSuite) TestConnectWithoutCompression() {
+	database := suite.openConnection(suite.createDefaultConfig().Compression(false))
+	suite.NoError(database.Ping())
+}
+
 func (suite *IntegrationTestSuite) TestConnectWithTlsFails() {
 	database := suite.openConnection(suite.createDefaultConfig().UseTLS(true))
 	suite.EqualError(database.Ping(), "x509: certificate is not valid for any names, but wanted to match localhost")
