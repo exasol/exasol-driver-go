@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver 0.1.2, released 2021-10-13
+# Exasol Go SQL Driver 0.1.2, released 2021-10-14
 
 Code name: Support TLS
 
