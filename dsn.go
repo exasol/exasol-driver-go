@@ -87,7 +87,7 @@ func (c *DSNConfig) String() string {
 		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", boolToInt(*c.validateServerCertificate)))
 	}
 	if c.certificateFingerprint != "" {
-		sb.WriteString(fmt.Sprintf("certificateFingerprint=%s;", c.certificateFingerprint))
+		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", c.certificateFingerprint))
 	}
 	if c.fetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
