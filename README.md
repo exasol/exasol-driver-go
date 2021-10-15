@@ -138,11 +138,22 @@ Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exaso
 | `compression`               |  0=off, 1=on  | `0`         | Switch data compression on or off.              |
 | `encryption`                |  0=off, 1=on  | `1`         | Switch automatic encryption on or off.          |
 | `validateservercertificate` |  0=off, 1=on  | `1`         | TLS certificate verification. Disable it if you want to use a self-signed or invalid certificate (server side)                  |
+| `certificatefingerprint`    |  string       |             | Expected fingerprint of the server's TLS certificate. See below for details
 | `fetchsize`                 | numeric, >0   | `128*1024`  | Amount of data in kB which should be obtained by Exasol during a fetch. The application can run out of memory if the value is too high. |
 | `password`                  |  string       |             | Exasol password.                                |
 | `resultsetmaxrows`          |  numeric      |             | Set the max amount of rows in the result set.   |
 | `schema`                    |  string       |             | Exasol schema name.                             |
 | `user`                      |  string       |             | Exasol username.                                |
+
+### Configuring TLS
+
+We recommend to always enable TLS encryption. This is on by default, but you can enable it explicitly via driver property `encryption=1` or `config.Encryption(true)`.
+
+There are two driver properties that control how TLS certificates are verified: `validateservercertificate` and `certificatefingerprint`. You have these three options depending on your setup:
+
+* With `validateservercertificate=1` (or `config.ValidateServerCertificate(true)`) the driver will return an error for any TLS errors (e.g. unknown certificate or invalid hostname). Use this when the database has an CA-signed certificate. This is the default.
+* With `validateservercertificate=1;certificatefingerprint=<fingerprint>` (or `config.ValidateServerCertificate(true).CertificateFingerprint("<fingerprint>")`) you can specify the fingerprint (i.e. the SHA256 sum) of the server's certificate. This is useful when the database has a self-signed certificate with invalid hostname.
+* With `validateservercertificate=1` (or `config.ValidateServerCertificate(false)`) the driver will ignore any TLS certificate errors. Use this if the server uses a self-signed certificate and you don't know the fingerprint. This is not recommended.
 
 ## Information for Users
 
