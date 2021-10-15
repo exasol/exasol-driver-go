@@ -79,7 +79,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 		expectedError string
 	}{
 		{"wrong port", suite.createDefaultConfig().Port(1234), "connect: connection refuse"},
-		{"wrong host", suite.createDefaultConfig().Host("wrong"), "dial tcp: lookup wrong: no such host"},
+		{"wrong host", suite.createDefaultConfig().Host("wrong"), "dial tcp: lookup wrong"},
 		{"wrong user", exasol.NewConfig("wronguser", "exasol").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgAuthFailed},
 		{"wrong password", exasol.NewConfig("sys", "wrongPassword").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgAuthFailed},
 
