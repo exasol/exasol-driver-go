@@ -1,6 +1,8 @@
 package exasol
 
 import (
+	"net/url"
+
 	error_msg "github.com/exasol/error-reporting-go"
 )
 
@@ -40,6 +42,58 @@ func newErrCouldNotAbort(rootCause error) DriverErr {
 
 func newDriverErr(error *error_msg.ErrorMessageBuilder) DriverErr {
 	return DriverErr(error.String())
+}
+
+func logPasswordEncryptionError(err error) {
+	errorLogger.Print(error_msg.ExaError("E-GOD-13").
+		Message("password encryption error: {{root cause}}").
+		Parameter("root cause", err).
+		String())
+}
+
+func logConnectionFailedError(url url.URL, err error) {
+	errorLogger.Print(error_msg.ExaError("W-EGOD-14").
+		Message("connection to {{url}} failed: {{error}}").
+		Parameter("url", url.String()).
+		Parameter("error", err).
+		String())
+}
+
+func logMarshallingError(request interface{}, err error) {
+	errorLogger.Print(error_msg.ExaError("W-EGOD-15").
+		Message("could not marshal request {{request}}: {{error}}").
+		Parameter("request", request).
+		Parameter("error", err).
+		String())
+}
+
+func logRequestSendingError(err error) {
+	errorLogger.Printf("could not send request, %s", err)
+	errorLogger.Print(error_msg.ExaError("W-EGOD-16").
+		Message("could not send request: {{error}}").
+		Parameter("error", err).
+		String())
+}
+
+func logReceivingError(err error) {
+	errorLogger.Print(error_msg.ExaError("W-EGOD-17").
+		Message("could not receive data: {{error}}").
+		Parameter("error", err).
+		String())
+}
+
+func logUncompressingError(err error) {
+	errorLogger.Print(error_msg.ExaError("W-EGOD-18").
+		Message("could not decode compressed data: {{error}}").
+		Parameter("error", err).
+		String())
+}
+
+func logJsonDecodingError(err error) {
+	errorLogger.Print(error_msg.ExaError("W-EGOD-19").
+		Message("could not decode json data: {{error}}").
+		Parameter("error", err).
+		String())
 }
 
 type DriverErr string

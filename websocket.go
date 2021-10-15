@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	error_msg "github.com/exasol/error-reporting-go"
 	"github.com/gorilla/websocket"
 )
 
@@ -116,11 +115,7 @@ func (c *connection) connect() error {
 			c.websocket.EnableWriteCompression(false)
 			break
 		} else {
-			errorLogger.Print(error_msg.ExaError("W-EGOD-14").
-				Message("connection to {{url}} failed: {{error}}").
-				Parameter("url", url.String()).
-				Parameter("error", err).
-				String())
+			logConnectionFailedError(url, err)
 		}
 	}
 	return err
@@ -172,7 +167,7 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 func (c *connection) asyncSend(request interface{}) (func(interface{}) error, error) {
 	message, err := json.Marshal(request)
 	if err != nil {
-		errorLogger.Printf("could not marshal request, %s", err)
+		logMarshallingError(request, err)
 		return nil, driver.ErrBadConn
 	}
 
@@ -191,7 +186,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
-		errorLogger.Printf("could not send request, %s", err)
+		logRequestSendingError(err)
 		return nil, driver.ErrBadConn
 	}
 
@@ -199,7 +194,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 		_, message, err := c.websocket.ReadMessage()
 		if err != nil {
-			errorLogger.Printf("could not receive data, %s", err)
+			logReceivingError(err)
 			return driver.ErrBadConn
 		}
 
@@ -208,19 +203,19 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 			b := bytes.NewReader(message)
 			r, err := zlib.NewReader(b)
 			if err != nil {
-				errorLogger.Printf("could not decode compressed data, %s", err)
+				logUncompressingError(err)
 				return driver.ErrBadConn
 			}
 			err = json.NewDecoder(r).Decode(result)
 			if err != nil {
-				errorLogger.Printf("could not decode data, %s", err)
+				logJsonDecodingError( err)
 				return driver.ErrBadConn
 			}
 
 		} else {
 			err = json.Unmarshal(message, result)
 			if err != nil {
-				errorLogger.Printf("could not receive data, %s", err)
+				logJsonDecodingError( err)
 				return driver.ErrBadConn
 			}
 		}
