@@ -116,6 +116,12 @@ func (c *connection) connect() error {
 			c.websocket = ws
 			c.websocket.EnableWriteCompression(false)
 			break
+		} else {
+			errorLogger.Print(error_reporting_go.ExaError("W-EGOD-3").
+				Message("Connection to {{url}} failed: {{error}}").
+				Parameter("url", fmt.Sprintf("%s://%s", u.Scheme, u.Host)).
+				Parameter("error", err).
+				String())
 		}
 	}
 	return err
@@ -131,11 +137,10 @@ func (c *connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][
 	}
 	actualFingerprint := sha256Hex(rawCerts[0])
 	if !strings.EqualFold(expectedFingerprint, actualFingerprint) {
-		err := error_reporting_go.ExaError("E-EGOD-2")
-		err.Message("The server's certificate fingerprint {{server fingerprint}} does not match the expected fingerprint {{expected fingerprint}}")
-		err.ParameterWithDescription("server fingerprint", actualFingerprint, "The SHA256 sum of the server's certificate")
-		err.ParameterWithDescription("expected fingerprint", expectedFingerprint, "The expected fingerprint")
-		return err
+		return error_reporting_go.ExaError("E-EGOD-2").
+			Message("The server's certificate fingerprint {{server fingerprint}} does not match the expected fingerprint {{expected fingerprint}}").
+			ParameterWithDescription("server fingerprint", actualFingerprint, "The SHA256 sum of the server's certificate").
+			ParameterWithDescription("expected fingerprint", expectedFingerprint, "The expected fingerprint")
 	}
 	return nil
 }
