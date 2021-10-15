@@ -59,11 +59,6 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	suite.Equal("2", columns[0])
 }
 
-func (suite *IntegrationTestSuite) TestConnectWithTlsFails() {
-	database := suite.openConnection(suite.createDefaultConfig().ValidateServerCertificate(true))
-	suite.EqualError(database.Ping(), "x509: certificate is not valid for any names, but wanted to match localhost")
-}
-
 func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	wrongFingerprint := "wrongFingerprint"
