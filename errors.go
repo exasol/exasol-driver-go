@@ -38,13 +38,6 @@ func newErrCouldNotAbort(rootCause error) DriverErr {
 		Parameter("root cause", rootCause))
 }
 
-func newConnectionFailedErr(hosts []string, rootCause error) DriverErr {
-	return newDriverErr(error_msg.ExaError("E-GOD-13").
-		Message("could not connect to hosts {{hosts}}: {{root cause}}").
-		Parameter("hosts", hosts).
-		Parameter("root cause", rootCause.Error()))
-}
-
 func newDriverErr(error *error_msg.ErrorMessageBuilder) DriverErr {
 	return DriverErr(error.String())
 }

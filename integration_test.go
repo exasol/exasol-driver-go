@@ -116,7 +116,7 @@ func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
 	database := suite.openConnection(suite.createDefaultConfig().CertificateFingerprint("wrongFingerprint"))
 	err := database.Ping()
 	suite.Error(err)
-	re := regexp.MustCompile(`E-EGOD-10: The server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
+	re := regexp.MustCompile(`E-EGOD-10: the server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
 	submatches := re.FindStringSubmatch(err.Error())
 	suite.Equal(2, len(submatches), "Error message %q does not match %q", err, re)
 	return submatches[1]

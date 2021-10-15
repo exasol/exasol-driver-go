@@ -123,7 +123,7 @@ func (c *connection) connect() error {
 				String())
 		}
 	}
-	return newConnectionFailedErr(hosts, err)
+	return err
 }
 
 func (c *connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
