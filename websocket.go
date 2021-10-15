@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	error_reporting_go "github.com/exasol/error-reporting-go"
+	error_msg "github.com/exasol/error-reporting-go"
 	"github.com/gorilla/websocket"
 )
 
@@ -116,7 +116,7 @@ func (c *connection) connect() error {
 			c.websocket.EnableWriteCompression(false)
 			break
 		} else {
-			errorLogger.Print(error_reporting_go.ExaError("W-EGOD-3").
+			errorLogger.Print(error_msg.ExaError("W-EGOD-3").
 				Message("Connection to {{url}} failed: {{error}}").
 				Parameter("url", url.String()).
 				Parameter("error", err).
@@ -132,14 +132,11 @@ func (c *connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][
 		return nil
 	}
 	if len(rawCerts) == 0 {
-		return error_reporting_go.ExaError("E-EGOD-1").Message("Server did not return certificates")
+		return ErrMissingServerCertificate
 	}
 	actualFingerprint := sha256Hex(rawCerts[0])
 	if !strings.EqualFold(expectedFingerprint, actualFingerprint) {
-		return error_reporting_go.ExaError("E-EGOD-2").
-			Message("The server's certificate fingerprint {{server fingerprint}} does not match the expected fingerprint {{expected fingerprint}}").
-			ParameterWithDescription("server fingerprint", actualFingerprint, "The SHA256 sum of the server's certificate").
-			ParameterWithDescription("expected fingerprint", expectedFingerprint, "The expected fingerprint")
+		return newErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint)
 	}
 	return nil
 }
@@ -164,7 +161,7 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 	case <-ctx.Done():
 		_, err := c.asyncSend(&Command{Command: "abortQuery"})
 		if err != nil {
-			return fmt.Errorf("could not abort query %w", ctx.Err())
+			return newErrCouldNotAbort(ctx.Err())
 		}
 		return ctx.Err()
 	case err := <-channel:
@@ -229,7 +226,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 		}
 
 		if result.Status != "ok" {
-			return fmt.Errorf("[%s] %s", result.Exception.SQLCode, result.Exception.Text)
+			return newSqlErr(result.Exception)
 		}
 
 		if response == nil {

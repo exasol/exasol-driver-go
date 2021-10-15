@@ -15,12 +15,12 @@ func TestTransactionSuite(t *testing.T) {
 
 func (suite *TransactionTestSuite) TestCommitWithEmptyConnection() {
 	transaction := transaction{nil}
-	suite.EqualError(transaction.Commit(), "invalid connection")
+	suite.EqualError(transaction.Commit(), "E-EGOD-4: invalid connection")
 }
 
 func (suite *TransactionTestSuite) TestRollbackWithEmptyConnection() {
 	transaction := transaction{nil}
-	suite.EqualError(transaction.Rollback(), "invalid connection")
+	suite.EqualError(transaction.Rollback(), "E-EGOD-4: invalid connection")
 }
 
 func (suite *TransactionTestSuite) TestCommitWithClosedConnection() {

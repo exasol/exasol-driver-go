@@ -29,5 +29,5 @@ func TestErrorsSetLogger(t *testing.T) {
 }
 
 func TestLoggerIsNil(t *testing.T) {
-	assert.EqualError(t, SetLogger(nil), "logger is nil")
+	assert.EqualError(t, SetLogger(nil), "E-EGOD-11: logger is nil")
 }

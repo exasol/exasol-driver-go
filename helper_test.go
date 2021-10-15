@@ -17,5 +17,5 @@ func TestNamedValuesToValuesInvalidName(t *testing.T) {
 	namedValues := []driver.NamedValue{{Name: "some name"}}
 	values, err := namedValuesToValues(namedValues)
 	assert.Nil(t, values)
-	assert.EqualError(t, err, "named parameters not supported")
+	assert.EqualError(t, err, "E-EGOD-10: named parameters not supported")
 }

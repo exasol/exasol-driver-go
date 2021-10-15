@@ -10,6 +10,8 @@ To migrate to the new version, you only need to rename all occurances of `usetls
 
 We also added support for TLS certificate fingerprints, similar to the [JDBC driver](https://docs.exasol.com/connect_exasol/drivers/jdbc.htm). This is especially useful when your Exasol database uses a self-signed certificate or the certificate contains the wrong hostname. See the [documentation](../../README.md) for details.
 
+The new release also uses [error-reporting-go](https://github.com/exasol/error-reporting-go/) to provide error messages with a unique ID, e.g. `E-EGOD-4`. This will allow us to generate a catalog of all error messages in a central location.
+
 ## Features
 
 * #37: Verify TLS certificate fingerprints
