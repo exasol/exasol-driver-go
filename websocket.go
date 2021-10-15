@@ -78,9 +78,10 @@ func (c *connection) connect() error {
 			Scheme: c.getURIScheme(),
 			Host:   fmt.Sprintf("%s:%d", host, c.config.port),
 		}
+		skipVerify := !c.config.validateServerCertificate || c.config.certificateFingerprint != ""
 		dialer := *websocket.DefaultDialer
 		dialer.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: !c.config.validateServerCertificate,
+			InsecureSkipVerify: skipVerify,
 			CipherSuites: []uint16{
 				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,

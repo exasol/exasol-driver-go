@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -104,6 +105,51 @@ func (suite *IntegrationTestSuite) TestConnectWithoutEncryption() {
 func (suite *IntegrationTestSuite) TestConnectWithTlsFails() {
 	database := suite.openConnection(suite.createDefaultConfig().ValidateServerCertificate(true))
 	suite.EqualError(database.Ping(), "x509: certificate is not valid for any names, but wanted to match localhost")
+}
+
+func (suite *IntegrationTestSuite) TestTlsConnection() {
+	actualFingerprint := suite.getActualCertificateFingerprint()
+	wrongFingerprint := "wrongFingerprint"
+	noFingerprint := ""
+
+	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-2: The server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
+
+	for i, testCase := range []struct {
+		validateCertificate bool
+		fingerprint         string
+		expectedError       string
+	}{
+		// validate certificate = off
+		{false, noFingerprint, ""},
+		{false, wrongFingerprint, errorMsgWrongFingerprint},
+		{false, actualFingerprint, ""},
+		// validate certificate = on
+		{true, noFingerprint, "x509: certificate is not valid for any names, but wanted to match localhost"},
+		{true, wrongFingerprint, errorMsgWrongFingerprint},
+		{true, actualFingerprint, ""},
+	} {
+		suite.Run(fmt.Sprintf("Test %v: validate=%v fingerprint=%q expectedErrror=%q", i, testCase.validateCertificate, testCase.fingerprint, testCase.expectedError), func() {
+			database := suite.openConnection(suite.createDefaultConfig().
+				ValidateServerCertificate(testCase.validateCertificate).
+				CertificateFingerprint(testCase.fingerprint))
+			err := database.Ping()
+			if testCase.expectedError == "" {
+				suite.NoError(err)
+			} else {
+				suite.EqualError(err, testCase.expectedError)
+			}
+		})
+	}
+}
+
+func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
+	database := suite.openConnection(suite.createDefaultConfig().CertificateFingerprint("wrongFingerprint"))
+	err := database.Ping()
+	suite.Error(err)
+	re := regexp.MustCompile(`E-EGOD-2: The server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
+	submatches := re.FindStringSubmatch(err.Error())
+	suite.Equal(2, len(submatches), "Error message %q does not match expected message", err)
+	return submatches[1]
 }
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
