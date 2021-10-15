@@ -74,11 +74,9 @@ func (c *connection) connect() error {
 	})
 
 	for _, host := range hosts {
-		uri := fmt.Sprintf("%s:%d", host, c.config.port)
-
-		u := url.URL{
+		url := url.URL{
 			Scheme: c.getURIScheme(),
-			Host:   uri,
+			Host:   fmt.Sprintf("%s:%d", host, c.config.port),
 		}
 		dialer := *websocket.DefaultDialer
 		dialer.TLSClientConfig = &tls.Config{
@@ -111,7 +109,7 @@ func (c *connection) connect() error {
 		}
 
 		var ws *websocket.Conn
-		ws, _, err = dialer.DialContext(c.ctx, u.String(), nil)
+		ws, _, err = dialer.DialContext(c.ctx, url.String(), nil)
 		if err == nil {
 			c.websocket = ws
 			c.websocket.EnableWriteCompression(false)
@@ -119,7 +117,7 @@ func (c *connection) connect() error {
 		} else {
 			errorLogger.Print(error_reporting_go.ExaError("W-EGOD-3").
 				Message("Connection to {{url}} failed: {{error}}").
-				Parameter("url", fmt.Sprintf("%s://%s", u.Scheme, u.Host)).
+				Parameter("url", url.String()).
 				Parameter("error", err).
 				String())
 		}
