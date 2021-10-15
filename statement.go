@@ -101,7 +101,7 @@ func (s *statement) executePreparedStatement(ctx context.Context, args []driver.
 		NumRows:         len(data[0]),
 		Data:            data,
 		Attributes: Attributes{
-			ResultSetMaxRows: s.connection.config.ResultSetMaxRows,
+			ResultSetMaxRows: s.connection.config.resultSetMaxRows,
 		},
 	}
 	result := &SQLQueriesResponse{}

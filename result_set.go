@@ -84,7 +84,7 @@ func (results *queryResults) Next(dest []driver.Value) error {
 			Command:         Command{"fetch"},
 			ResultSetHandle: results.data.ResultSetHandle,
 			StartPosition:   results.rowPointer,
-			NumBytes:        results.con.config.FetchSize,
+			NumBytes:        results.con.config.fetchSize,
 		}, result)
 		if err != nil {
 			return err

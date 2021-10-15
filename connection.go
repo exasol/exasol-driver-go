@@ -89,7 +89,7 @@ func (c *connection) Begin() (driver.Tx, error) {
 		errorLogger.Print(ErrClosed)
 		return nil, driver.ErrBadConn
 	}
-	if c.config.Autocommit {
+	if c.config.autocommit {
 		return nil, ErrAutocommitEnabled
 	}
 	return &transaction{
@@ -151,7 +151,7 @@ func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePrep
 		NumRows:         len(data[0]),
 		Data:            data,
 		Attributes: Attributes{
-			ResultSetMaxRows: c.config.ResultSetMaxRows,
+			ResultSetMaxRows: c.config.resultSetMaxRows,
 		},
 	}
 	result := &SQLQueriesResponse{}
@@ -212,7 +212,7 @@ func (c *connection) simpleExec(ctx context.Context, query string) (*SQLQueriesR
 		Command: Command{"execute"},
 		SQLText: query,
 		Attributes: Attributes{
-			ResultSetMaxRows: c.config.ResultSetMaxRows,
+			ResultSetMaxRows: c.config.resultSetMaxRows,
 		},
 	}
 	result := &SQLQueriesResponse{}
@@ -235,11 +235,11 @@ func (c *connection) close(ctx context.Context) error {
 }
 
 func (c *connection) login(ctx context.Context) error {
-	hasCompression := c.config.Compression
-	c.config.Compression = false
+	hasCompression := c.config.compression
+	c.config.compression = false
 	loginCommand := &LoginCommand{
 		Command:         Command{"login"},
-		ProtocolVersion: c.config.ApiVersion,
+		ProtocolVersion: c.config.apiVersion,
 	}
 	loginResponse := &PublicKeyResponse{}
 	err := c.send(ctx, loginCommand, loginResponse)
@@ -257,7 +257,7 @@ func (c *connection) login(ctx context.Context) error {
 		N: &modulus,
 		E: int(pubKeyExp),
 	}
-	password := []byte(c.config.Password)
+	password := []byte(c.config.password)
 	encPass, err := rsa.EncryptPKCS1v15(rand.Reader, &pubKey, password)
 	if err != nil {
 		errorLogger.Printf("password encryption error: %s", err)
@@ -266,17 +266,17 @@ func (c *connection) login(ctx context.Context) error {
 	b64Pass := base64.StdEncoding.EncodeToString(encPass)
 
 	authRequest := AuthCommand{
-		Username:       c.config.User,
+		Username:       c.config.user,
 		Password:       b64Pass,
 		UseCompression: false,
-		ClientName:     c.config.ClientName,
+		ClientName:     c.config.clientName,
 		DriverName:     fmt.Sprintf("exasol-driver-go %s", driverVersion),
 		ClientOs:       runtime.GOOS,
-		ClientVersion:  c.config.ClientName,
+		ClientVersion:  c.config.clientName,
 		ClientRuntime:  runtime.Version(),
 		Attributes: Attributes{
-			Autocommit:         boolToPtr(c.config.Autocommit),
-			CurrentSchema:      c.config.Schema,
+			Autocommit:         boolToPtr(c.config.autocommit),
+			CurrentSchema:      c.config.schema,
 			CompressionEnabled: boolToPtr(hasCompression),
 		},
 	}
@@ -291,7 +291,7 @@ func (c *connection) login(ctx context.Context) error {
 		return err
 	}
 	c.isClosed = false
-	c.config.Compression = hasCompression
+	c.config.compression = hasCompression
 
 	return nil
 }

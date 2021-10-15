@@ -10,22 +10,22 @@ import (
 type ExasolDriver struct{}
 
 type config struct {
-	User             string
-	Password         string
-	Host             string
-	Port             int
-	Params           map[string]string // Connection parameters
-	ApiVersion       int
-	ClientName       string
-	ClientVersion    string
-	Schema           string
-	Autocommit       bool
-	FetchSize        int
-	Compression      bool
-	ResultSetMaxRows int
-	Timeout          time.Time
-	Encryption       bool
-	UseTLS           bool
+	user                      string
+	password                  string
+	host                      string
+	port                      int
+	params                    map[string]string // Connection parameters
+	apiVersion                int
+	clientName                string
+	clientVersion             string
+	schema                    string
+	autocommit                bool
+	fetchSize                 int
+	compression               bool
+	resultSetMaxRows          int
+	timeout                   time.Time
+	encryption                bool
+	validateServerCertificate bool
 }
 
 func init() {
