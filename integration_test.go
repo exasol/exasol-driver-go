@@ -80,6 +80,12 @@ func (suite *IntegrationTestSuite) TestConnectWithCorrectCredentials() {
 	suite.NoError(database.Ping())
 }
 
+func (suite *IntegrationTestSuite) TestConnectWithMultipleInvalidHostNames() {
+	hosts := fmt.Sprintf("wrong0,wrong1,wrong2,wrong3,wrong4,wrong5,%s", suite.host)
+	database := suite.openConnection(suite.createDefaultConfig().Host(hosts))
+	suite.NoError(database.Ping())
+}
+
 func (suite *IntegrationTestSuite) TestConnectWithCompression() {
 	database := suite.openConnection(suite.createDefaultConfig().Compression(true))
 	suite.NoError(database.Ping())
@@ -87,6 +93,11 @@ func (suite *IntegrationTestSuite) TestConnectWithCompression() {
 
 func (suite *IntegrationTestSuite) TestConnectWithoutCompression() {
 	database := suite.openConnection(suite.createDefaultConfig().Compression(false))
+	suite.NoError(database.Ping())
+}
+
+func (suite *IntegrationTestSuite) TestConnectWithoutEncryption() {
+	database := suite.openConnection(suite.createDefaultConfig().Encryption(false))
 	suite.NoError(database.Ping())
 }
 
