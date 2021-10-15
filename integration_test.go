@@ -63,8 +63,8 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	wrongFingerprint := "wrongFingerprint"
 
-	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-2: The server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
-	errorMsgAuthFailed := "[08004] Connection exception - authentication failed."
+	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
+	errorMsgAuthFailed := "E-GOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
 	errorMsgCertWrongHost := "x509: certificate is not valid for any names, but wanted to match localhost"
 	noError := ""
 
@@ -116,9 +116,9 @@ func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
 	database := suite.openConnection(suite.createDefaultConfig().CertificateFingerprint("wrongFingerprint"))
 	err := database.Ping()
 	suite.Error(err)
-	re := regexp.MustCompile(`E-EGOD-2: The server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
+	re := regexp.MustCompile(`E-EGOD-10: The server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
 	submatches := re.FindStringSubmatch(err.Error())
-	suite.Equal(2, len(submatches), "Error message %q does not match expected message", err)
+	suite.Equal(2, len(submatches), "Error message %q does not match %q", err, re)
 	return submatches[1]
 }
 

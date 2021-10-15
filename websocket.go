@@ -116,14 +116,14 @@ func (c *connection) connect() error {
 			c.websocket.EnableWriteCompression(false)
 			break
 		} else {
-			errorLogger.Print(error_msg.ExaError("W-EGOD-3").
-				Message("Connection to {{url}} failed: {{error}}").
+			errorLogger.Print(error_msg.ExaError("W-EGOD-14").
+				Message("connection to {{url}} failed: {{error}}").
 				Parameter("url", url.String()).
 				Parameter("error", err).
 				String())
 		}
 	}
-	return err
+	return newConnectionFailedErr(hosts, err)
 }
 
 func (c *connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {

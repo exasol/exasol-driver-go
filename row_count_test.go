@@ -9,7 +9,7 @@ func TestLastInsertId(t *testing.T) {
 	rows := rowCount{10}
 	id, err := rows.LastInsertId()
 	assert.Equal(t, int64(0), id)
-	assert.EqualError(t, err, "E-EGOD-9: no LastInsertId available")
+	assert.EqualError(t, err, "E-EGOD-6: no LastInsertId available")
 }
 
 func TestRowsAffected(t *testing.T) {
