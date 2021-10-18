@@ -41,7 +41,7 @@ func (c *connection) resolveHosts() ([]string, error) {
 			}
 
 			if stop < start {
-				return nil, fmt.Errorf("invalid range limits")
+				return nil, newInvalidHostRangeLimits(host)
 			}
 
 			for i := start; i <= stop; i++ {

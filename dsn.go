@@ -103,7 +103,7 @@ func (c *DSNConfig) String() string {
 
 func parseDSN(dsn string) (*config, error) {
 	if !strings.HasPrefix(dsn, "exa:") {
-		return nil, fmt.Errorf("invalid connection string, must start with 'exa:'")
+		return nil, newInvalidConnectionString(dsn)
 	}
 
 	splitDsn := splitIntoConnectionStringAndParameters(dsn)
@@ -127,11 +127,11 @@ func splitIntoConnectionStringAndParameters(dsn string) []string {
 func extractHostAndPort(connectionString string) (string, int, error) {
 	hostPort := strings.Split(connectionString, ":")
 	if len(hostPort) != 2 {
-		return "", 0, fmt.Errorf("invalid host or port, expected format: <host>:<port>")
+		return "", 0, newInvalidConnectionStringHostOrPort(connectionString)
 	}
 	port, err := strconv.Atoi(hostPort[1])
 	if err != nil {
-		return "", 0, fmt.Errorf("invalid `port` value, numeric port expected")
+		return "", 0, newInvalidConnectionStringInvalidPort(hostPort[1])
 	}
 	return hostPort[0], port, nil
 }
@@ -157,7 +157,7 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 	for _, parameter := range parameters {
 		keyValuePair := strings.SplitN(parameter, "=", 2)
 		if len(keyValuePair) != 2 {
-			return nil, fmt.Errorf("invalid parameter %s, expected format <parameter>=<value>", parameter)
+			return nil, newInvalidConnectionStringInvalidParameter(parameter)
 		}
 		key := keyValuePair[0]
 		value := keyValuePair[1]
@@ -184,17 +184,17 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 		case "schema":
 			config.schema = value
 		case "fetchsize":
-			value, err := strconv.Atoi(value)
+			fetchSizeValue, err := strconv.Atoi(value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid `fetchsize` value, numeric expected")
+				return nil, newInvalidConnectionStringInvalidIntParam("fetchsize", value)
 			}
-			config.fetchSize = value
+			config.fetchSize = fetchSizeValue
 		case "resultsetmaxrows":
-			value, err := strconv.Atoi(value)
+			maxRowsValue, err := strconv.Atoi(value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid `resultsetmaxrows` value, numeric expected")
+				return nil, newInvalidConnectionStringInvalidIntParam("resultsetmaxrows", value)
 			}
-			config.resultSetMaxRows = value
+			config.resultSetMaxRows = maxRowsValue
 		default:
 			config.params[key] = unescape(value, ";")
 		}

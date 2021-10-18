@@ -68,7 +68,6 @@ func logMarshallingError(request interface{}, err error) {
 }
 
 func logRequestSendingError(err error) {
-	errorLogger.Printf("could not send request, %s", err)
 	errorLogger.Print(error_msg.ExaError("W-EGOD-16").
 		Message("could not send request: {{error}}").
 		Parameter("error", err).
@@ -94,6 +93,41 @@ func logJsonDecodingError(err error) {
 		Message("could not decode json data: {{error}}").
 		Parameter("error", err).
 		String())
+}
+
+func newInvalidHostRangeLimits(host string) DriverErr {
+	return newDriverErr(error_msg.ExaError("E-GOD-20").
+		Message("invalid host range limits: {{host name}}").
+		Parameter("host name", host))
+}
+
+func newInvalidConnectionString(connectionString string) DriverErr {
+	return newDriverErr(error_msg.ExaError("E-GOD-21").
+		Message("invalid connection string, must start with 'exa:': {{connection string}}").
+		Parameter("connection string", connectionString))
+}
+
+func newInvalidConnectionStringHostOrPort(connectionString string) DriverErr {
+	return newDriverErr(error_msg.ExaError("E-GOD-22").
+		Message("invalid host or port in {{connection string}}, expected format: <host>:<port>").
+		Parameter("connection string", connectionString))
+}
+
+func newInvalidConnectionStringInvalidPort(port string) DriverErr {
+	return newDriverErr(error_msg.ExaError("E-GOD-23").
+		Message("invalid `port` value {{port}}, numeric port expected").
+		Parameter("port", port))
+}
+func newInvalidConnectionStringInvalidParameter(parameter string) DriverErr {
+	return newDriverErr(error_msg.ExaError("E-GOD-24").
+		Message("invalid parameter {{parameter}}, expected format <parameter>=<value>").
+		Parameter("parameter", parameter))
+}
+func newInvalidConnectionStringInvalidIntParam(paramName, value string) DriverErr {
+	return newDriverErr(error_msg.ExaError("E-GOD-25").
+		Message("invalid {{parameter name}} value {{value}}, numeric expected").
+		Parameter("parameter name", paramName).
+		Parameter("value", value))
 }
 
 type DriverErr string

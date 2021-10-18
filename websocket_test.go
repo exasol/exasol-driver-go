@@ -59,6 +59,25 @@ func (suite *WebsocketTestSuite) TestResolvingHostRangeWithCompleteHostnameNotSu
 	suite.Equal("exasol1..exasol3", hosts[0])
 }
 
+func (suite *WebsocketTestSuite) TestResolvingHostRangeWithInvalidRangeNotSupported() {
+	config := config{host: "exasolX..Y"}
+	connection := connection{config: &config}
+
+	hosts, err := connection.resolveHosts()
+	suite.NoError(err)
+	suite.Equal(1, len(hosts))
+	suite.Equal("exasolX..Y", hosts[0])
+}
+
+func (suite *WebsocketTestSuite) TestResolvingHostRangeWithInvalidRangeLimits() {
+	config := config{host: "exasol3..1"}
+	connection := connection{config: &config}
+
+	hosts, err := connection.resolveHosts()
+	suite.EqualError(err, "E-GOD-20: invalid host range limits: 'exasol3..1'")
+	suite.Nil(hosts)
+}
+
 func (suite *WebsocketTestSuite) TestIPRangeResolve() {
 	config := config{host: "127.0.0.1..3"}
 	connection := connection{config: &config}
