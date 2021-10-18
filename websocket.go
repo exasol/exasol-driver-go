@@ -27,29 +27,39 @@ func (c *connection) resolveHosts() ([]string, error) {
 
 	for _, host := range strings.Split(c.config.host, ",") {
 		if hostRangeRegex.MatchString(host) {
-			matches := hostRangeRegex.FindStringSubmatch(host)
-			prefix := matches[2]
-
-			start, err := strconv.Atoi(matches[3])
+			parsedHosts, err := c.parseRange(hostRangeRegex, host)
 			if err != nil {
 				return nil, err
 			}
-
-			stop, err := strconv.Atoi(matches[4])
-			if err != nil {
-				return nil, err
-			}
-
-			if stop < start {
-				return nil, newInvalidHostRangeLimits(host)
-			}
-
-			for i := start; i <= stop; i++ {
-				hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
-			}
+			hosts = append(hosts, parsedHosts...)
 		} else {
 			hosts = append(hosts, host)
 		}
+	}
+	return hosts, nil
+}
+
+func (c *connection) parseRange(hostRangeRegex *regexp.Regexp, host string) ([]string, error) {
+	matches := hostRangeRegex.FindStringSubmatch(host)
+	prefix := matches[2]
+
+	start, err := strconv.Atoi(matches[3])
+	if err != nil {
+		return nil, err
+	}
+
+	stop, err := strconv.Atoi(matches[4])
+	if err != nil {
+		return nil, err
+	}
+
+	if stop < start {
+		return nil, newInvalidHostRangeLimits(host)
+	}
+
+	var hosts []string
+	for i := start; i <= stop; i++ {
+		hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
 	}
 	return hosts, nil
 }
@@ -208,14 +218,14 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 			}
 			err = json.NewDecoder(r).Decode(result)
 			if err != nil {
-				logJsonDecodingError( err)
+				logJsonDecodingError(err)
 				return driver.ErrBadConn
 			}
 
 		} else {
 			err = json.Unmarshal(message, result)
 			if err != nil {
-				logJsonDecodingError( err)
+				logJsonDecodingError(err)
 				return driver.ErrBadConn
 			}
 		}
