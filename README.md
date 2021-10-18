@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver [ALPHA]
+# Exasol Go SQL Driver
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
 
