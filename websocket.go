@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/url"
 	"regexp"
@@ -200,6 +201,10 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 		return nil, driver.ErrBadConn
 	}
 
+	return c.callback(), nil
+}
+
+func (c *connection) callback() func(response interface{}) error {
 	return func(response interface{}) error {
 
 		_, message, err := c.websocket.ReadMessage()
@@ -209,25 +214,22 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 		}
 
 		result := &BaseResponse{}
+
+		var reader io.Reader
+		reader = bytes.NewReader(message)
+
 		if c.config.compression {
-			b := bytes.NewReader(message)
-			r, err := zlib.NewReader(b)
+			reader, err = zlib.NewReader(bytes.NewReader(message))
 			if err != nil {
 				logUncompressingError(err)
 				return driver.ErrBadConn
 			}
-			err = json.NewDecoder(r).Decode(result)
-			if err != nil {
-				logJsonDecodingError(err)
-				return driver.ErrBadConn
-			}
+		}
 
-		} else {
-			err = json.Unmarshal(message, result)
-			if err != nil {
-				logJsonDecodingError(err)
-				return driver.ErrBadConn
-			}
+		err = json.NewDecoder(reader).Decode(result)
+		if err != nil {
+			logJsonDecodingError(err)
+			return driver.ErrBadConn
 		}
 
 		if result.Status != "ok" {
@@ -239,6 +241,5 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 		}
 
 		return json.Unmarshal(result.ResponseData, response)
-
-	}, nil
+	}
 }
