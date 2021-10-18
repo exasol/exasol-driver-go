@@ -29,7 +29,7 @@ func (suite *ErrorsTestSuite) SetupTest() {
 }
 
 func (suite *ErrorsTestSuite) TearDownTest() {
-	SetLogger(suite.previousLogger)
+	suite.NoError(SetLogger(suite.previousLogger))
 }
 
 func (suite *ErrorsTestSuite) getLogContent() string {
