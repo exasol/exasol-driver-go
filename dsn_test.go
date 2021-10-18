@@ -34,6 +34,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	suite.Equal(time.Time{}, dsn.timeout)
 	suite.Equal(true, dsn.encryption)
 	suite.Equal(true, dsn.validateServerCertificate)
+	suite.Equal("", dsn.certificateFingerprint)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
@@ -47,6 +48,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 			"schema=MY_SCHEMA;" +
 			"compression=1;" +
 			"resultsetmaxrows=100;" +
+			"certificatefingerprint=fingerprint;" +
 			"mycustomparam=value")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.user)
@@ -62,6 +64,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 	suite.Equal(100, dsn.resultSetMaxRows)
 	suite.Equal(time.Time{}, dsn.timeout)
 	suite.Equal(false, dsn.encryption)
+	suite.Equal("fingerprint", dsn.certificateFingerprint)
 	suite.Equal(map[string]string{"mycustomparam": "value"}, dsn.params)
 }
 
@@ -106,25 +109,25 @@ func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars2() {
 func (suite *DsnTestSuite) TestInvalidPrefix() {
 	dsn, err := parseDSN("exaa:localhost:1234")
 	suite.Nil(dsn)
-	suite.EqualError(err, "invalid connection string, must start with 'exa:'")
+	suite.EqualError(err, "E-GOD-21: invalid connection string, must start with 'exa:': 'exaa:localhost:1234'")
 }
 
 func (suite *DsnTestSuite) TestInvalidHostPortFormat() {
 	dsn, err := parseDSN("exa:localhost")
 	suite.Nil(dsn)
-	suite.EqualError(err, "invalid host or port, expected format: <host>:<port>")
+	suite.EqualError(err, "E-GOD-22: invalid host or port in 'localhost', expected format: <host>:<port>")
 }
 
 func (suite *DsnTestSuite) TestInvalidParameter() {
 	dsn, err := parseDSN("exa:localhost:1234;user")
 	suite.Nil(dsn)
-	suite.EqualError(err, "invalid parameter user, expected format <parameter>=<value>")
+	suite.EqualError(err, "E-GOD-24: invalid parameter 'user', expected format <parameter>=<value>")
 }
 
 func (suite *DsnTestSuite) TestInvalidFetchsize() {
 	dsn, err := parseDSN("exa:localhost:1234;fetchsize=size")
 	suite.Nil(dsn)
-	suite.EqualError(err, "invalid `fetchsize` value, numeric expected")
+	suite.EqualError(err, "E-GOD-25: invalid 'fetchsize' value 'size', numeric expected")
 }
 
 func (suite *DsnTestSuite) TestInvalidValidateservercertificateUsesDefaultValue() {
@@ -136,12 +139,12 @@ func (suite *DsnTestSuite) TestInvalidValidateservercertificateUsesDefaultValue(
 func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
 	dsn, err := parseDSN("exa:localhost:1234;resultsetmaxrows=size")
 	suite.Nil(dsn)
-	suite.EqualError(err, "invalid `resultsetmaxrows` value, numeric expected")
+	suite.EqualError(err, "E-GOD-25: invalid 'resultsetmaxrows' value 'size', numeric expected")
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	dsn, err := parseDSN(
-		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0")
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0;certificatefingerprint=fingerprint;clientname=clientName;clientversion=clientVersion")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.user)
 	suite.Equal("exasol", dsn.password)
@@ -151,24 +154,34 @@ func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	suite.Equal(false, dsn.encryption)
 	suite.Equal(true, dsn.compression)
 	suite.Equal(false, dsn.validateServerCertificate)
+	suite.Equal("fingerprint", dsn.certificateFingerprint)
+	suite.Equal("clientName", dsn.clientName)
+	suite.Equal("clientVersion", dsn.clientVersion)
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesTrue() {
-	config := NewConfig("sys", "exasol")
-	config.Compression(true)
-	config.Encryption(true)
-	config.Autocommit(true)
-	config.ValidateServerCertificate(true)
+	config := NewConfig("sys", "exasol").
+		Compression(true).
+		Encryption(true).
+		Autocommit(true).
+		ValidateServerCertificate(true)
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;validateservercertificate=1", config.String())
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesFalse() {
-	config := NewConfig("sys", "exasol")
-	config.Compression(false)
-	config.Encryption(false)
-	config.Autocommit(false)
-	config.ValidateServerCertificate(false)
+	config := NewConfig("sys", "exasol").
+		Compression(false).
+		Encryption(false).
+		Autocommit(false).
+		ValidateServerCertificate(false)
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=0;compression=0;encryption=0;validateservercertificate=0", config.String())
+}
+
+func (suite *DriverTestSuite) TestConfigToDsnWithClientNameAndVersion() {
+	config := NewConfig("sys", "exasol").
+		ClientName("clientName").
+		ClientVersion("clientVersion")
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;clientname=clientName;clientversion=clientVersion", config.String())
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithDefaultValues() {

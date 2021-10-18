@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -58,41 +59,67 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	suite.Equal("2", columns[0])
 }
 
-func (suite *IntegrationTestSuite) TestConnectWithWrongPort() {
-	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:1234;user=sys;password=exasol", suite.host))
+func (suite *IntegrationTestSuite) TestConnection() {
+	actualFingerprint := suite.getActualCertificateFingerprint()
+	wrongFingerprint := "wrongFingerprint"
+
+	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
+	errorMsgAuthFailed := "E-GOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
+	errorMsgCertWrongHost := "x509: certificate is not valid for any names, but wanted to match localhost"
+	noError := ""
+
+	for i, testCase := range []struct {
+		description   string
+		config        *exasol.DSNConfig
+		expectedError string
+	}{
+		{"wrong port", suite.createDefaultConfig().Port(1234), "connect: connection refuse"},
+		{"wrong host", suite.createDefaultConfig().Host("wrong"), "dial tcp: lookup wrong"},
+		{"wrong user", exasol.NewConfig("wronguser", "exasol").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgAuthFailed},
+		{"wrong password", exasol.NewConfig("sys", "wrongPassword").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgAuthFailed},
+
+		{"valid credentials", suite.createDefaultConfig(), noError},
+		{"multiple invalid hostnames", suite.createDefaultConfig().Host("wrong0,wrong1,wrong2,wrong3,wrong4,wrong5," + suite.host), noError},
+
+		{"compression on", suite.createDefaultConfig().Compression(true), noError},
+		{"compression off", suite.createDefaultConfig().Compression(false), noError},
+
+		{"encryption on", suite.createDefaultConfig().Encryption(true), noError},
+		{"encryption off", suite.createDefaultConfig().Encryption(false), noError},
+
+		{"don't validate cert, no fingerprint", suite.createDefaultConfig().ValidateServerCertificate(false).CertificateFingerprint(""), noError},
+		{"don't validate cert, wrong fingerprint", suite.createDefaultConfig().ValidateServerCertificate(false).CertificateFingerprint(wrongFingerprint), errorMsgWrongFingerprint},
+		{"don't validate cert, correct fingerprint", suite.createDefaultConfig().ValidateServerCertificate(false).CertificateFingerprint(actualFingerprint), noError},
+
+		{"validate cert, no fingerprint", suite.createDefaultConfig().ValidateServerCertificate(true).CertificateFingerprint(""), errorMsgCertWrongHost},
+		{"validate cert, wrong fingerprint", suite.createDefaultConfig().ValidateServerCertificate(true).CertificateFingerprint(wrongFingerprint), errorMsgWrongFingerprint},
+		{"validate cert, correct fingerprint", suite.createDefaultConfig().ValidateServerCertificate(true).CertificateFingerprint(actualFingerprint), noError},
+	} {
+		suite.Run(fmt.Sprintf("Test%02d %s", i, testCase.description), func() {
+			database := suite.openConnection(testCase.config)
+			err := database.Ping()
+			if testCase.expectedError == "" {
+				suite.NoError(err)
+				rows, _ := database.Query("SELECT 2 FROM DUAL")
+				columns, _ := rows.Columns()
+				suite.Equal("2", columns[0])
+				suite.assertSingleValueResult(rows, "2")
+			} else {
+				suite.Error(err)
+				suite.Contains(err.Error(), testCase.expectedError)
+			}
+		})
+	}
+}
+
+func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
+	database := suite.openConnection(suite.createDefaultConfig().CertificateFingerprint("wrongFingerprint"))
 	err := database.Ping()
 	suite.Error(err)
-	suite.Contains(err.Error(), "connect: connection refuse")
-}
-
-func (suite *IntegrationTestSuite) TestConnectWithWrongUsername() {
-	database := suite.openConnection(exasol.NewConfig("wronguser", "exasol").ValidateServerCertificate(false).Port(suite.port))
-	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
-}
-
-func (suite *IntegrationTestSuite) TestConnectWithWrongPassword() {
-	database := suite.openConnection(exasol.NewConfig("sys", "wrongpassword").ValidateServerCertificate(false).Port(suite.port))
-	suite.EqualError(database.Ping(), "[08004] Connection exception - authentication failed.")
-}
-
-func (suite *IntegrationTestSuite) TestConnectWithCorrectCredentials() {
-	database := suite.openConnection(suite.createDefaultConfig())
-	suite.NoError(database.Ping())
-}
-
-func (suite *IntegrationTestSuite) TestConnectWithCompression() {
-	database := suite.openConnection(suite.createDefaultConfig().Compression(true))
-	suite.NoError(database.Ping())
-}
-
-func (suite *IntegrationTestSuite) TestConnectWithoutCompression() {
-	database := suite.openConnection(suite.createDefaultConfig().Compression(false))
-	suite.NoError(database.Ping())
-}
-
-func (suite *IntegrationTestSuite) TestConnectWithTlsFails() {
-	database := suite.openConnection(suite.createDefaultConfig().ValidateServerCertificate(true))
-	suite.EqualError(database.Ping(), "x509: certificate is not valid for any names, but wanted to match localhost")
+	re := regexp.MustCompile(`E-EGOD-10: the server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
+	submatches := re.FindStringSubmatch(err.Error())
+	suite.Equal(2, len(submatches), "Error message %q does not match %q", err, re)
+	return submatches[1]
 }
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {

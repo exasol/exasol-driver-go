@@ -18,6 +18,7 @@ type DSNConfig struct {
 	clientVersion             string
 	fetchSize                 int
 	validateServerCertificate *bool
+	certificateFingerprint    string
 }
 
 func NewConfig(user, password string) *DSNConfig {
@@ -43,6 +44,10 @@ func (c *DSNConfig) Autocommit(enabled bool) *DSNConfig {
 }
 func (c *DSNConfig) ValidateServerCertificate(validate bool) *DSNConfig {
 	c.validateServerCertificate = &validate
+	return c
+}
+func (c *DSNConfig) CertificateFingerprint(fingerprint string) *DSNConfig {
+	c.certificateFingerprint = fingerprint
 	return c
 }
 func (c *DSNConfig) FetchSize(size int) *DSNConfig {
@@ -81,6 +86,9 @@ func (c *DSNConfig) String() string {
 	if c.validateServerCertificate != nil {
 		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", boolToInt(*c.validateServerCertificate)))
 	}
+	if c.certificateFingerprint != "" {
+		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", c.certificateFingerprint))
+	}
 	if c.fetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
 	}
@@ -95,7 +103,7 @@ func (c *DSNConfig) String() string {
 
 func parseDSN(dsn string) (*config, error) {
 	if !strings.HasPrefix(dsn, "exa:") {
-		return nil, fmt.Errorf("invalid connection string, must start with 'exa:'")
+		return nil, newInvalidConnectionString(dsn)
 	}
 
 	splitDsn := splitIntoConnectionStringAndParameters(dsn)
@@ -119,11 +127,11 @@ func splitIntoConnectionStringAndParameters(dsn string) []string {
 func extractHostAndPort(connectionString string) (string, int, error) {
 	hostPort := strings.Split(connectionString, ":")
 	if len(hostPort) != 2 {
-		return "", 0, fmt.Errorf("invalid host or port, expected format: <host>:<port>")
+		return "", 0, newInvalidConnectionStringHostOrPort(connectionString)
 	}
 	port, err := strconv.Atoi(hostPort[1])
 	if err != nil {
-		return "", 0, fmt.Errorf("invalid `port` value, numeric port expected")
+		return "", 0, newInvalidConnectionStringInvalidPort(hostPort[1])
 	}
 	return hostPort[0], port, nil
 }
@@ -149,7 +157,7 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 	for _, parameter := range parameters {
 		keyValuePair := strings.SplitN(parameter, "=", 2)
 		if len(keyValuePair) != 2 {
-			return nil, fmt.Errorf("invalid parameter %s, expected format <parameter>=<value>", parameter)
+			return nil, newInvalidConnectionStringInvalidParameter(parameter)
 		}
 		key := keyValuePair[0]
 		value := keyValuePair[1]
@@ -165,6 +173,8 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 			config.encryption = value == "1"
 		case "validateservercertificate":
 			config.validateServerCertificate = value != "0"
+		case "certificatefingerprint":
+			config.certificateFingerprint = value
 		case "compression":
 			config.compression = value == "1"
 		case "clientname":
@@ -174,17 +184,17 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 		case "schema":
 			config.schema = value
 		case "fetchsize":
-			value, err := strconv.Atoi(value)
+			fetchSizeValue, err := strconv.Atoi(value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid `fetchsize` value, numeric expected")
+				return nil, newInvalidConnectionStringInvalidIntParam("fetchsize", value)
 			}
-			config.fetchSize = value
+			config.fetchSize = fetchSizeValue
 		case "resultsetmaxrows":
-			value, err := strconv.Atoi(value)
+			maxRowsValue, err := strconv.Atoi(value)
 			if err != nil {
-				return nil, fmt.Errorf("invalid `resultsetmaxrows` value, numeric expected")
+				return nil, newInvalidConnectionStringInvalidIntParam("resultsetmaxrows", value)
 			}
-			config.resultSetMaxRows = value
+			config.resultSetMaxRows = maxRowsValue
 		default:
 			config.params[key] = unescape(value, ";")
 		}

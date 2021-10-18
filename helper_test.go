@@ -2,8 +2,9 @@ package exasol
 
 import (
 	"database/sql/driver"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNamedValuesToValues(t *testing.T) {
@@ -17,5 +18,5 @@ func TestNamedValuesToValuesInvalidName(t *testing.T) {
 	namedValues := []driver.NamedValue{{Name: "some name"}}
 	values, err := namedValuesToValues(namedValues)
 	assert.Nil(t, values)
-	assert.EqualError(t, err, "named parameters not supported")
+	assert.EqualError(t, err, "E-EGOD-7: named parameters not supported")
 }

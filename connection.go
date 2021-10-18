@@ -260,7 +260,7 @@ func (c *connection) login(ctx context.Context) error {
 	password := []byte(c.config.password)
 	encPass, err := rsa.EncryptPKCS1v15(rand.Reader, &pubKey, password)
 	if err != nil {
-		errorLogger.Printf("password encryption error: %s", err)
+		logPasswordEncryptionError(err)
 		return driver.ErrBadConn
 	}
 	b64Pass := base64.StdEncoding.EncodeToString(encPass)

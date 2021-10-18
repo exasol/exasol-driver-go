@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"compress/zlib"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"database/sql/driver"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -38,7 +41,7 @@ func (c *connection) resolveHosts() ([]string, error) {
 			}
 
 			if stop < start {
-				return nil, fmt.Errorf("invalid range limits")
+				return nil, newInvalidHostRangeLimits(host)
 			}
 
 			for i := start; i <= stop; i++ {
@@ -70,47 +73,76 @@ func (c *connection) connect() error {
 	})
 
 	for _, host := range hosts {
-		uri := fmt.Sprintf("%s:%d", host, c.config.port)
-
-		u := url.URL{
+		url := url.URL{
 			Scheme: c.getURIScheme(),
-			Host:   uri,
+			Host:   fmt.Sprintf("%s:%d", host, c.config.port),
 		}
+		skipVerify := !c.config.validateServerCertificate || c.config.certificateFingerprint != ""
 		dialer := *websocket.DefaultDialer
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: !c.config.validateServerCertificate, CipherSuites: []uint16{
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		dialer.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: skipVerify,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 
-			tls.TLS_AES_128_GCM_SHA256,
-			tls.TLS_AES_256_GCM_SHA384,
-			tls.TLS_CHACHA20_POLY1305_SHA256,
+				tls.TLS_AES_128_GCM_SHA256,
+				tls.TLS_AES_256_GCM_SHA384,
+				tls.TLS_CHACHA20_POLY1305_SHA256,
 
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-		}}
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			},
+			VerifyPeerCertificate: c.verifyPeerCertificate,
+		}
 
 		var ws *websocket.Conn
-		ws, _, err = dialer.DialContext(c.ctx, u.String(), nil)
+		ws, _, err = dialer.DialContext(c.ctx, url.String(), nil)
 		if err == nil {
 			c.websocket = ws
 			c.websocket.EnableWriteCompression(false)
 			break
+		} else {
+			logConnectionFailedError(url, err)
 		}
 	}
 	return err
+}
+
+func (c *connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+	expectedFingerprint := c.config.certificateFingerprint
+	if len(expectedFingerprint) == 0 {
+		return nil
+	}
+	if len(rawCerts) == 0 {
+		return ErrMissingServerCertificate
+	}
+	actualFingerprint := sha256Hex(rawCerts[0])
+	if !strings.EqualFold(expectedFingerprint, actualFingerprint) {
+		return newErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint)
+	}
+	return nil
+}
+
+func sha256Hex(data []byte) string {
+	sha256Sum := sha256.Sum256(data)
+	return bytesToHexString(sha256Sum[:])
+}
+
+func bytesToHexString(data []byte) string {
+	return hex.EncodeToString(data)
 }
 
 func (c *connection) send(ctx context.Context, request, response interface{}) error {
@@ -124,7 +156,7 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 	case <-ctx.Done():
 		_, err := c.asyncSend(&Command{Command: "abortQuery"})
 		if err != nil {
-			return fmt.Errorf("could not abort query %w", ctx.Err())
+			return newErrCouldNotAbort(ctx.Err())
 		}
 		return ctx.Err()
 	case err := <-channel:
@@ -135,7 +167,7 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 func (c *connection) asyncSend(request interface{}) (func(interface{}) error, error) {
 	message, err := json.Marshal(request)
 	if err != nil {
-		errorLogger.Printf("could not marshal request, %s", err)
+		logMarshallingError(request, err)
 		return nil, driver.ErrBadConn
 	}
 
@@ -154,7 +186,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
-		errorLogger.Printf("could not send request, %s", err)
+		logRequestSendingError(err)
 		return nil, driver.ErrBadConn
 	}
 
@@ -162,7 +194,7 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 		_, message, err := c.websocket.ReadMessage()
 		if err != nil {
-			errorLogger.Printf("could not receive data, %s", err)
+			logReceivingError(err)
 			return driver.ErrBadConn
 		}
 
@@ -171,25 +203,25 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 			b := bytes.NewReader(message)
 			r, err := zlib.NewReader(b)
 			if err != nil {
-				errorLogger.Printf("could not decode compressed data, %s", err)
+				logUncompressingError(err)
 				return driver.ErrBadConn
 			}
 			err = json.NewDecoder(r).Decode(result)
 			if err != nil {
-				errorLogger.Printf("could not decode data, %s", err)
+				logJsonDecodingError( err)
 				return driver.ErrBadConn
 			}
 
 		} else {
 			err = json.Unmarshal(message, result)
 			if err != nil {
-				errorLogger.Printf("could not receive data, %s", err)
+				logJsonDecodingError( err)
 				return driver.ErrBadConn
 			}
 		}
 
 		if result.Status != "ok" {
-			return fmt.Errorf("[%s] %s", result.Exception.SQLCode, result.Exception.Text)
+			return newSqlErr(result.Exception)
 		}
 
 		if response == nil {

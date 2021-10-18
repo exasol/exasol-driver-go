@@ -26,6 +26,7 @@ type config struct {
 	timeout                   time.Time
 	encryption                bool
 	validateServerCertificate bool
+	certificateFingerprint    string
 }
 
 func init() {
