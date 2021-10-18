@@ -113,3 +113,12 @@ func (suite *ErrorsTestSuite) TestLogUncompressingError() {
 	logUncompressingError(fmt.Errorf("error"))
 	suite.Equal("W-EGOD-18: could not decode compressed data: 'error'\n", suite.getLogContent())
 }
+
+func (suite *ErrorsTestSuite) TestLogJsonDecodingError() {
+	logJsonDecodingError(fmt.Errorf("error"))
+	suite.Equal("W-EGOD-19: could not decode json data: 'error'\n", suite.getLogContent())
+}
+
+func (suite *ErrorsTestSuite) TestNewInvalidConnectionStringInvalidPort() {
+	suite.EqualError(newInvalidConnectionStringInvalidPort("port"), "E-GOD-23: invalid `port` value 'port', numeric port expected")
+}

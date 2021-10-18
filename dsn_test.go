@@ -144,7 +144,7 @@ func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
 
 func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	dsn, err := parseDSN(
-		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0;certificatefingerprint=fingerprint")
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0;certificatefingerprint=fingerprint;clientname=clientName;clientversion=clientVersion")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.user)
 	suite.Equal("exasol", dsn.password)
@@ -155,24 +155,33 @@ func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {
 	suite.Equal(true, dsn.compression)
 	suite.Equal(false, dsn.validateServerCertificate)
 	suite.Equal("fingerprint", dsn.certificateFingerprint)
+	suite.Equal("clientName", dsn.clientName)
+	suite.Equal("clientVersion", dsn.clientVersion)
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesTrue() {
-	config := NewConfig("sys", "exasol")
-	config.Compression(true)
-	config.Encryption(true)
-	config.Autocommit(true)
-	config.ValidateServerCertificate(true)
+	config := NewConfig("sys", "exasol").
+		Compression(true).
+		Encryption(true).
+		Autocommit(true).
+		ValidateServerCertificate(true)
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=1;compression=1;encryption=1;validateservercertificate=1", config.String())
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesFalse() {
-	config := NewConfig("sys", "exasol")
-	config.Compression(false)
-	config.Encryption(false)
-	config.Autocommit(false)
-	config.ValidateServerCertificate(false)
+	config := NewConfig("sys", "exasol").
+		Compression(false).
+		Encryption(false).
+		Autocommit(false).
+		ValidateServerCertificate(false)
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol;autocommit=0;compression=0;encryption=0;validateservercertificate=0", config.String())
+}
+
+func (suite *DriverTestSuite) TestConfigToDsnWithClientNameAndVersion() {
+	config := NewConfig("sys", "exasol").
+		ClientName("clientName").
+		ClientVersion("clientVersion")
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;clientname=clientName;clientversion=clientVersion", config.String())
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithDefaultValues() {
