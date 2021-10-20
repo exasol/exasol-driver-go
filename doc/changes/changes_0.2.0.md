@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver 0.2.0, released 2021-10-??
+# Exasol Go SQL Driver 0.2.0, released 2021-10-20
 
 Code name: Verify TLS Certificate Fingerprints
 
@@ -15,6 +15,7 @@ The new release also uses [error-reporting-go](https://github.com/exasol/error-r
 ## Features
 
 * #37: Verify TLS certificate fingerprints
+* #42: Use [error-reporting-go](https://github.com/exasol/error-reporting-go) to generate Exasol error messages
 
 ## Bugfixes
 
