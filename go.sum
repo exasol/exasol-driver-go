@@ -278,6 +278,8 @@ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7
 github.com/evanphx/json-patch v4.9.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/exasol/error-reporting-go v0.0.0-20210928115847-09f31457c2bb h1:Z3b7u1X/SjVNL+Ji/c3Fl7kJwOtD3nWJmdYA3fZ8Grk=
 github.com/exasol/error-reporting-go v0.0.0-20210928115847-09f31457c2bb/go.mod h1:lUzRJqKLiSuYpqRUN2LVyj08WeHzhMEC/8Gmgtuqh1Y=
+github.com/exasol/error-reporting-go v0.1.0 h1:p81VbfknFLJHT1jnAlSa1iz3Ysx8sMSJnVnNlqarVqQ=
+github.com/exasol/error-reporting-go v0.1.0/go.mod h1:im4x2ucQTPXFn+/B1EFcya6dnSUNYsuf6wC0DefHLK4=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/frankban/quicktest v1.11.3/go.mod h1:wRf/ReqHper53s+kmmSZizM8NamnL3IM0I9ntUbOk+k=
