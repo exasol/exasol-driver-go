@@ -1,5 +1,7 @@
 # Exasol Go SQL Driver
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/exasol/exasol-driver-go.svg)](https://pkg.go.dev/github.com/exasol/exasol-driver-go)
+
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
 
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=com.exasol%3Aexasol-driver-go&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=com.exasol%3Aexasol-driver-go)
