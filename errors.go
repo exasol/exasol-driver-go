@@ -18,6 +18,10 @@ var (
 	ErrLoggerNil                = newDriverErr(exaerror.New("E-EGOD-8").Message("logger is nil"))
 	ErrMissingServerCertificate = newDriverErr(exaerror.New("E-EGOD-9").
 					Message("server did not return certificates"))
+	ErrInvalidProxyConn = newDriverErr(exaerror.New("E-EGOD-26").
+				Message("could not create proxy connection to import file"))
+	ErrInvalidImportQuery = newDriverErr(exaerror.New("E-EGOD-29").
+				Message("could not parse import query"))
 )
 
 func newErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint string) DriverErr {
@@ -128,6 +132,12 @@ func newInvalidConnectionStringInvalidIntParam(paramName, value string) DriverEr
 		Message("invalid {{parameter name}} value {{value}}, numeric expected").
 		Parameter("parameter name", paramName).
 		Parameter("value", value))
+}
+
+func newFileNotFound(path string) DriverErr {
+	return newDriverErr(exaerror.New("E-GOD-28").
+		Message("file {{path}} not found").
+		Parameter("path", path))
 }
 
 type DriverErr string

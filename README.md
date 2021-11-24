@@ -122,6 +122,26 @@ To rollback a transaction use `Rollback()`:
 err = transaction.Rollback()
 ```
 
+## Import local csv files
+
+Use the sql driver to load data into your Exasol Database.
+
+```
+!! Limitation !!
+
+Only import of csv files is at the moment supported
+```
+
+```go
+result, err := exasol.Exec(`
+IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv' 
+ COLUMN SEPARATOR = ';' 
+ ENCODING = 'UTF-8' 
+ ROW SEPARATOR = 'LF'
+`)
+```
+
+
 ## Connection String
 
 The golang Driver uses the following URL structure for Exasol:
