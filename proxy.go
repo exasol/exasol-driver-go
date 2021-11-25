@@ -79,31 +79,40 @@ func (p *proxy) write(files []*os.File, rowSeparator string) error {
 	}
 	chunkedWriter := httputil.NewChunkedWriter(p.connection)
 	for _, file := range files {
-		reader := bufio.NewReader(file)
-		for {
-			line, err := reader.ReadBytes('\n')
-
-			if err != nil && len(line) == 0 {
-				break
-			}
-
-			if err != nil && len(line) != 0 {
-				line = append(line, []byte(rowSeparator)...)
-			}
-
-			if len(line) == 0 {
-				break
-			}
-			_, err = chunkedWriter.Write(line)
-			if err != nil {
-				return err
-			}
-
+		err = p.sendFile(file, rowSeparator, chunkedWriter)
+		if err != nil {
+			return err
 		}
-
 	}
 	_, err = p.connection.Write([]byte("0\r\n\r\n")) // A final zero chunk
 	return err
+}
+
+func (p *proxy) sendFile(file *os.File, rowSeparator string, chunkedWriter io.WriteCloser) error {
+
+	reader := bufio.NewReader(file)
+
+	for {
+		line, err := reader.ReadBytes('\n')
+
+		if err != nil && len(line) == 0 {
+			break
+		}
+
+		if err != nil && len(line) != 0 {
+			line = append(line, []byte(rowSeparator)...)
+		}
+
+		if len(line) == 0 {
+			break
+		}
+		_, err = chunkedWriter.Write(line)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
 }
 
 func (p *proxy) sendHeaders(headers []string) error {
