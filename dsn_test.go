@@ -109,25 +109,25 @@ func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars2() {
 func (suite *DsnTestSuite) TestInvalidPrefix() {
 	dsn, err := parseDSN("exaa:localhost:1234")
 	suite.Nil(dsn)
-	suite.EqualError(err, "E-GOD-21: invalid connection string, must start with 'exa:': 'exaa:localhost:1234'")
+	suite.EqualError(err, "E-EGOD-21: invalid connection string, must start with 'exa:': 'exaa:localhost:1234'")
 }
 
 func (suite *DsnTestSuite) TestInvalidHostPortFormat() {
 	dsn, err := parseDSN("exa:localhost")
 	suite.Nil(dsn)
-	suite.EqualError(err, "E-GOD-22: invalid host or port in 'localhost', expected format: <host>:<port>")
+	suite.EqualError(err, "E-EGOD-22: invalid host or port in 'localhost', expected format: <host>:<port>")
 }
 
 func (suite *DsnTestSuite) TestInvalidParameter() {
 	dsn, err := parseDSN("exa:localhost:1234;user")
 	suite.Nil(dsn)
-	suite.EqualError(err, "E-GOD-24: invalid parameter 'user', expected format <parameter>=<value>")
+	suite.EqualError(err, "E-EGOD-24: invalid parameter 'user', expected format <parameter>=<value>")
 }
 
 func (suite *DsnTestSuite) TestInvalidFetchsize() {
 	dsn, err := parseDSN("exa:localhost:1234;fetchsize=size")
 	suite.Nil(dsn)
-	suite.EqualError(err, "E-GOD-25: invalid 'fetchsize' value 'size', numeric expected")
+	suite.EqualError(err, "E-EGOD-25: invalid 'fetchsize' value 'size', numeric expected")
 }
 
 func (suite *DsnTestSuite) TestInvalidValidateservercertificateUsesDefaultValue() {
@@ -139,7 +139,7 @@ func (suite *DsnTestSuite) TestInvalidValidateservercertificateUsesDefaultValue(
 func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
 	dsn, err := parseDSN("exa:localhost:1234;resultsetmaxrows=size")
 	suite.Nil(dsn)
-	suite.EqualError(err, "E-GOD-25: invalid 'resultsetmaxrows' value 'size', numeric expected")
+	suite.EqualError(err, "E-EGOD-25: invalid 'resultsetmaxrows' value 'size', numeric expected")
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnCustomValues() {

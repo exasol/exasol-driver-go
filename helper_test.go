@@ -52,7 +52,7 @@ func TestGetFilePathNotFound(t *testing.T) {
 
 func TestOpenFileNotFound(t *testing.T) {
 	_, err := openFile("./.does_not_exist")
-	assert.EqualError(t, err, "E-GOD-28: file './.does_not_exist' not found")
+	assert.EqualError(t, err, "E-EGOD-28: file './.does_not_exist' not found")
 }
 
 func TestOpenFile(t *testing.T) {

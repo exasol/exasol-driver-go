@@ -64,7 +64,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	wrongFingerprint := "wrongFingerprint"
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
-	errorMsgAuthFailed := "E-GOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
+	errorMsgAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
 	errorMsgCertWrongHost := "x509: certificate is not valid for any names, but wanted to match localhost"
 	noError := ""
 
