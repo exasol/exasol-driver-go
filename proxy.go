@@ -24,7 +24,7 @@ func newProxy(host string, port int) (*proxy, error) {
 	uri := fmt.Sprintf("%s:%d", host, port)
 	con, err := net.Dial("tcp", uri)
 	if err != nil {
-		wrappedErr := fmt.Errorf("%w: could not create tpc connection, %s", ErrInvalidProxyConn, err.Error())
+		wrappedErr := fmt.Errorf("%w: could not create TCP connection to %s, %s", ErrInvalidProxyConn, uri, err.Error())
 		errorLogger.Print(wrappedErr)
 		return nil, wrappedErr
 	}
@@ -54,7 +54,7 @@ func (p *proxy) startProxy() error {
 	}
 	err := binary.Read(p.connection, binary.LittleEndian, &result)
 	if err != nil {
-		wrappedErr := fmt.Errorf("%w: could not read from tpc connection to get internal host and port, %s", ErrInvalidProxyConn, err.Error())
+		wrappedErr := fmt.Errorf("%w: could not read from TCP connection to get internal host and port, %s", ErrInvalidProxyConn, err.Error())
 		errorLogger.Print(wrappedErr)
 		return wrappedErr
 	}
@@ -93,7 +93,12 @@ func (p *proxy) sendFile(file *os.File, rowSeparator string, chunkedWriter io.Wr
 	reader := bufio.NewReader(file)
 
 	for {
-		line, err := reader.ReadBytes('\n')
+		delimiter := '\n'
+		// Handle files which end on CR
+		if rowSeparator == "\r" {
+			delimiter = '\r'
+		}
+		line, err := reader.ReadBytes(byte(delimiter))
 
 		if err != nil && len(line) == 0 {
 			break

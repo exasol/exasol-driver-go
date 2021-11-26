@@ -4,9 +4,9 @@ Code name: CSV import
 
 ## Summary
 
-This release allows the import of multiple local csv files via SQL. 
+This release allows the import of multiple local CSV files via SQL. 
 
 ## Features
 
-* #15: Import of local csv files
+* #15: Import of local CSV files
 

@@ -9,8 +9,8 @@ import (
 )
 
 var localImportRegex = regexp.MustCompile(`(?i)(FROM LOCAL CSV )`)
-var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9\/._]+)(["|']?))`)
-var rowQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<Row>[a-zA-Z]+)(["|']?))`)
+var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ))`)
+var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<RowSeparator>[a-zA-Z]+)(["|']?))`)
 
 func namedValuesToValues(namedValues []driver.NamedValue) ([]driver.Value, error) {
 	values := make([]driver.Value, len(namedValues))
@@ -39,18 +39,18 @@ func isImportQuery(query string) bool {
 }
 
 func getRowSeparator(query string) string {
-	r := rowQueryRegex.FindStringSubmatch(query)
+	r := rowSeparatorQueryRegex.FindStringSubmatch(query)
 	separator := "LF"
-	for i, name := range rowQueryRegex.SubexpNames() {
-		if name == "Row" && len(r) >= i {
+	for i, name := range rowSeparatorQueryRegex.SubexpNames() {
+		if name == "RowSeparator" && len(r) >= i {
 			separator = r[i]
 		}
 	}
 
 	switch separator {
-	case "CR":
+	case "CR", "cr":
 		return "\r"
-	case "CRLF":
+	case "CRLF", "crlf":
 		return "\r\n"
 	default:
 		return "\n"

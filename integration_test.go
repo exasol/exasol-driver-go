@@ -309,6 +309,30 @@ func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCol
 
 }
 
+func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_10"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data_cr.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'CR'`, schemaName, tableName))
+	suite.NoError(err, "import should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(3), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{float64(11), "test1"},
+			{float64(12), "test2"},
+			{float64(13), "test3"},
+		},
+	)
+}
+
 func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
 	rows.Next()
 	var testValue string

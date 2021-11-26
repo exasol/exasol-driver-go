@@ -2,6 +2,8 @@ package exasol
 
 import (
 	"database/sql/driver"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,18 +34,6 @@ func TestGetFilePathsSingle(t *testing.T) {
 	assert.Equal(t, "/path/to/filename.csv", paths[0])
 }
 
-func TestGetFilePaths(t *testing.T) {
-	query := `IMPORT INTO table_1 FROM CSV
-       AT 'http://192.168.1.1:8080/' USER 'agent_007' IDENTIFIED BY 'secret'
-       FILE 'tab1_part1.csv' FILE 'tab1_part2.csv'
-       COLUMN SEPARATOR = ';'
-       SKIP = 5;`
-	paths, err := getFilePaths(query)
-	assert.NoError(t, err)
-	assert.Equal(t, "tab1_part1.csv", paths[0])
-	assert.Equal(t, "tab1_part2.csv", paths[1])
-}
-
 func TestGetFilePathNotFound(t *testing.T) {
 	query := "SELECT * FROM table"
 	_, err := getFilePaths(query)
@@ -59,21 +49,6 @@ func TestOpenFile(t *testing.T) {
 	file, err := openFile("./testData/data.csv")
 	assert.NoError(t, err)
 	assert.NotNil(t, file)
-}
-
-func TestGetRowSeparatorLF(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'LF'"
-	assert.Equal(t, getRowSeparator(query), "\n")
-}
-
-func TestGetRowSeparatorCR(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CR'"
-	assert.Equal(t, getRowSeparator(query), "\r")
-}
-
-func TestGetRowSeparatorCRLF(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR =  'CRLF'"
-	assert.Equal(t, getRowSeparator(query), "\r\n")
 }
 
 func TestUpdateImportQuery(t *testing.T) {
@@ -95,4 +70,84 @@ func TestUpdateImportQueryMulti2(t *testing.T) {
 	query := "IMPORT INTO table_1 FROM LOCAL CSV USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.csv' FILE 'tab1_part2.csv' COLUMN SEPARATOR = ';' SKIP = 5;"
 	newQuery := updateImportQuery(query, p)
 	assert.Equal(t, "IMPORT INTO table_1 FROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv'  COLUMN SEPARATOR = ';' SKIP = 5;", newQuery)
+}
+
+func TestGetFilePaths(t *testing.T) {
+
+	quotes := []struct {
+		name  string
+		value string
+	}{
+		{name: "SingleQuote",
+			value: "'"},
+		{name: "DoubleQuote",
+			value: `"`},
+	}
+
+	tests := []struct {
+		name  string
+		paths []string
+	}{
+		{name: "Relative paths", paths: []string{"./tab1_part1.csv", "./tab1_part2.csv"}},
+		{name: "Windows paths", paths: []string{"C:\\Documents\\Newsletters\\Summer2018.csv", "\\Program Files\\Custom Utilities\\StringFinder.csv"}},
+		{name: "Unix paths", paths: []string{"/Users/User/Documents/Data/test.csv"}},
+	}
+
+	for _, quote := range quotes {
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("%s %s", tt.name, quote.name), func(t *testing.T) {
+
+				var preparedPaths []string
+				for _, path := range tt.paths {
+					preparedPaths = append(preparedPaths, fmt.Sprintf("%s%s%s", quote.value, path, quote.value))
+				}
+
+				foundPaths, err := getFilePaths(fmt.Sprintf(`IMPORT INTO table_1 FROM CSV
+       			AT 'http://192.168.1.1:8080/' USER 'agent_007' IDENTIFIED BY 'secret'
+       			FILE %s 
+       			COLUMN SEPARATOR = ';'
+       			SKIP = 5;`, strings.Join(preparedPaths, " FILE ")))
+				assert.NoError(t, err)
+				assert.ElementsMatch(t, tt.paths, foundPaths)
+			})
+		}
+	}
+}
+
+func TestGetRowSeparatorLF(t *testing.T) {
+	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'LF'"
+	assert.Equal(t, getRowSeparator(query), "\n")
+}
+
+func TestGetRowSeparatorCR(t *testing.T) {
+	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CR'"
+	assert.Equal(t, getRowSeparator(query), "\r")
+}
+
+func TestGetRowSeparatorCRLF(t *testing.T) {
+	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR =  'CRLF'"
+	assert.Equal(t, getRowSeparator(query), "\r\n")
+}
+
+func TestGetRowSeparator(t *testing.T) {
+	tests := []struct {
+		name      string
+		separator string
+		want      string
+	}{
+		{name: "LF", separator: "LF", want: "\n"},
+		{name: "LF lowercase", separator: "lf", want: "\n"},
+		{name: "CRLF", separator: "CRLF", want: "\r\n"},
+		{name: "CRLF lowercase", separator: "crlf", want: "\r\n"},
+		{name: "CR", separator: "CR", want: "\r"},
+		{name: "CR lowercase", separator: "cr", want: "\r"},
+	}
+	for _, tt := range tests {
+
+		query := fmt.Sprintf("IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR =  '%s'", tt.separator)
+
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, getRowSeparator(query))
+		})
+	}
 }

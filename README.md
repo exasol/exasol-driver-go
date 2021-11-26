@@ -122,14 +122,14 @@ To rollback a transaction use `Rollback()`:
 err = transaction.Rollback()
 ```
 
-## Import local csv files
+## Import local CSV files
 
 Use the sql driver to load data into your Exasol Database.
 
 ```
 !! Limitation !!
 
-Only import of csv files is at the moment supported
+Only import of CSV files is supported at the moment.
 ```
 
 ```go
