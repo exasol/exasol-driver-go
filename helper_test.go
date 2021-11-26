@@ -27,13 +27,6 @@ func TestIsImportQuery(t *testing.T) {
 	assert.True(t, isImportQuery("IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n"))
 }
 
-func TestGetFilePathsSingle(t *testing.T) {
-	query := "IMPORT into table from LOCAL CSV file '/path/to/filename.csv'"
-	paths, err := getFilePaths(query)
-	assert.NoError(t, err)
-	assert.Equal(t, "/path/to/filename.csv", paths[0])
-}
-
 func TestGetFilePathNotFound(t *testing.T) {
 	query := "SELECT * FROM table"
 	_, err := getFilePaths(query)
@@ -55,7 +48,7 @@ func TestUpdateImportQuery(t *testing.T) {
 	p := &proxy{Host: "127.0.0.1", Port: 4333}
 	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'"
 	newQuery := updateImportQuery(query, p)
-	assert.Equal(t, "IMPORT into table FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv'", newQuery)
+	assert.Equal(t, "IMPORT into table FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv' ", newQuery)
 }
 
 func TestUpdateImportQueryMulti(t *testing.T) {
@@ -69,7 +62,7 @@ func TestUpdateImportQueryMulti2(t *testing.T) {
 	p := &proxy{Host: "127.0.0.1", Port: 4333}
 	query := "IMPORT INTO table_1 FROM LOCAL CSV USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.csv' FILE 'tab1_part2.csv' COLUMN SEPARATOR = ';' SKIP = 5;"
 	newQuery := updateImportQuery(query, p)
-	assert.Equal(t, "IMPORT INTO table_1 FROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv'  COLUMN SEPARATOR = ';' SKIP = 5;", newQuery)
+	assert.Equal(t, "IMPORT INTO table_1 FROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv' COLUMN SEPARATOR = ';' SKIP = 5;", newQuery)
 }
 
 func TestGetFilePaths(t *testing.T) {
@@ -88,6 +81,8 @@ func TestGetFilePaths(t *testing.T) {
 		name  string
 		paths []string
 	}{
+		{name: "Single file", paths: []string{"/path/to/filename.csv"}},
+		{name: "Multi file", paths: []string{"/path/to/filename.csv", "/path/to/filename2.csv"}},
 		{name: "Relative paths", paths: []string{"./tab1_part1.csv", "./tab1_part2.csv"}},
 		{name: "Windows paths", paths: []string{"C:\\Documents\\Newsletters\\Summer2018.csv", "\\Program Files\\Custom Utilities\\StringFinder.csv"}},
 		{name: "Unix paths", paths: []string{"/Users/User/Documents/Data/test.csv"}},

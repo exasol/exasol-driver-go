@@ -9,7 +9,7 @@ import (
 )
 
 var localImportRegex = regexp.MustCompile(`(?i)(FROM LOCAL CSV )`)
-var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ))`)
+var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`)
 var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<RowSeparator>[a-zA-Z]+)(["|']?))`)
 
 func namedValuesToValues(namedValues []driver.NamedValue) ([]driver.Value, error) {
@@ -86,7 +86,7 @@ func updateImportQuery(query string, p *proxy) string {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	for i, matches := range r {
 		if i == 0 {
-			query = strings.Replace(query, matches[0], "FILE 'data.csv'", 1)
+			query = strings.Replace(query, matches[0], "FILE 'data.csv' ", 1)
 		} else {
 			query = strings.Replace(query, matches[0], "", 1)
 		}
