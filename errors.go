@@ -18,6 +18,10 @@ var (
 	ErrLoggerNil                = newDriverErr(exaerror.New("E-EGOD-8").Message("logger is nil"))
 	ErrMissingServerCertificate = newDriverErr(exaerror.New("E-EGOD-9").
 					Message("server did not return certificates"))
+	ErrInvalidProxyConn = newDriverErr(exaerror.New("E-EGOD-26").
+				Message("could not create proxy connection to import file"))
+	ErrInvalidImportQuery = newDriverErr(exaerror.New("E-EGOD-27").
+				Message("could not parse import query"))
 )
 
 func newErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint string) DriverErr {
@@ -28,14 +32,14 @@ func newErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint
 }
 
 func newSqlErr(exception *Exception) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-11").
+	return newDriverErr(exaerror.New("E-EGOD-11").
 		Message("execution failed with SQL error code {{sql code}} and message {{text}}").
 		Parameter("sql code", exception.SQLCode).
 		Parameter("text", exception.Text))
 }
 
 func newErrCouldNotAbort(rootCause error) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-12").
+	return newDriverErr(exaerror.New("E-EGOD-12").
 		Message("could not abort query: {{root cause}}").
 		Parameter("root cause", rootCause))
 }
@@ -45,7 +49,7 @@ func newDriverErr(error *exaerror.ExaError) DriverErr {
 }
 
 func logPasswordEncryptionError(err error) {
-	errorLogger.Print(exaerror.New("E-GOD-13").
+	errorLogger.Print(exaerror.New("E-EGOD-13").
 		Message("password encryption error: {{root cause}}").
 		Parameter("root cause", err).
 		String())
@@ -96,38 +100,44 @@ func logJsonDecodingError(err error) {
 }
 
 func newInvalidHostRangeLimits(host string) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-20").
+	return newDriverErr(exaerror.New("E-EGOD-20").
 		Message("invalid host range limits: {{host name}}").
 		Parameter("host name", host))
 }
 
 func newInvalidConnectionString(connectionString string) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-21").
+	return newDriverErr(exaerror.New("E-EGOD-21").
 		Message("invalid connection string, must start with 'exa:': {{connection string}}").
 		Parameter("connection string", connectionString))
 }
 
 func newInvalidConnectionStringHostOrPort(connectionString string) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-22").
+	return newDriverErr(exaerror.New("E-EGOD-22").
 		Message("invalid host or port in {{connection string}}, expected format: <host>:<port>").
 		Parameter("connection string", connectionString))
 }
 
 func newInvalidConnectionStringInvalidPort(port string) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-23").
+	return newDriverErr(exaerror.New("E-EGOD-23").
 		Message("invalid `port` value {{port}}, numeric port expected").
 		Parameter("port", port))
 }
 func newInvalidConnectionStringInvalidParameter(parameter string) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-24").
+	return newDriverErr(exaerror.New("E-EGOD-24").
 		Message("invalid parameter {{parameter}}, expected format <parameter>=<value>").
 		Parameter("parameter", parameter))
 }
 func newInvalidConnectionStringInvalidIntParam(paramName, value string) DriverErr {
-	return newDriverErr(exaerror.New("E-GOD-25").
+	return newDriverErr(exaerror.New("E-EGOD-25").
 		Message("invalid {{parameter name}} value {{value}}, numeric expected").
 		Parameter("parameter name", paramName).
 		Parameter("value", value))
+}
+
+func newFileNotFound(path string) DriverErr {
+	return newDriverErr(exaerror.New("E-EGOD-28").
+		Message("file {{path}} not found").
+		Parameter("path", path))
 }
 
 type DriverErr string

@@ -64,7 +64,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	wrongFingerprint := "wrongFingerprint"
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
-	errorMsgAuthFailed := "E-GOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
+	errorMsgAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
 	errorMsgCertWrongHost := "x509: certificate is not valid for any names, but wanted to match localhost"
 	noError := ""
 
@@ -239,6 +239,100 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 	suite.EqualError(err, "context canceled")
 }
 
+func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
+	suite.NoError(err, "import should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(3), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{float64(11), "test1"},
+			{float64(12), "test2"},
+			{float64(13), "test3"},
+		},
+	)
+}
+
+func (suite *IntegrationTestSuite) TestMultiImportStatement() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_9"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
+	suite.NoError(err, "import should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(6), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{float64(11), "test1"},
+			{float64(12), "test2"},
+			{float64(13), "test3"},
+			{float64(21), "test4"},
+			{float64(22), "test5"},
+			{float64(23), "test6"},
+		},
+	)
+}
+
+func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCols []string, expectedRows [][]interface{}) {
+	i := 0
+	cols, _ := rows.Columns()
+	suite.Equal(expectedCols, cols)
+	for rows.Next() {
+		columns := make([]interface{}, len(cols))
+		columnPointers := make([]interface{}, len(cols))
+		for i := range columns {
+			columnPointers[i] = &columns[i]
+		}
+		err := rows.Scan(columnPointers...)
+		onError(err)
+
+		suite.Equal(expectedRows[i], columns)
+		i = i + 1
+	}
+
+}
+
+func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_10"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data_cr.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'CR'`, schemaName, tableName))
+	suite.NoError(err, "import should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(3), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{float64(11), "test1"},
+			{float64(12), "test2"},
+			{float64(13), "test3"},
+		},
+	)
+}
+
 func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
 	rows.Next()
 	var testValue string
@@ -273,7 +367,7 @@ func runExasolContainer(ctx context.Context) testcontainers.Container {
 
 	dbVersion := os.Getenv("DB_VERSION")
 	if dbVersion == "" {
-		dbVersion = "7.1.1"
+		dbVersion = "7.1.2"
 	}
 
 	request := testcontainers.ContainerRequest{

@@ -74,7 +74,7 @@ func (suite *WebsocketTestSuite) TestResolvingHostRangeWithInvalidRangeLimits() 
 	connection := connection{config: &config}
 
 	hosts, err := connection.resolveHosts()
-	suite.EqualError(err, "E-GOD-20: invalid host range limits: 'exasol3..1'")
+	suite.EqualError(err, "E-EGOD-20: invalid host range limits: 'exasol3..1'")
 	suite.Nil(hosts)
 }
 

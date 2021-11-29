@@ -8,12 +8,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"math/big"
+	"os"
 	"os/user"
 	"runtime"
 	"strconv"
-
-	"github.com/gorilla/websocket"
 )
 
 type connection struct {
@@ -178,6 +178,14 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 		return nil, driver.ErrBadConn
 	}
 
+	if isImportQuery(query) {
+		var err error
+		query, err = c.handleImportQuery(query)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
 		return c.executeSimpleWithResult(ctx, query)
@@ -197,6 +205,41 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 		return nil, err
 	}
 	return toResult(result)
+}
+
+func (c *connection) handleImportQuery(query string) (string, error) {
+	paths, err := getFilePaths(query)
+	if err != nil {
+		return "", err
+	}
+
+	p, err := newProxy(c.config.host, c.config.port)
+	if err != nil {
+		return "", err
+	}
+	defer p.close()
+
+	err = p.startProxy()
+	if err != nil {
+		return "", err
+	}
+	query = updateImportQuery(query, p)
+
+	var files []*os.File
+	for _, path := range paths {
+		f, err := openFile(path)
+		if err != nil {
+			return "", err
+		}
+		files = append(files, f)
+	}
+
+	err = p.write(files, getRowSeparator(query))
+	if err != nil {
+		return "", err
+	}
+
+	return query, nil
 }
 
 func (c *connection) executeSimpleWithResult(ctx context.Context, query string) (driver.Result, error) {

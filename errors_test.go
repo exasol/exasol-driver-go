@@ -78,16 +78,16 @@ func (suite *ErrorsTestSuite) TestNewErrCertificateFingerprintMismatch() {
 
 func (suite *ErrorsTestSuite) TestNewSqlErr() {
 	exception := Exception{SQLCode: "sqlCode", Text: "text"}
-	suite.EqualError(newSqlErr(&exception), "E-GOD-11: execution failed with SQL error code 'sqlCode' and message 'text'")
+	suite.EqualError(newSqlErr(&exception), "E-EGOD-11: execution failed with SQL error code 'sqlCode' and message 'text'")
 }
 
 func (suite *ErrorsTestSuite) TestNewErrCouldNotAbort() {
-	suite.EqualError(newErrCouldNotAbort(fmt.Errorf("error")), "E-GOD-12: could not abort query: 'error'")
+	suite.EqualError(newErrCouldNotAbort(fmt.Errorf("error")), "E-EGOD-12: could not abort query: 'error'")
 }
 
 func (suite *ErrorsTestSuite) TestLogPasswordEncryptionError() {
 	logPasswordEncryptionError(fmt.Errorf("error"))
-	suite.Equal("E-GOD-13: password encryption error: 'error'\n", suite.getLogContent())
+	suite.Equal("E-EGOD-13: password encryption error: 'error'\n", suite.getLogContent())
 }
 
 func (suite *ErrorsTestSuite) TestLogConnectionFailedError() {
@@ -120,5 +120,5 @@ func (suite *ErrorsTestSuite) TestLogJsonDecodingError() {
 }
 
 func (suite *ErrorsTestSuite) TestNewInvalidConnectionStringInvalidPort() {
-	suite.EqualError(newInvalidConnectionStringInvalidPort("port"), "E-GOD-23: invalid `port` value 'port', numeric port expected")
+	suite.EqualError(newInvalidConnectionStringInvalidPort("port"), "E-EGOD-23: invalid `port` value 'port', numeric port expected")
 }
