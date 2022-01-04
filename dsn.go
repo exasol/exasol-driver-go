@@ -7,101 +7,124 @@ import (
 )
 
 type DSNConfig struct {
-	host                      string
-	port                      int
-	user                      string
-	password                  string
-	autocommit                *bool
-	encryption                *bool
-	compression               *bool
-	clientName                string
-	clientVersion             string
-	fetchSize                 int
-	validateServerCertificate *bool
-	certificateFingerprint    string
+	Host                      string
+	Port                      int
+	User                      string
+	Password                  string
+	Autocommit                *bool
+	Encryption                *bool
+	Compression               *bool
+	ClientName                string
+	ClientVersion             string
+	FetchSize                 int
+	ValidateServerCertificate *bool
+	CertificateFingerprint    string
+	Schema                    string
+	ResultSetMaxRows          int
+	params                    map[string]string // Connection parameters
 }
 
-func NewConfig(user, password string) *DSNConfig {
-	return &DSNConfig{
-		host:     "localhost",
-		port:     8563,
-		user:     user,
-		password: password,
+type DSNConfigBuilder struct {
+	config *DSNConfig
+}
+
+func NewConfig(user, password string) *DSNConfigBuilder {
+	return &DSNConfigBuilder{
+		config: &DSNConfig{
+			Host:     "localhost",
+			Port:     8563,
+			User:     user,
+			Password: password,
+		},
 	}
 }
 
-func (c *DSNConfig) Compression(enabled bool) *DSNConfig {
-	c.compression = &enabled
+func (c *DSNConfigBuilder) Compression(enabled bool) *DSNConfigBuilder {
+	c.config.Compression = &enabled
 	return c
 }
-func (c *DSNConfig) Encryption(enabled bool) *DSNConfig {
-	c.encryption = &enabled
+func (c *DSNConfigBuilder) Encryption(enabled bool) *DSNConfigBuilder {
+	c.config.Encryption = &enabled
 	return c
 }
-func (c *DSNConfig) Autocommit(enabled bool) *DSNConfig {
-	c.autocommit = &enabled
+func (c *DSNConfigBuilder) Autocommit(enabled bool) *DSNConfigBuilder {
+	c.config.Autocommit = &enabled
 	return c
 }
-func (c *DSNConfig) ValidateServerCertificate(validate bool) *DSNConfig {
-	c.validateServerCertificate = &validate
+func (c *DSNConfigBuilder) ValidateServerCertificate(validate bool) *DSNConfigBuilder {
+	c.config.ValidateServerCertificate = &validate
 	return c
 }
-func (c *DSNConfig) CertificateFingerprint(fingerprint string) *DSNConfig {
-	c.certificateFingerprint = fingerprint
+func (c *DSNConfigBuilder) CertificateFingerprint(fingerprint string) *DSNConfigBuilder {
+	c.config.CertificateFingerprint = fingerprint
 	return c
 }
-func (c *DSNConfig) FetchSize(size int) *DSNConfig {
-	c.fetchSize = size
+func (c *DSNConfigBuilder) FetchSize(size int) *DSNConfigBuilder {
+	c.config.FetchSize = size
 	return c
 }
-func (c *DSNConfig) ClientName(name string) *DSNConfig {
-	c.clientName = name
+func (c *DSNConfigBuilder) ClientName(name string) *DSNConfigBuilder {
+	c.config.ClientName = name
 	return c
 }
-func (c *DSNConfig) ClientVersion(version string) *DSNConfig {
-	c.clientVersion = version
+func (c *DSNConfigBuilder) ClientVersion(version string) *DSNConfigBuilder {
+	c.config.ClientVersion = version
 	return c
 }
-func (c *DSNConfig) Host(host string) *DSNConfig {
-	c.host = host
+func (c *DSNConfigBuilder) Host(host string) *DSNConfigBuilder {
+	c.config.Host = host
 	return c
 }
-func (c *DSNConfig) Port(port int) *DSNConfig {
-	c.port = port
+func (c *DSNConfigBuilder) Port(port int) *DSNConfigBuilder {
+	c.config.Port = port
 	return c
 }
 
-func (c *DSNConfig) String() string {
+func (c *DSNConfigBuilder) ResultSetMaxRows(maxRows int) *DSNConfigBuilder {
+	c.config.ResultSetMaxRows = maxRows
+	return c
+}
+
+func (c *DSNConfigBuilder) Schema(schema string) *DSNConfigBuilder {
+	c.config.Schema = schema
+	return c
+}
+
+func (c *DSNConfigBuilder) String() string {
+	return c.config.ToDSN()
+}
+
+func (c *DSNConfig) ToDSN() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("exa:%s:%d;user=%s;password=%s;", c.host, c.port, c.user, c.password))
-	if c.autocommit != nil {
-		sb.WriteString(fmt.Sprintf("autocommit=%d;", boolToInt(*c.autocommit)))
+	sb.WriteString(fmt.Sprintf("exa:%s:%d;user=%s;password=%s;", c.Host, c.Port, c.User, c.Password))
+	if c.Autocommit != nil {
+		sb.WriteString(fmt.Sprintf("autocommit=%d;", boolToInt(*c.Autocommit)))
 	}
-	if c.compression != nil {
-		sb.WriteString(fmt.Sprintf("compression=%d;", boolToInt(*c.compression)))
+	if c.Compression != nil {
+		sb.WriteString(fmt.Sprintf("compression=%d;", boolToInt(*c.Compression)))
 	}
-	if c.encryption != nil {
-		sb.WriteString(fmt.Sprintf("encryption=%d;", boolToInt(*c.encryption)))
+	if c.Encryption != nil {
+		sb.WriteString(fmt.Sprintf("encryption=%d;", boolToInt(*c.Encryption)))
 	}
-	if c.validateServerCertificate != nil {
-		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", boolToInt(*c.validateServerCertificate)))
+	if c.ValidateServerCertificate != nil {
+		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", boolToInt(*c.ValidateServerCertificate)))
 	}
-	if c.certificateFingerprint != "" {
-		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", c.certificateFingerprint))
+	if c.CertificateFingerprint != "" {
+		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", c.CertificateFingerprint))
 	}
-	if c.fetchSize != 0 {
-		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.fetchSize))
+	if c.FetchSize != 0 {
+		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.FetchSize))
 	}
-	if c.clientName != "" {
-		sb.WriteString(fmt.Sprintf("clientname=%s;", c.clientName))
+	if c.ClientName != "" {
+		sb.WriteString(fmt.Sprintf("clientname=%s;", c.ClientName))
 	}
-	if c.clientVersion != "" {
-		sb.WriteString(fmt.Sprintf("clientversion=%s;", c.clientVersion))
+	if c.ClientVersion != "" {
+		sb.WriteString(fmt.Sprintf("clientversion=%s;", c.ClientVersion))
 	}
 	return strings.TrimRight(sb.String(), ";")
 }
 
-func parseDSN(dsn string) (*config, error) {
+func ParseDSN(dsn string) (*DSNConfig, error) {
 	if !strings.HasPrefix(dsn, "exa:") {
 		return nil, newInvalidConnectionString(dsn)
 	}
@@ -136,22 +159,21 @@ func extractHostAndPort(connectionString string) (string, int, error) {
 	return hostPort[0], port, nil
 }
 
-func getDefaultConfig(host string, port int) *config {
-	return &config{
-		host:                      host,
-		port:                      port,
-		apiVersion:                2,
-		autocommit:                true,
-		encryption:                true,
-		compression:               false,
-		validateServerCertificate: true,
-		clientName:                "Go client",
+func getDefaultConfig(host string, port int) *DSNConfig {
+	return &DSNConfig{
+		Host:                      host,
+		Port:                      port,
+		Autocommit:                boolToPtr(true),
+		Encryption:                boolToPtr(true),
+		Compression:               boolToPtr(false),
+		ValidateServerCertificate: boolToPtr(true),
+		ClientName:                "Go client",
 		params:                    map[string]string{},
-		fetchSize:                 128 * 1024,
+		FetchSize:                 128 * 1024,
 	}
 }
 
-func getConfigWithParameters(host string, port int, parametersString string) (*config, error) {
+func getConfigWithParameters(host string, port int, parametersString string) (*DSNConfig, error) {
 	config := getDefaultConfig(host, port)
 	parameters := extractParameters(parametersString)
 	for _, parameter := range parameters {
@@ -164,37 +186,37 @@ func getConfigWithParameters(host string, port int, parametersString string) (*c
 
 		switch key {
 		case "password":
-			config.password = unescape(value, ";")
+			config.Password = unescape(value, ";")
 		case "user":
-			config.user = unescape(value, ";")
+			config.User = unescape(value, ";")
 		case "autocommit":
-			config.autocommit = value == "1"
+			config.Autocommit = boolToPtr(value == "1")
 		case "encryption":
-			config.encryption = value == "1"
+			config.Encryption = boolToPtr(value == "1")
 		case "validateservercertificate":
-			config.validateServerCertificate = value != "0"
+			config.ValidateServerCertificate = boolToPtr(value != "0")
 		case "certificatefingerprint":
-			config.certificateFingerprint = value
+			config.CertificateFingerprint = value
 		case "compression":
-			config.compression = value == "1"
+			config.Compression = boolToPtr(value == "1")
 		case "clientname":
-			config.clientName = value
+			config.ClientName = value
 		case "clientversion":
-			config.clientVersion = value
+			config.ClientVersion = value
 		case "schema":
-			config.schema = value
+			config.Schema = value
 		case "fetchsize":
 			fetchSizeValue, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, newInvalidConnectionStringInvalidIntParam("fetchsize", value)
 			}
-			config.fetchSize = fetchSizeValue
+			config.FetchSize = fetchSizeValue
 		case "resultsetmaxrows":
 			maxRowsValue, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, newInvalidConnectionStringInvalidIntParam("resultsetmaxrows", value)
 			}
-			config.resultSetMaxRows = maxRowsValue
+			config.ResultSetMaxRows = maxRowsValue
 		default:
 			config.params[key] = unescape(value, ";")
 		}
