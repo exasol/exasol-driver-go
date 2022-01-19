@@ -9,4 +9,4 @@ This release allows the import of multiple local CSV files via SQL.
 ## Features
 
 * #15: Import of local CSV files
-
+* #47: Make parseDsn public

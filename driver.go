@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"time"
 )
 
 type ExasolDriver struct{}
@@ -23,7 +22,6 @@ type config struct {
 	fetchSize                 int
 	compression               bool
 	resultSetMaxRows          int
-	timeout                   time.Time
 	encryption                bool
 	validateServerCertificate bool
 	certificateFingerprint    string
@@ -33,23 +31,44 @@ func init() {
 	sql.Register("exasol", &ExasolDriver{})
 }
 
+func toInternalConfig(dsnConfig *DSNConfig) *config {
+	return &config{
+		user:                      dsnConfig.User,
+		password:                  dsnConfig.Password,
+		host:                      dsnConfig.Host,
+		port:                      dsnConfig.Port,
+		params:                    dsnConfig.params,
+		apiVersion:                2,
+		clientName:                dsnConfig.ClientName,
+		clientVersion:             dsnConfig.ClientVersion,
+		schema:                    dsnConfig.Schema,
+		autocommit:                *dsnConfig.Autocommit,
+		fetchSize:                 dsnConfig.FetchSize,
+		compression:               *dsnConfig.Compression,
+		resultSetMaxRows:          dsnConfig.ResultSetMaxRows,
+		encryption:                *dsnConfig.Encryption,
+		validateServerCertificate: *dsnConfig.ValidateServerCertificate,
+		certificateFingerprint:    dsnConfig.CertificateFingerprint,
+	}
+}
+
 func (e ExasolDriver) Open(dsn string) (driver.Conn, error) {
-	config, err := parseDSN(dsn)
+	dsnConfig, err := ParseDSN(dsn)
 	if err != nil {
 		return nil, err
 	}
 	c := &connector{
-		config: config,
+		config: toInternalConfig(dsnConfig),
 	}
 	return c.Connect(context.Background())
 }
 
 func (e ExasolDriver) OpenConnector(dsn string) (driver.Connector, error) {
-	config, err := parseDSN(dsn)
+	dsnConfig, err := ParseDSN(dsn)
 	if err != nil {
 		return nil, err
 	}
 	return &connector{
-		config: config,
+		config: toInternalConfig(dsnConfig),
 	}, nil
 }

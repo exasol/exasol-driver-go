@@ -70,7 +70,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 
 	for i, testCase := range []struct {
 		description   string
-		config        *exasol.DSNConfig
+		config        *exasol.DSNConfigBuilder
 		expectedError string
 	}{
 		{"wrong port", suite.createDefaultConfig().Port(1234), "connect: connection refuse"},
@@ -346,11 +346,11 @@ func (suite *IntegrationTestSuite) TearDownSuite() {
 	onError(err)
 }
 
-func (suite *IntegrationTestSuite) createDefaultConfig() *exasol.DSNConfig {
+func (suite *IntegrationTestSuite) createDefaultConfig() *exasol.DSNConfigBuilder {
 	return exasol.NewConfig("sys", "exasol").ValidateServerCertificate(false).Host(suite.host).Port(suite.port)
 }
 
-func (suite *IntegrationTestSuite) openConnection(config *exasol.DSNConfig) *sql.DB {
+func (suite *IntegrationTestSuite) openConnection(config *exasol.DSNConfigBuilder) *sql.DB {
 	database, err := sql.Open("exasol", config.String())
 	if err != nil {
 		fmt.Printf("error connecting to database using config %q", config)
