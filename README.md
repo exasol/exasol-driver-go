@@ -141,7 +141,6 @@ IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData
 `)
 ```
 
-
 ## Connection String
 
 The golang Driver uses the following URL structure for Exasol:

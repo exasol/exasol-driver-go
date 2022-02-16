@@ -367,7 +367,7 @@ func runExasolContainer(ctx context.Context) testcontainers.Container {
 
 	dbVersion := os.Getenv("DB_VERSION")
 	if dbVersion == "" {
-		dbVersion = "7.1.2"
+		dbVersion = "7.1.6"
 	}
 
 	request := testcontainers.ContainerRequest{
