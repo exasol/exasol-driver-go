@@ -65,7 +65,13 @@ func (suite *IntegrationTestSuite) TestConnection() {
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
 	errorMsgAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
-	errorMsgCertWrongHost := "x509: certificate is not valid for any names, but wanted to match localhost"
+
+	var errorMsgCertWrongHost string
+	if suite.host == "localhost" {
+		errorMsgCertWrongHost = "x509: certificate is not valid for any names, but wanted to match localhost"
+	} else {
+		errorMsgCertWrongHost = fmt.Sprintf("x509: cannot validate certificate for %s because it doesn't contain any IP SANs", suite.host)
+	}
 	noError := ""
 
 	for i, testCase := range []struct {
