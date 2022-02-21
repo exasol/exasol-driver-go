@@ -3,7 +3,7 @@ package exasol
 import (
 	"net/url"
 
-	exaerror "github.com/exasol/error-reporting-go"
+	"github.com/exasol/error-reporting-go"
 )
 
 // Various errors the driver might return. Can change between driver versions.
