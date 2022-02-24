@@ -19,3 +19,5 @@ Update dependencies to fix security issues:
 
 * Added `github.com/docker/distribution v2.8.0+incompatible`
 * Added `github.com/opencontainers/runc v1.0.3`
+* Added `github.com/docker/docker v20.10.11+incompatible`
+
