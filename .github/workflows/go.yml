@@ -42,6 +42,9 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: latest
+          skip-go-installation: true # Go already installed by actions/setup-go
+          skip-pkg-cache: true # Caching already done by actions/cache
+          skip-build-cache: true
 
       - name: Go build
         run: |
