@@ -121,6 +121,9 @@ func (c *DSNConfig) ToDSN() string {
 	if c.ClientVersion != "" {
 		sb.WriteString(fmt.Sprintf("clientversion=%s;", c.ClientVersion))
 	}
+	if c.Schema != "" {
+		sb.WriteString(fmt.Sprintf("schema=%s;", c.Schema))
+	}
 	return strings.TrimRight(sb.String(), ";")
 }
 

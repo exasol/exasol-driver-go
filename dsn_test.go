@@ -179,6 +179,12 @@ func (suite *DriverTestSuite) TestConfigToDsnWithClientNameAndVersion() {
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol;clientname=clientName;clientversion=clientVersion", config.String())
 }
 
+func (suite *DriverTestSuite) TestConfigToDsnWithSchema() {
+	config := NewConfig("sys", "exasol").
+		Schema("schemaName")
+	suite.Equal("exa:localhost:8563;user=sys;password=exasol;schema=schemaName", config.String())
+}
+
 func (suite *DriverTestSuite) TestConfigToDsnWithDefaultValues() {
 	config := NewConfig("sys", "exasol")
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol", config.String())
