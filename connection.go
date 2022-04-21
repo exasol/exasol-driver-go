@@ -324,7 +324,7 @@ func (c *connection) login(ctx context.Context) error {
 		},
 	}
 
-	if osUser, err := user.Current(); err != nil {
+	if osUser, _ := user.Current(); osUser != nil {
 		authRequest.ClientOsUsername = osUser.Username
 	}
 
