@@ -10,10 +10,10 @@ jobs:
     strategy:
       matrix:
         go: [ "1.17", "1.18" ]
-        db: [ "7.0.17", "7.1.8" ]
+        db: [ "7.0.18", "7.1.9" ]
     env:
       DEFAULT_GO: "1.18"
-      DEFAULT_DB: "7.1.8"
+      DEFAULT_DB: "7.1.9"
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
     runs-on: ubuntu-latest
     steps:
