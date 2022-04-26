@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -371,6 +373,35 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	)
 }
 
+func (suite *IntegrationTestSuite) TestCustomClientName() {
+	expectedClientName := "My Client Name"
+	database := suite.openConnection(suite.createDefaultConfig().ClientName(expectedClientName))
+	rows, err := database.Query("select client from exa_user_sessions where session_id = current_session")
+	suite.NoError(err)
+	suite.True(rows.Next())
+	var client string
+	err = rows.Scan(&client)
+	suite.NoError(err)
+	suite.Equal(expectedClientName+" (unknown version)", client)
+}
+
+func (suite *IntegrationTestSuite) TestClientMetadataWithDefaultClientName() {
+	expectedOsUser, err := user.Current()
+	suite.NoError(err)
+	suite.NotNil(expectedOsUser)
+	database := suite.openConnection(suite.createDefaultConfig())
+	rows, err := database.Query("select client, driver, os_user, os_name from exa_user_sessions where session_id = current_session")
+	suite.NoError(err)
+	suite.True(rows.Next())
+	var client, driver, osUser, osName string
+	err = rows.Scan(&client, &driver, &osUser, &osName)
+	suite.NoError(err)
+	suite.Equal("Go client (unknown version)", client)
+	suite.Equal("exasol-driver-go v0.3.3 ", driver)
+	suite.Equal(expectedOsUser.Username, osUser)
+	suite.Equal(runtime.GOOS, osName)
+}
+
 func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
 	rows.Next()
 	var testValue string
@@ -382,7 +413,6 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 func (suite *IntegrationTestSuite) dropSchema(db *sql.DB, schemaName string) {
 	_, err := db.Exec("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE")
 	suite.NoError(err, "Failed to drop schema "+schemaName)
-	fmt.Printf("Schema dropped: %q\n", schemaName)
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {

@@ -8,12 +8,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"math/big"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
+
+	"github.com/gorilla/websocket"
 )
 
 type connection struct {
@@ -315,7 +316,7 @@ func (c *connection) login(ctx context.Context) error {
 		ClientName:     c.config.clientName,
 		DriverName:     fmt.Sprintf("exasol-driver-go %s", driverVersion),
 		ClientOs:       runtime.GOOS,
-		ClientVersion:  c.config.clientName,
+		ClientVersion:  "(unknown version)",
 		ClientRuntime:  runtime.Version(),
 		Attributes: Attributes{
 			Autocommit:         boolToPtr(c.config.autocommit),
@@ -324,8 +325,10 @@ func (c *connection) login(ctx context.Context) error {
 		},
 	}
 
-	if osUser, err := user.Current(); err != nil {
+	if osUser, err := user.Current(); err == nil && osUser != nil {
 		authRequest.ClientOsUsername = osUser.Username
+	} else {
+		logCouldNotGetOsUser(err)
 	}
 
 	authResponse := &AuthResponse{}
