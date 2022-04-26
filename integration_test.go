@@ -70,7 +70,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	if suite.host == "localhost" {
 		errorMsgCertWrongHost = "x509: certificate is not valid for any names, but wanted to match localhost"
 	} else {
-		errorMsgCertWrongHost = fmt.Sprintf("x509: cannot validate certificate for %s because it doesn't contain any IP SANs", suite.host)
+		errorMsgCertWrongHost = "x509: “*.exacluster.local” certificate is not standards compliant"
 	}
 	noError := ""
 
