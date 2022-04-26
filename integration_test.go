@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -35,9 +36,29 @@ func TestIntegrationSuite(t *testing.T) {
 
 func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = getContext()
-	suite.exasolContainer = runExasolContainer(suite.ctx)
-	suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
-	suite.host = getExasolHost(suite.exasolContainer, suite.ctx)
+	exasolHostEnv := os.Getenv("EXASOL_HOST")
+	if exasolHostEnv != "" {
+		suite.exasolContainer = nil
+		suite.host = exasolHostEnv
+		suite.port = getExasolPortFromEnv()
+	} else {
+		suite.exasolContainer = runExasolContainer(suite.ctx)
+		suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
+		suite.host = getExasolHost(suite.exasolContainer, suite.ctx)
+	}
+}
+
+func getExasolPortFromEnv() int {
+	envValue := os.Getenv("EXASOL_PORT")
+	if envValue == "" {
+		envValue = "8563"
+	}
+	if intValue, err := strconv.Atoi(envValue); err == nil {
+		return intValue
+	} else {
+		log.Fatalf("Error parsing port %q from environment variable EXASOL_PORT", envValue)
+		return -1
+	}
 }
 
 func getExasolHost(exasolContainer testcontainers.Container, ctx context.Context) string {
@@ -348,8 +369,10 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
-	err := suite.exasolContainer.Terminate(suite.ctx)
-	onError(err)
+	if suite.exasolContainer != nil {
+		err := suite.exasolContainer.Terminate(suite.ctx)
+		onError(err)
+	}
 }
 
 func (suite *IntegrationTestSuite) createDefaultConfig() *exasol.DSNConfigBuilder {
