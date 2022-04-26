@@ -204,3 +204,9 @@ For running the integrations tests you need [Docker](https://www.docker.com/) in
 ```shell
 go test ./...
 ```
+
+To save time for starting the Docker container, you can use an already running database:
+
+```shell
+EXASOL_HOST=<IP-address> EXASOL_PORT=8563 go test ./... 
+```
