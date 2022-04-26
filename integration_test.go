@@ -153,6 +153,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_1"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = database.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
@@ -163,6 +164,7 @@ func (suite *IntegrationTestSuite) TestFetch() {
 	database := suite.openConnection(suite.createDefaultConfig().FetchSize(200))
 	schemaName := "TEST_SCHEMA_FETCH"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	data := make([]string, 0)
 	for i := 0; i < 10000; i++ {
@@ -194,6 +196,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_2"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABLE not found"))
@@ -203,6 +206,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	preparedStatement, _ := database.Prepare("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (?)")
 	_, _ = preparedStatement.Exec(15)
@@ -216,6 +220,7 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Commit()
@@ -228,6 +233,7 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Rollback()
@@ -248,6 +254,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
 	_, _ = database.ExecContext(ctx, "INSERT INTO "+schemaName+".TEST_TABLE VALUES (15)")
 	rows, _ := database.QueryContext(ctx, "SELECT x FROM "+schemaName+".TEST_TABLE")
@@ -261,6 +268,7 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 	schemaName := "TEST_SCHEMA_7"
 	transaction, _ := database.BeginTx(ctx, nil)
 	_, _ = transaction.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
 	cancel()
 	_, err := transaction.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
 	suite.EqualError(err, "context canceled")
@@ -272,6 +280,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	schemaName := "TEST_SCHEMA_8"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
@@ -296,6 +305,7 @@ func (suite *IntegrationTestSuite) TestMultiImportStatement() {
 	schemaName := "TEST_SCHEMA_9"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
@@ -342,6 +352,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	schemaName := "TEST_SCHEMA_10"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data_cr.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'CR'`, schemaName, tableName))
@@ -366,6 +377,12 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 	err := rows.Scan(&testValue)
 	onError(err)
 	suite.Equal(expected, testValue)
+}
+
+func (suite *IntegrationTestSuite) dropSchema(db *sql.DB, schemaName string) {
+	_, err := db.Exec("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE")
+	suite.NoError(err, "Failed to drop schema "+schemaName)
+	fmt.Printf("Schema dropped: %q\n", schemaName)
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
