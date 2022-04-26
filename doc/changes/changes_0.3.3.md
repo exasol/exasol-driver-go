@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver 0.3.3, released 2022-04-26
+# Exasol Go SQL Driver 0.3.3, released 2022-04-27
 
 Code name: Fix OS user name
 
