@@ -140,6 +140,13 @@ func newFileNotFound(path string) DriverErr {
 		Parameter("path", path))
 }
 
+func logCouldNotGetOsUser(err error) {
+	errorLogger.Print(exaerror.New("W-EGOD-28").
+		Message("could not get current OS user: {{error}}").
+		Parameter("error", err).
+		String())
+}
+
 type DriverErr string
 
 func (e DriverErr) Error() string {

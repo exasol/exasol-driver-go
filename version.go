@@ -1,3 +1,3 @@
 package exasol
 
-const driverVersion = "v1.0.0"
+const driverVersion = "v0.3.3"
