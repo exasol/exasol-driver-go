@@ -16,4 +16,4 @@ testshort:
 	go test -v -short -coverprofile=coverage.out ./...
 
 coverage: test
-	go tool cover -html=coverage.out -o coverag.html
+	go tool cover -html=coverage.out -o coverage.html
