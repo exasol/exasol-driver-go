@@ -475,6 +475,7 @@ func runExasolContainer(ctx context.Context) testcontainers.Container {
 	if dbVersion == "" {
 		dbVersion = "7.1.9"
 	}
+	start := time.Now()
 
 	request := testcontainers.ContainerRequest{
 		Image:        fmt.Sprintf("exasol/docker-db:%s", dbVersion),
@@ -487,6 +488,12 @@ func runExasolContainer(ctx context.Context) testcontainers.Container {
 		Started:          true,
 	})
 	onError(err)
+
+	containerID := exasolContainer.GetContainerID()
+	name, err := exasolContainer.Name(ctx)
+	onError(err)
+
+	log.Printf("Started Exasol %s in container %s with ID %s in %s", dbVersion, name, containerID, time.Since(start))
 	return exasolContainer
 }
 
