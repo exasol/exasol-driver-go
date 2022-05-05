@@ -38,7 +38,7 @@ func main() {
 }
 ```
 
-If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`
+If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`. See the [documentation](https://docs.exasol.com/db/latest/sql/create_user.htm#AuthenticationusingOpenID) about how to configure OpenID authentication in Exasol.
 
 #### With Exasol DSN
 
@@ -210,5 +210,5 @@ go test ./...
 To save time for starting the Docker container, you can use an already running database:
 
 ```shell
-EXASOL_HOST=<IP-address> EXASOL_PORT=8563 go test ./... 
+EXASOL_HOST=<IP-address> EXASOL_PORT=8563 go test ./...
 ```
