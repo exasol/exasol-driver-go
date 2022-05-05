@@ -282,7 +282,29 @@ func (c *connection) login(ctx context.Context) error {
 	hasCompression := c.config.compression
 	c.config.compression = false
 
-	authRequest := AuthCommand{
+	authRequest, err := c.preLogin(ctx, hasCompression)
+	if err != nil {
+		return err
+	}
+
+	if osUser, err := user.Current(); err == nil && osUser != nil {
+		authRequest.ClientOsUsername = osUser.Username
+	} else {
+		logCouldNotGetOsUser(err)
+	}
+	authResponse := &AuthResponse{}
+	err = c.send(ctx, authRequest, authResponse)
+	if err != nil {
+		return err
+	}
+	c.isClosed = false
+	c.config.compression = hasCompression
+
+	return nil
+}
+
+func (c *connection) preLogin(ctx context.Context, compression bool) (*AuthCommand, error) {
+	authRequest := &AuthCommand{
 		UseCompression: false,
 		ClientName:     c.config.clientName,
 		DriverName:     fmt.Sprintf("exasol-driver-go %s", driverVersion),
@@ -292,45 +314,30 @@ func (c *connection) login(ctx context.Context) error {
 		Attributes: Attributes{
 			Autocommit:         boolToPtr(c.config.autocommit),
 			CurrentSchema:      c.config.schema,
-			CompressionEnabled: boolToPtr(hasCompression),
+			CompressionEnabled: boolToPtr(compression),
 		},
 	}
-
 	if c.config.accessToken != "" {
 		err := c.prepareLoginViaToken(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		authRequest.AccessToken = c.config.accessToken
 	} else if c.config.refreshToken != "" {
 		err := c.prepareLoginViaToken(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		authRequest.RefreshToken = c.config.refreshToken
 	} else {
 		password, err := c.prepareLoginViaPassword(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		authRequest.Username = c.config.user
 		authRequest.Password = password
 	}
-
-	if osUser, err := user.Current(); err == nil && osUser != nil {
-		authRequest.ClientOsUsername = osUser.Username
-	} else {
-		logCouldNotGetOsUser(err)
-	}
-	authResponse := &AuthResponse{}
-	err := c.send(ctx, authRequest, authResponse)
-	if err != nil {
-		return err
-	}
-	c.isClosed = false
-	c.config.compression = hasCompression
-
-	return nil
+	return authRequest, nil
 }
 
 func (c *connection) prepareLoginViaPassword(ctx context.Context) (string, error) {

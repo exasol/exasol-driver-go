@@ -1,10 +1,13 @@
 all: build
 
-install_deps:
+install-deps:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.45.2
 
-lint:
+lint-fix:
 	golangci-lint run --print-issued-lines=false --fix ./...
+
+lint:
+	golangci-lint run --print-issued-lines=false ./...
 
 test:
 	go test -v -coverprofile=coverage.out ./...
