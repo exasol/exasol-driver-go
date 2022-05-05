@@ -4,7 +4,7 @@ Code name: Allow login via OpenID tokens
 
 ## Summary
 
-This release allows login via OpenID access token and refresh token
+This release allows login via OpenID access token and refresh token with Exasol 7.1.x and later.
 
 ## Features
 

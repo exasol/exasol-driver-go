@@ -25,6 +25,7 @@ type IntegrationTestSuite struct {
 	suite.Suite
 	ctx             context.Context
 	exasolContainer testcontainers.Container
+	dbVersion       string
 	port            int
 	host            string
 }
@@ -44,10 +45,19 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 		suite.host = exasolHostEnv
 		suite.port = getExasolPortFromEnv()
 	} else {
-		suite.exasolContainer = runExasolContainer(suite.ctx)
+		suite.dbVersion = getDbVersion()
+		suite.exasolContainer = runExasolContainer(suite.ctx, suite.dbVersion)
 		suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
 		suite.host = getExasolHost(suite.exasolContainer, suite.ctx)
 	}
+}
+
+func getDbVersion() string {
+	dbVersion := os.Getenv("DB_VERSION")
+	if dbVersion != "" {
+		return dbVersion
+	}
+	return "7.1.9"
 }
 
 func getExasolPortFromEnv() int {
@@ -82,13 +92,23 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	suite.Equal("2", columns[0])
 }
 
+func (suite *IntegrationTestSuite) isExasol7_0_x() bool {
+	return strings.HasPrefix(suite.dbVersion, "7.0.")
+}
+
 func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	wrongFingerprint := "wrongFingerprint"
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
 	errorMsgAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
-	errorMsgTokenAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed'"
+
+	var errorMsgTokenAuthFailed string
+	if suite.isExasol7_0_x() {
+		errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '00000' and message 'Invalid login request command: loginToken'"
+	} else {
+		errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed'"
+	}
 
 	var errorMsgCertWrongHost string
 	if suite.host == "localhost" {
@@ -469,12 +489,7 @@ func getContext() context.Context {
 	return context.Background()
 }
 
-func runExasolContainer(ctx context.Context) testcontainers.Container {
-
-	dbVersion := os.Getenv("DB_VERSION")
-	if dbVersion == "" {
-		dbVersion = "7.1.9"
-	}
+func runExasolContainer(ctx context.Context, dbVersion string) testcontainers.Container {
 	start := time.Now()
 
 	request := testcontainers.ContainerRequest{
