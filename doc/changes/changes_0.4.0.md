@@ -1,11 +1,11 @@
-# Exasol Go SQL Driver 0.4.0, unreleased
+# Exasol Go SQL Driver 0.4.0, released 2022-05-05
 
-Code name: Allow login via openID tokens
+Code name: Allow login via OpenID tokens
 
 ## Summary
 
-This release allows login via access token and refresh token
+This release allows login via OpenID access token and refresh token
 
 ## Features
 
-* #60: Support authentication via access token
+* #60: Support authentication via OpenID token
