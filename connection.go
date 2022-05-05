@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"os/user"
@@ -281,6 +282,60 @@ func (c *connection) close(ctx context.Context) error {
 func (c *connection) login(ctx context.Context) error {
 	hasCompression := c.config.compression
 	c.config.compression = false
+
+	authRequest := AuthCommand{
+		UseCompression: false,
+		ClientName:     c.config.clientName,
+		DriverName:     fmt.Sprintf("exasol-driver-go %s", driverVersion),
+		ClientOs:       runtime.GOOS,
+		ClientVersion:  "(unknown version)",
+		ClientRuntime:  runtime.Version(),
+		Attributes: Attributes{
+			Autocommit:         boolToPtr(c.config.autocommit),
+			CurrentSchema:      c.config.schema,
+			CompressionEnabled: boolToPtr(hasCompression),
+		},
+	}
+
+	if c.config.accessToken != "" {
+		err := c.prepareLoginViaToken(ctx)
+		if err != nil {
+			return err
+		}
+		authRequest.AccessToken = c.config.accessToken
+	} else if c.config.refreshToken != "" {
+		err := c.prepareLoginViaToken(ctx)
+		if err != nil {
+			return err
+		}
+		authRequest.RefreshToken = c.config.refreshToken
+	} else {
+		password, err := c.prepareLoginViaPassword(ctx)
+		if err != nil {
+			return err
+		}
+		authRequest.Username = c.config.user
+		authRequest.Password = password
+	}
+
+	if osUser, err := user.Current(); err == nil && osUser != nil {
+		authRequest.ClientOsUsername = osUser.Username
+	} else {
+		logCouldNotGetOsUser(err)
+	}
+	log.Printf("Login via authRequest, %v", authRequest)
+	authResponse := &AuthResponse{}
+	err := c.send(ctx, authRequest, authResponse)
+	if err != nil {
+		return err
+	}
+	c.isClosed = false
+	c.config.compression = hasCompression
+
+	return nil
+}
+
+func (c *connection) prepareLoginViaPassword(ctx context.Context) (string, error) {
 	loginCommand := &LoginCommand{
 		Command:         Command{"login"},
 		ProtocolVersion: c.config.apiVersion,
@@ -288,7 +343,7 @@ func (c *connection) login(ctx context.Context) error {
 	loginResponse := &PublicKeyResponse{}
 	err := c.send(ctx, loginCommand, loginResponse)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	pubKeyMod, _ := hex.DecodeString(loginResponse.PublicKeyModulus)
@@ -305,39 +360,20 @@ func (c *connection) login(ctx context.Context) error {
 	encPass, err := rsa.EncryptPKCS1v15(rand.Reader, &pubKey, password)
 	if err != nil {
 		logPasswordEncryptionError(err)
-		return driver.ErrBadConn
+		return "", driver.ErrBadConn
 	}
-	b64Pass := base64.StdEncoding.EncodeToString(encPass)
+	return base64.StdEncoding.EncodeToString(encPass), nil
+}
 
-	authRequest := AuthCommand{
-		Username:       c.config.user,
-		Password:       b64Pass,
-		UseCompression: false,
-		ClientName:     c.config.clientName,
-		DriverName:     fmt.Sprintf("exasol-driver-go %s", driverVersion),
-		ClientOs:       runtime.GOOS,
-		ClientVersion:  "(unknown version)",
-		ClientRuntime:  runtime.Version(),
-		Attributes: Attributes{
-			Autocommit:         boolToPtr(c.config.autocommit),
-			CurrentSchema:      c.config.schema,
-			CompressionEnabled: boolToPtr(hasCompression),
-		},
+func (c *connection) prepareLoginViaToken(ctx context.Context) error {
+	c.config.compression = false
+	loginCommand := &LoginTokenCommand{
+		Command:         Command{"loginToken"},
+		ProtocolVersion: c.config.apiVersion,
 	}
-
-	if osUser, err := user.Current(); err == nil && osUser != nil {
-		authRequest.ClientOsUsername = osUser.Username
-	} else {
-		logCouldNotGetOsUser(err)
-	}
-
-	authResponse := &AuthResponse{}
-	err = c.send(ctx, authRequest, authResponse)
+	err := c.send(ctx, loginCommand, nil)
 	if err != nil {
 		return err
 	}
-	c.isClosed = false
-	c.config.compression = hasCompression
-
 	return nil
 }

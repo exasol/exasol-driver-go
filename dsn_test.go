@@ -189,3 +189,35 @@ func (suite *DriverTestSuite) TestConfigToDsnWithDefaultValues() {
 	config := NewConfig("sys", "exasol")
 	suite.Equal("exa:localhost:8563;user=sys;password=exasol", config.String())
 }
+
+func (suite *DriverTestSuite) TestConfigWithAccessToken() {
+	config := NewConfigWithAccessToken("TOKEN.JWT.TEST")
+	suite.Equal("exa:localhost:8563;accesstoken=TOKEN.JWT.TEST", config.String())
+}
+
+func (suite *DsnTestSuite) TestParseValidDsnWithAccessToken() {
+	dsn, err := ParseDSN(
+		`exa:localhost:1234;accesstoken=TOKEN.JWT.TEST;autocommit=1;encryption=1;compression=0`)
+	suite.NoError(err)
+	suite.Equal("TOKEN.JWT.TEST", dsn.AccessToken)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(true, *dsn.Autocommit)
+	suite.Equal(true, *dsn.Encryption)
+	suite.Equal(false, *dsn.Compression)
+}
+
+func (suite *DriverTestSuite) TestConfigWithrefreshToken() {
+	config := NewConfigWithRefreshToken("RefreshToken")
+	suite.Equal("exa:localhost:8563;refreshtoken=RefreshToken", config.String())
+}
+
+func (suite *DsnTestSuite) TestParseValidDsnWithRefreshToken() {
+	dsn, err := ParseDSN(
+		`exa:localhost:1234;refreshtoken=RefreshToken;autocommit=1;encryption=1;compression=0`)
+	suite.NoError(err)
+	suite.Equal("RefreshToken", dsn.RefreshToken)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(true, *dsn.Autocommit)
+	suite.Equal(true, *dsn.Encryption)
+	suite.Equal(false, *dsn.Compression)
+}

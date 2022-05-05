@@ -30,13 +30,15 @@ import (
 )
 
 func main() {
-    database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
-                                              .Port(<port>)
-                                              .Host("<host>")
-                                              .String())
+    database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").
+                                              Port(<port>).
+                                              Host("<host>").
+                                              String())
     // ...
 }
 ```
+
+If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`
 
 #### With Exasol DSN
 
