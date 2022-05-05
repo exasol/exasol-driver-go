@@ -217,6 +217,32 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	suite.assertSingleValueResult(rows, "15")
 }
 
+func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	schemaName := "TEST_SCHEMA_3_2"
+	_, _ = database.ExecContext(context.Background(), "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
+	_, _ = database.ExecContext(context.Background(), "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
+	result, _ := database.ExecContext(context.Background(), "INSERT INTO "+schemaName+".TEST_TABLE VALUES (?)", 15)
+	affectedRow, _ := result.RowsAffected()
+	suite.Assert().Equal(int64(1), affectedRow)
+	rows, _ := database.QueryContext(context.Background(), "SELECT x FROM "+schemaName+".TEST_TABLE WHERE x = ?", 15)
+	suite.assertSingleValueResult(rows, "15")
+}
+
+func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	schemaName := "TEST_SCHEMA_3_3"
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
+	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	result, _ := database.Exec("INSERT INTO "+schemaName+".TEST_TABLE VALUES (?)", 15)
+	affectedRow, _ := result.RowsAffected()
+	suite.Assert().Equal(int64(1), affectedRow)
+	rows, _ := database.Query("SELECT x FROM "+schemaName+".TEST_TABLE WHERE x = ?", 15)
+	suite.assertSingleValueResult(rows, "15")
+}
+
 func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "TEST_SCHEMA_4"
