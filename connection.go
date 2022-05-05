@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"os/user"
@@ -323,7 +322,6 @@ func (c *connection) login(ctx context.Context) error {
 	} else {
 		logCouldNotGetOsUser(err)
 	}
-	log.Printf("Login via authRequest, %v", authRequest)
 	authResponse := &AuthResponse{}
 	err := c.send(ctx, authRequest, authResponse)
 	if err != nil {
