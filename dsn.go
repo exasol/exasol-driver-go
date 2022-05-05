@@ -22,6 +22,8 @@ type DSNConfig struct {
 	Schema                    string
 	ResultSetMaxRows          int
 	params                    map[string]string // Connection parameters
+	AccessToken               string
+	RefreshToken              string
 }
 
 type DSNConfigBuilder struct {
@@ -35,6 +37,26 @@ func NewConfig(user, password string) *DSNConfigBuilder {
 			Port:     8563,
 			User:     user,
 			Password: password,
+		},
+	}
+}
+
+func NewConfigWithAccessToken(token string) *DSNConfigBuilder {
+	return &DSNConfigBuilder{
+		config: &DSNConfig{
+			Host:        "localhost",
+			Port:        8563,
+			AccessToken: token,
+		},
+	}
+}
+
+func NewConfigWithRefreshToken(token string) *DSNConfigBuilder {
+	return &DSNConfigBuilder{
+		config: &DSNConfig{
+			Host:         "localhost",
+			Port:         8563,
+			RefreshToken: token,
 		},
 	}
 }
@@ -96,7 +118,16 @@ func (c *DSNConfigBuilder) String() string {
 
 func (c *DSNConfig) ToDSN() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("exa:%s:%d;user=%s;password=%s;", c.Host, c.Port, c.User, c.Password))
+	sb.WriteString(fmt.Sprintf("exa:%s:%d;", c.Host, c.Port))
+
+	if c.AccessToken != "" {
+		sb.WriteString(fmt.Sprintf("accesstoken=%s;", c.AccessToken))
+	} else if c.RefreshToken != "" {
+		sb.WriteString(fmt.Sprintf("refreshtoken=%s;", c.RefreshToken))
+	} else {
+		sb.WriteString(fmt.Sprintf("user=%s;password=%s;", c.User, c.Password))
+	}
+
 	if c.Autocommit != nil {
 		sb.WriteString(fmt.Sprintf("autocommit=%d;", boolToInt(*c.Autocommit)))
 	}
@@ -190,6 +221,10 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 		switch key {
 		case "password":
 			config.Password = unescape(value, ";")
+		case "accesstoken":
+			config.AccessToken = unescape(value, ";")
+		case "refreshtoken":
+			config.RefreshToken = unescape(value, ";")
 		case "user":
 			config.User = unescape(value, ";")
 		case "autocommit":

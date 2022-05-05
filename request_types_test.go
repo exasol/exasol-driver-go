@@ -26,7 +26,9 @@ func (suite *RequestTypesTestSuite) TestMarshallLoginCommand() {
 		{"login command", LoginCommand{
 			Command:         Command{"login"},
 			ProtocolVersion: 42}, `{"command":"login","protocolVersion":42,"attributes":{}}`},
-
+		{"login token command", LoginTokenCommand{
+			Command:         Command{"loginToken"},
+			ProtocolVersion: 42}, `{"command":"loginToken","protocolVersion":42,"attributes":{}}`},
 		{"login command with attributes", LoginCommand{
 			Command:         Command{"login"},
 			ProtocolVersion: 42,

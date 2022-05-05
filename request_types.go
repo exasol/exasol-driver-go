@@ -10,6 +10,12 @@ type LoginCommand struct {
 	Attributes      Attributes `json:"attributes,omitempty"`
 }
 
+type LoginTokenCommand struct {
+	Command
+	ProtocolVersion int        `json:"protocolVersion"`
+	Attributes      Attributes `json:"attributes,omitempty"`
+}
+
 type CloseResultSetCommand struct {
 	Command
 	ResultSetHandles []int      `json:"resultSetHandles"`
@@ -65,8 +71,10 @@ type Attributes struct {
 }
 
 type AuthCommand struct {
-	Username         string     `json:"username"`
-	Password         string     `json:"password"`
+	Username         string     `json:"username,omitempty"`
+	Password         string     `json:"password,omitempty"`
+	AccessToken      string     `json:"accessToken,omitempty"`
+	RefreshToken     string     `json:"refreshToken,omitempty"`
 	UseCompression   bool       `json:"useCompression"`
 	SessionID        int        `json:"sessionId,omitempty"`
 	ClientName       string     `json:"clientName,omitempty"`

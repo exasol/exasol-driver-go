@@ -11,6 +11,8 @@ type ExasolDriver struct{}
 type config struct {
 	user                      string
 	password                  string
+	accessToken               string
+	refreshToken              string
 	host                      string
 	port                      int
 	params                    map[string]string // Connection parameters
@@ -32,13 +34,19 @@ func init() {
 }
 
 func toInternalConfig(dsnConfig *DSNConfig) *config {
+	apiVersion := 2
+	if dsnConfig.AccessToken != "" || dsnConfig.RefreshToken != "" {
+		apiVersion = 3
+	}
 	return &config{
 		user:                      dsnConfig.User,
 		password:                  dsnConfig.Password,
+		accessToken:               dsnConfig.AccessToken,
+		refreshToken:              dsnConfig.RefreshToken,
 		host:                      dsnConfig.Host,
 		port:                      dsnConfig.Port,
 		params:                    dsnConfig.params,
-		apiVersion:                2,
+		apiVersion:                apiVersion,
 		clientName:                dsnConfig.ClientName,
 		clientVersion:             dsnConfig.ClientVersion,
 		schema:                    dsnConfig.Schema,

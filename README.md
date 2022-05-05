@@ -30,13 +30,15 @@ import (
 )
 
 func main() {
-    database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>")
-                                              .Port(<port>)
-                                              .Host("<host>")
-                                              .String())
+    database, err := sql.Open("exasol", exasol.NewConfig("<username>", "<password>").
+                                              Port(<port>).
+                                              Host("<host>").
+                                              String())
     // ...
 }
 ```
+
+If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`. See the [documentation](https://docs.exasol.com/db/latest/sql/create_user.htm#AuthenticationusingOpenID) about how to configure OpenID authentication in Exasol. OpenID authentication is only supported with Exasol 7.1.x and later.
 
 #### With Exasol DSN
 
@@ -208,5 +210,5 @@ go test ./...
 To save time for starting the Docker container, you can use an already running database:
 
 ```shell
-EXASOL_HOST=<IP-address> EXASOL_PORT=8563 go test ./... 
+EXASOL_HOST=<IP-address> EXASOL_PORT=8563 go test ./...
 ```

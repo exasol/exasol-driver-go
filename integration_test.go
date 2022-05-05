@@ -25,6 +25,7 @@ type IntegrationTestSuite struct {
 	suite.Suite
 	ctx             context.Context
 	exasolContainer testcontainers.Container
+	dbVersion       string
 	port            int
 	host            string
 }
@@ -44,10 +45,19 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 		suite.host = exasolHostEnv
 		suite.port = getExasolPortFromEnv()
 	} else {
-		suite.exasolContainer = runExasolContainer(suite.ctx)
+		suite.dbVersion = getDbVersion()
+		suite.exasolContainer = runExasolContainer(suite.ctx, suite.dbVersion)
 		suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
 		suite.host = getExasolHost(suite.exasolContainer, suite.ctx)
 	}
+}
+
+func getDbVersion() string {
+	dbVersion := os.Getenv("DB_VERSION")
+	if dbVersion != "" {
+		return dbVersion
+	}
+	return "7.1.9"
 }
 
 func getExasolPortFromEnv() int {
@@ -82,12 +92,23 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	suite.Equal("2", columns[0])
 }
 
+func (suite *IntegrationTestSuite) isExasol7_0_x() bool {
+	return strings.HasPrefix(suite.dbVersion, "7.0.")
+}
+
 func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	wrongFingerprint := "wrongFingerprint"
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
 	errorMsgAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
+
+	var errorMsgTokenAuthFailed string
+	if suite.isExasol7_0_x() {
+		errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '00000' and message 'Invalid login request command: loginToken'"
+	} else {
+		errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed'"
+	}
 
 	var errorMsgCertWrongHost string
 	if suite.host == "localhost" {
@@ -106,6 +127,9 @@ func (suite *IntegrationTestSuite) TestConnection() {
 		{"wrong host", suite.createDefaultConfig().Host("wrong"), "dial tcp: lookup wrong"},
 		{"wrong user", exasol.NewConfig("wronguser", "exasol").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgAuthFailed},
 		{"wrong password", exasol.NewConfig("sys", "wrongPassword").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgAuthFailed},
+
+		{"wrong refresh token", exasol.NewConfigWithRefreshToken("invalid.refresh.token").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgTokenAuthFailed},
+		{"wrong access token", exasol.NewConfigWithAccessToken("invalid.access.token").Host(suite.host).Port(suite.port).ValidateServerCertificate(false), errorMsgTokenAuthFailed},
 
 		{"valid credentials", suite.createDefaultConfig(), noError},
 		{"multiple invalid hostnames", suite.createDefaultConfig().Host("wrong0,wrong1,wrong2,wrong3,wrong4,wrong5," + suite.host), noError},
@@ -214,6 +238,32 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	_, _ = preparedStatement.Exec(15)
 	preparedStatement, _ = database.Prepare("SELECT x FROM " + schemaName + ".TEST_TABLE WHERE x = ?")
 	rows, _ := preparedStatement.Query(15)
+	suite.assertSingleValueResult(rows, "15")
+}
+
+func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	schemaName := "TEST_SCHEMA_3_2"
+	_, _ = database.ExecContext(context.Background(), "CREATE SCHEMA "+schemaName)
+	defer suite.dropSchema(database, schemaName)
+	_, _ = database.ExecContext(context.Background(), "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
+	result, _ := database.ExecContext(context.Background(), "INSERT INTO "+schemaName+".TEST_TABLE VALUES (?)", 15)
+	affectedRow, _ := result.RowsAffected()
+	suite.Assert().Equal(int64(1), affectedRow)
+	rows, _ := database.QueryContext(context.Background(), "SELECT x FROM "+schemaName+".TEST_TABLE WHERE x = ?", 15)
+	suite.assertSingleValueResult(rows, "15")
+}
+
+func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	schemaName := "TEST_SCHEMA_3_3"
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.dropSchema(database, schemaName)
+	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	result, _ := database.Exec("INSERT INTO "+schemaName+".TEST_TABLE VALUES (?)", 15)
+	affectedRow, _ := result.RowsAffected()
+	suite.Assert().Equal(int64(1), affectedRow)
+	rows, _ := database.Query("SELECT x FROM "+schemaName+".TEST_TABLE WHERE x = ?", 15)
 	suite.assertSingleValueResult(rows, "15")
 }
 
@@ -439,12 +489,8 @@ func getContext() context.Context {
 	return context.Background()
 }
 
-func runExasolContainer(ctx context.Context) testcontainers.Container {
-
-	dbVersion := os.Getenv("DB_VERSION")
-	if dbVersion == "" {
-		dbVersion = "7.1.9"
-	}
+func runExasolContainer(ctx context.Context, dbVersion string) testcontainers.Container {
+	start := time.Now()
 
 	request := testcontainers.ContainerRequest{
 		Image:        fmt.Sprintf("exasol/docker-db:%s", dbVersion),
@@ -457,6 +503,12 @@ func runExasolContainer(ctx context.Context) testcontainers.Container {
 		Started:          true,
 	})
 	onError(err)
+
+	containerID := exasolContainer.GetContainerID()
+	name, err := exasolContainer.Name(ctx)
+	onError(err)
+
+	log.Printf("Started Exasol %s in container %s with ID %s in %s", dbVersion, name, containerID, time.Since(start))
 	return exasolContainer
 }
 
