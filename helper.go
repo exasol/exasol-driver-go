@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -95,6 +96,49 @@ func updateImportQuery(query string, p *proxy) string {
 	proxyURL := fmt.Sprintf("http://%s:%d", p.Host, p.Port)
 	updatedImport := fmt.Sprintf("CSV AT '%s'", proxyURL)
 	var importQueryRegex = regexp.MustCompile(`(?i)(LOCAL CSV)`)
-	return string(importQueryRegex.ReplaceAll([]byte(query), []byte(updatedImport)))
 
+	return string(importQueryRegex.ReplaceAll([]byte(query), []byte(updatedImport)))
+}
+
+func resolveHosts(h string) ([]string, error) {
+	var hosts []string
+	hostRangeRegex := regexp.MustCompile(`^((.+?)(\d+))\.\.(\d+)$`)
+
+	for _, host := range strings.Split(h, ",") {
+		if hostRangeRegex.MatchString(host) {
+			parsedHosts, err := parseRange(hostRangeRegex, host)
+			if err != nil {
+				return nil, err
+			}
+			hosts = append(hosts, parsedHosts...)
+		} else {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts, nil
+}
+
+func parseRange(hostRangeRegex *regexp.Regexp, host string) ([]string, error) {
+	matches := hostRangeRegex.FindStringSubmatch(host)
+	prefix := matches[2]
+
+	start, err := strconv.Atoi(matches[3])
+	if err != nil {
+		return nil, err
+	}
+
+	stop, err := strconv.Atoi(matches[4])
+	if err != nil {
+		return nil, err
+	}
+
+	if stop < start {
+		return nil, newInvalidHostRangeLimits(host)
+	}
+
+	var hosts []string
+	for i := start; i <= stop; i++ {
+		hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
+	}
+	return hosts, nil
 }

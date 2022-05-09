@@ -9,10 +9,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	mathRand "math/rand"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -213,6 +215,15 @@ func (c *connection) handleImportQuery(query string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	hosts, err := resolveHosts(c.config.host)
+	if err != nil {
+		return "", err
+	}
+	mathRand.Seed(time.Now().UnixNano())
+	mathRand.Shuffle(len(hosts), func(i, j int) {
+		hosts[i], hosts[j] = hosts[j], hosts[i]
+	})
 
 	p, err := newProxy(c.config.host, c.config.port)
 	if err != nil {

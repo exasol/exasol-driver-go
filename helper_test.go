@@ -146,3 +146,62 @@ func TestGetRowSeparator(t *testing.T) {
 		})
 	}
 }
+
+func TestSingleHostResolve(t *testing.T) {
+	hosts, err := resolveHosts("localhost")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(hosts))
+	assert.Equal(t, "localhost", hosts[0])
+}
+
+func TestMultipleHostResolve(t *testing.T) {
+	hosts, err := resolveHosts("exasol1,127.0.0.1,exasol3")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(hosts))
+	assert.Equal(t, "exasol1", hosts[0])
+	assert.Equal(t, "127.0.0.1", hosts[1])
+	assert.Equal(t, "exasol3", hosts[2])
+}
+
+func TestHostSuffixRangeResolve(t *testing.T) {
+	hosts, err := resolveHosts("exasol1..3")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(hosts))
+	assert.Equal(t, "exasol1", hosts[0])
+	assert.Equal(t, "exasol2", hosts[1])
+	assert.Equal(t, "exasol3", hosts[2])
+}
+
+func TestResolvingHostRangeWithCompleteHostnameNotSupported(t *testing.T) {
+	hosts, err := resolveHosts("exasol1..exasol3")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(hosts))
+	assert.Equal(t, "exasol1..exasol3", hosts[0])
+}
+
+func TestResolvingHostRangeWithInvalidRangeNotSupported(t *testing.T) {
+	hosts, err := resolveHosts("exasolX..Y")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(hosts))
+	assert.Equal(t, "exasolX..Y", hosts[0])
+}
+
+func TestResolvingHostRangeWithInvalidRangeLimits(t *testing.T) {
+	hosts, err := resolveHosts("exasol3..1")
+	assert.EqualError(t, err, "E-EGOD-20: invalid host range limits: 'exasol3..1'")
+	assert.Nil(t, hosts)
+}
+
+func TestIPRangeResolve(t *testing.T) {
+	hosts, err := resolveHosts("127.0.0.1..3")
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(hosts))
+	assert.Equal(t, "127.0.0.1", hosts[0])
+	assert.Equal(t, "127.0.0.2", hosts[1])
+	assert.Equal(t, "127.0.0.3", hosts[2])
+}
