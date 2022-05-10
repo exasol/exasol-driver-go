@@ -14,56 +14,11 @@ import (
 	"io"
 	"math/rand"
 	"net/url"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
-
-func (c *connection) resolveHosts() ([]string, error) {
-	var hosts []string
-	hostRangeRegex := regexp.MustCompile(`^((.+?)(\d+))\.\.(\d+)$`)
-
-	for _, host := range strings.Split(c.config.host, ",") {
-		if hostRangeRegex.MatchString(host) {
-			parsedHosts, err := c.parseRange(hostRangeRegex, host)
-			if err != nil {
-				return nil, err
-			}
-			hosts = append(hosts, parsedHosts...)
-		} else {
-			hosts = append(hosts, host)
-		}
-	}
-	return hosts, nil
-}
-
-func (c *connection) parseRange(hostRangeRegex *regexp.Regexp, host string) ([]string, error) {
-	matches := hostRangeRegex.FindStringSubmatch(host)
-	prefix := matches[2]
-
-	start, err := strconv.Atoi(matches[3])
-	if err != nil {
-		return nil, err
-	}
-
-	stop, err := strconv.Atoi(matches[4])
-	if err != nil {
-		return nil, err
-	}
-
-	if stop < start {
-		return nil, newInvalidHostRangeLimits(host)
-	}
-
-	var hosts []string
-	for i := start; i <= stop; i++ {
-		hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
-	}
-	return hosts, nil
-}
 
 func (c *connection) getURIScheme() string {
 	if c.config.encryption {
@@ -74,7 +29,7 @@ func (c *connection) getURIScheme() string {
 }
 
 func (c *connection) connect() error {
-	hosts, err := c.resolveHosts()
+	hosts, err := resolveHosts(c.config.host)
 	if err != nil {
 		return err
 	}
