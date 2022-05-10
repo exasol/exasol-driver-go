@@ -225,7 +225,7 @@ func (c *connection) handleImportQuery(query string) (string, error) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
 
-	p, err := newProxy(hosts[0], c.config.port)
+	p, err := newProxy(hosts, c.config.port)
 	if err != nil {
 		return "", err
 	}

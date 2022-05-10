@@ -20,21 +20,24 @@ type proxy struct {
 
 var magicWords = []interface{}{uint32(0x02212102), uint32(1), uint32(1)}
 
-func newProxy(host string, port int) (*proxy, error) {
-	uri := fmt.Sprintf("%s:%d", host, port)
-	con, err := net.Dial("tcp", uri)
-	if err != nil {
-		wrappedErr := fmt.Errorf("%w: could not create TCP connection to %s, %s", ErrInvalidProxyConn, uri, err.Error())
-		errorLogger.Print(wrappedErr)
-		return nil, wrappedErr
-	}
+func newProxy(hosts []string, port int) (*proxy, error) {
+	var wrappedErr error
+	for _, host := range hosts {
+		uri := fmt.Sprintf("%s:%d", host, port)
+		con, err := net.Dial("tcp", uri)
+		if err == nil {
+			p := &proxy{
+				connection: con,
+				isClosed:   false,
+			}
 
-	p := &proxy{
-		connection: con,
-		isClosed:   false,
+			return p, nil
+		} else {
+			wrappedErr = fmt.Errorf("%w: could not create TCP connection to %s, %s", ErrInvalidProxyConn, uri, err.Error())
+			errorLogger.Print(wrappedErr)
+		}
 	}
-
-	return p, nil
+	return nil, wrappedErr
 }
 
 func (p *proxy) startProxy() error {
@@ -91,6 +94,7 @@ func (p *proxy) write(files []*os.File, rowSeparator string) error {
 func (p *proxy) sendFile(file *os.File, rowSeparator string, chunkedWriter io.WriteCloser) error {
 
 	reader := bufio.NewReader(file)
+	b := bufio.NewReader(p.connection)
 
 	for {
 		delimiter := '\n'
@@ -99,13 +103,16 @@ func (p *proxy) sendFile(file *os.File, rowSeparator string, chunkedWriter io.Wr
 			delimiter = '\r'
 		}
 		line, err := reader.ReadBytes(byte(delimiter))
-
 		if err != nil && len(line) == 0 {
 			break
 		}
 
 		if err != nil && len(line) != 0 {
 			line = append(line, []byte(rowSeparator)...)
+		}
+
+		if b.Buffered() > 0 {
+			fmt.Printf("has Buffered incomming data? %d\n", b.Buffered())
 		}
 
 		if len(line) == 0 {
