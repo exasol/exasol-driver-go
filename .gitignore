@@ -16,3 +16,4 @@
 main
 coverage.html
 .DS_Store
+testData/data_huge.csv

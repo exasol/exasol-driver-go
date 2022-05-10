@@ -3,6 +3,7 @@ package exasol_test
 import (
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
@@ -347,6 +348,49 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 			{float64(11), "test1"},
 			{float64(12), "test2"},
 			{float64(13), "test3"},
+		},
+	)
+}
+
+func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE_HUGE"
+
+	file, err := os.Create("./testData/data_huge.csv")
+	suite.NoError(err, "open file should be working")
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	writer.Comma = ','
+
+	exampleData := time.Now().Format(time.RFC3339)
+
+	// Generate file with around 3 MB
+	for i := 0; i < 20000; i++ {
+		err := writer.Write([]string{fmt.Sprint(i), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData})
+		suite.NoError(err, "adding example data should be working")
+	}
+	writer.Flush()
+
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+	defer suite.dropSchema(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data_huge.csv' COLUMN SEPARATOR = ',' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
+	suite.NoError(err, "import should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(20000), affectedRows)
+
+	rows, err := database.Query(fmt.Sprintf("SELECT * FROM %s.%s ORDER BY a LIMIT 3 ", schemaName, tableName))
+	suite.NoError(err, "query should be working")
+	suite.assertTableResult(rows,
+		[]string{"A", "B", "C", "D", "E", "F", "G"},
+		[][]interface{}{
+			{float64(0), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{float64(1), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{float64(2), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
 		},
 	)
 }

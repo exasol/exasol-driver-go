@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"math/big"
 	mathRand "math/rand"
 	"os"
@@ -180,78 +181,100 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 		errorLogger.Print(ErrClosed)
 		return nil, driver.ErrBadConn
 	}
+	result := make(chan driver.Result, 1)
+	errs, errctx := errgroup.WithContext(ctx)
 
 	if isImportQuery(query) {
-		var err error
-		query, err = c.handleImportQuery(query)
+		originalQuery := query
+		p, err := c.getProxy()
 		if err != nil {
 			return nil, err
 		}
+		err = p.startProxy()
+		if err != nil {
+			return nil, err
+		}
+		defer p.close()
+		query = updateImportQuery(originalQuery, p)
+		errs.Go(func() error { return c.uploadFiles(p, originalQuery) })
 	}
-
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
-		return c.executeSimpleWithResult(ctx, query)
-	}
+		errs.Go(func() error {
+			r, err := c.executeSimpleWithResult(errctx, query)
+			if err != nil {
+				return err
+			}
+			result <- r
+			return nil
+		})
+	} else {
+		prepResponse := &CreatePreparedStatementResponse{}
+		err := c.send(ctx, &CreatePreparedStatementCommand{
+			Command: Command{"createPreparedStatement"},
+			SQLText: query,
+		}, prepResponse)
+		if err != nil {
+			return nil, err
+		}
 
-	prepResponse := &CreatePreparedStatementResponse{}
-	err := c.send(ctx, &CreatePreparedStatementCommand{
-		Command: Command{"createPreparedStatement"},
-		SQLText: query,
-	}, prepResponse)
+		errs.Go(func() error {
+			resp, perr := c.executePreparedStatement(errctx, prepResponse, args)
+			if perr != nil {
+				return perr
+			}
+			r, perr := toResult(resp)
+			if perr != nil {
+				return perr
+			}
+			result <- r
+			return nil
+		})
+	}
+	err := errs.Wait()
+	close(result)
+
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := c.executePreparedStatement(ctx, prepResponse, args)
-	if err != nil {
-		return nil, err
-	}
-	return toResult(result)
+	return <-result, nil
 }
 
-func (c *connection) handleImportQuery(query string) (string, error) {
-	paths, err := getFilePaths(query)
-	if err != nil {
-		return "", err
-	}
-
+func (c *connection) getProxy() (*proxy, error) {
 	hosts, err := resolveHosts(c.config.host)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	mathRand.Seed(time.Now().UnixNano())
 	mathRand.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
 
-	p, err := newProxy(hosts, c.config.port)
-	if err != nil {
-		return "", err
-	}
-	defer p.close()
+	return newProxy(hosts, c.config.port)
+}
 
-	err = p.startProxy()
+func (c *connection) uploadFiles(p *proxy, query string) error {
+	paths, err := getFilePaths(query)
 	if err != nil {
-		return "", err
+		return err
 	}
-	query = updateImportQuery(query, p)
 
 	var files []*os.File
 	for _, path := range paths {
-		f, err := openFile(path)
-		if err != nil {
-			return "", err
+		f, ferr := openFile(path)
+		if ferr != nil {
+			return ferr
 		}
 		files = append(files, f)
 	}
 
 	err = p.write(files, getRowSeparator(query))
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return query, nil
+	return nil
 }
 
 func (c *connection) executeSimpleWithResult(ctx context.Context, query string) (driver.Result, error) {
