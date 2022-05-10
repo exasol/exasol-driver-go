@@ -200,36 +200,9 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 	}
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
-		errs.Go(func() error {
-			r, err := c.executeSimpleWithResult(errctx, query)
-			if err != nil {
-				return err
-			}
-			result <- r
-			return nil
-		})
+		errs.Go(c.executeSimpleWrapper(errctx, query, result))
 	} else {
-		prepResponse := &CreatePreparedStatementResponse{}
-		err := c.send(ctx, &CreatePreparedStatementCommand{
-			Command: Command{"createPreparedStatement"},
-			SQLText: query,
-		}, prepResponse)
-		if err != nil {
-			return nil, err
-		}
-
-		errs.Go(func() error {
-			resp, perr := c.executePreparedStatement(errctx, prepResponse, args)
-			if perr != nil {
-				return perr
-			}
-			r, perr := toResult(resp)
-			if perr != nil {
-				return perr
-			}
-			result <- r
-			return nil
-		})
+		errs.Go(c.executePreparedStatementWrapper(errctx, query, args, result))
 	}
 	err := errs.Wait()
 	close(result)
@@ -239,6 +212,40 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 	}
 
 	return <-result, nil
+}
+
+func (c *connection) executeSimpleWrapper(ctx context.Context, query string, result chan driver.Result) func() error {
+	return func() error {
+		r, err := c.executeSimpleWithResult(ctx, query)
+		if err != nil {
+			return err
+		}
+		result <- r
+		return nil
+	}
+}
+
+func (c *connection) executePreparedStatementWrapper(ctx context.Context, query string, args []driver.Value, result chan driver.Result) func() error {
+	return func() error {
+		prepResponse := &CreatePreparedStatementResponse{}
+		err := c.send(ctx, &CreatePreparedStatementCommand{
+			Command: Command{"createPreparedStatement"},
+			SQLText: query,
+		}, prepResponse)
+		if err != nil {
+			return err
+		}
+		resp, err := c.executePreparedStatement(ctx, prepResponse, args)
+		if err != nil {
+			return err
+		}
+		r, err := toResult(resp)
+		if err != nil {
+			return err
+		}
+		result <- r
+		return nil
+	}
 }
 
 func (c *connection) getProxy() (*proxy, error) {
