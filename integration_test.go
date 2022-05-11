@@ -3,7 +3,9 @@ package exasol_test
 import (
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -349,6 +351,65 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 			{float64(13), "test3"},
 		},
 	)
+}
+
+func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE_HUGE"
+
+	exampleData := time.Now().Format(time.RFC3339)
+	file, err := suite.generateExampleCSVFile(exampleData, 20000)
+	suite.NoError(err, "should generate csv file")
+	defer os.Remove(file.Name())
+
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+	defer suite.dropSchema(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '%s' COLUMN SEPARATOR = ',' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName, file.Name()))
+	suite.NoError(err, "import should be successful")
+
+	affectedRows, err := result.RowsAffected()
+	suite.NoError(err, "getting rows affected should be successful")
+	suite.Equal(int64(20000), affectedRows)
+
+	rows, err := database.Query(fmt.Sprintf("SELECT COUNT(*) FROM %s.%s", schemaName, tableName))
+	suite.NoError(err, "count query should work")
+	suite.assertTableResult(rows, []string{"COUNT(*)"},
+		[][]interface{}{
+			{float64(20000)},
+		},
+	)
+
+	rows, err = database.Query(fmt.Sprintf("SELECT * FROM %s.%s ORDER BY a LIMIT 3 ", schemaName, tableName))
+	suite.NoError(err, "query should be working")
+	suite.assertTableResult(rows,
+		[]string{"A", "B", "C", "D", "E", "F", "G"},
+		[][]interface{}{
+			{float64(0), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{float64(1), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{float64(2), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+		},
+	)
+}
+
+func (suite *IntegrationTestSuite) generateExampleCSVFile(exampleData string, amount int) (*os.File, error) {
+	file, err := ioutil.TempFile("", "data*.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	writer := csv.NewWriter(file)
+	writer.Comma = ','
+
+	for i := 0; i < amount; i++ {
+		err := writer.Write([]string{fmt.Sprint(i), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData})
+		suite.NoError(err, "adding example data should be working")
+	}
+	writer.Flush()
+	return file, err
 }
 
 func (suite *IntegrationTestSuite) TestMultiImportStatement() {
