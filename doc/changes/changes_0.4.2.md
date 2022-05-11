@@ -1,9 +1,9 @@
 # Exasol Go SQL Driver 0.4.1, unreleased
 
-Code name: Fix file upload
+Code name:  Fix upload of large files
 ## Summary
 
-This release fixes the issue that files bigger 1MB could not be uploaded.
+This release fixes the issue that files bigger than 1MB could not be uploaded.
 
 ## Bugfixes
 
