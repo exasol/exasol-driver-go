@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver 0.4.1, released 2022-05-11
+# Exasol Go SQL Driver 0.4.2, released 2022-05-11
 
 Code name: Fix upload of large files
 
