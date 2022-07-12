@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver 0.4.3, released 2022-05-11
+# Exasol Go SQL Driver 0.4.3, released 2022-07-12
 
 Code name: Fix security issues in dependencies
 
