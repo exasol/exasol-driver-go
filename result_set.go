@@ -95,7 +95,7 @@ func (results *queryResults) Next(dest []driver.Value) error {
 		results.rowPointer = 0
 		results.fetchedRows = results.fetchedRows + result.NumRows
 
-		// Overwrite old data, user needs to collect the whole date if needed
+		// Overwrite old data, user needs to collect the whole data if needed
 		results.data.Data = result.Data
 
 	}
