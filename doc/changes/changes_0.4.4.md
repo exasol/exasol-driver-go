@@ -12,6 +12,10 @@ This release reduces the memory consumption when fetching large result sets.
 
 ## Dependency Updates
 
+### Compile Dependency Updates
+
+* Updated `golang:1.17` to `1.18`
+
 ### Test Dependency Updates
 
 * Updated `golang.org/x/sync:v0.0.0-20220601150217-0de741cfad7f` to `v0.0.0-20220722155255-886fb9371eb4`
