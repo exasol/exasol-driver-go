@@ -81,9 +81,6 @@ func (results *queryResults) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
-	results.Lock()
-	defer results.Unlock()
-
 	if results.data.NumRowsInMessage < results.data.NumRows && results.totalRowPointer == results.fetchedRows {
 		result := &SQLQueryResponseResultSetData{}
 		err := results.con.send(context.Background(), &FetchCommand{
