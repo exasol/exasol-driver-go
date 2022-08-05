@@ -27,15 +27,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
 
-      - name: Cache Project Keeper
+      - name: Cache Go modules
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-pk-${{ hashFiles('.github/workflows/project-keeper.sh') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum', '.github/workflows/project-keeper.sh') }}
           restore-keys: |
-            ${{ runner.os }}-pk-
+            ${{ runner.os }}-go-
 
       - name: Cache go-licenses
         uses: actions/cache@v3
@@ -50,6 +50,9 @@ jobs:
 
       - name: Install go-licenses
         run: go install github.com/google/go-licenses@v1.2.1
+
+      - name: Install dependencies
+        run: go get -v -x ./...
 
       - name: Project Keeper Verify
         run: ./.github/workflows/project-keeper.sh
