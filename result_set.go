@@ -6,13 +6,16 @@ import (
 	"database/sql/driver"
 	"io"
 	"reflect"
+	"sync"
 )
 
 type queryResults struct {
-	data        *SQLQueryResponseResultSetData
-	con         *connection
-	fetchedRows int
-	rowPointer  int
+	sync.Mutex      // guards following
+	data            *SQLQueryResponseResultSetData
+	con             *connection
+	fetchedRows     int
+	totalRowPointer int
+	rowPointer      int
 }
 
 func (results *queryResults) ColumnTypeDatabaseTypeName(index int) string {
@@ -74,37 +77,35 @@ func (results *queryResults) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
-	if results.rowPointer >= results.data.NumRows {
+	if results.totalRowPointer >= results.data.NumRows {
 		return io.EOF
 	}
 
-	if results.data.NumRowsInMessage < results.data.NumRows && results.rowPointer == results.fetchedRows {
+	if results.data.NumRowsInMessage < results.data.NumRows && results.totalRowPointer == results.fetchedRows {
 		result := &SQLQueryResponseResultSetData{}
 		err := results.con.send(context.Background(), &FetchCommand{
 			Command:         Command{"fetch"},
 			ResultSetHandle: results.data.ResultSetHandle,
-			StartPosition:   results.rowPointer,
+			StartPosition:   results.totalRowPointer,
 			NumBytes:        results.con.config.fetchSize,
 		}, result)
 		if err != nil {
 			return err
 		}
-
+		results.rowPointer = 0
 		results.fetchedRows = results.fetchedRows + result.NumRows
 
-		if results.data.Data == nil {
-			results.data.Data = result.Data
-		} else {
-			for i, d := range result.Data {
-				results.data.Data[i] = append(results.data.Data[i], d...)
-			}
-		}
+		// Overwrite old data, user needs to collect the whole data if needed
+		results.data.Data = result.Data
 
 	}
 
 	for i := range dest {
 		dest[i] = results.data.Data[i][results.rowPointer]
 	}
+
 	results.rowPointer = results.rowPointer + 1
+	results.totalRowPointer = results.totalRowPointer + 1
+
 	return nil
 }

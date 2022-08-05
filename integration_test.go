@@ -199,8 +199,9 @@ func (suite *IntegrationTestSuite) TestFetch() {
 		data = append(data, fmt.Sprintf("(%d)", i))
 	}
 	_, _ = database.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES " + strings.Join(data, ","))
-	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE GROUP BY x ORDER BY x")
 	result := make([]int, 0)
+	counter := 0
 	for rows.Next() {
 		var x int
 		if err := rows.Scan(&x); err != nil {
@@ -208,7 +209,9 @@ func (suite *IntegrationTestSuite) TestFetch() {
 			// Query rows will be closed with defer.
 			log.Fatal(err)
 		}
+		suite.Equal(data[counter], fmt.Sprintf("(%d)", x))
 		result = append(result, x)
+		counter++
 	}
 	suite.Equal(10000, len(result))
 }

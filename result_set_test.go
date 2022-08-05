@@ -154,6 +154,6 @@ func (suite *ResultSetTestSuite) TestNextWithoutRows() {
 
 func (suite *ResultSetTestSuite) TestNextPointerDoesNotMatch() {
 	data := SQLQueryResponseResultSetData{NumRows: 1}
-	queryResults := queryResults{data: &data, rowPointer: 2}
+	queryResults := queryResults{data: &data, totalRowPointer: 2}
 	suite.EqualError(queryResults.Next(nil), "EOF")
 }
