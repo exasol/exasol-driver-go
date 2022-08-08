@@ -1,4 +1,4 @@
-# Exasol Go SQL Driver 0.4.4, released 2022-08-05
+# Exasol Go SQL Driver 0.4.4, released 2022-08-08
 
 Code name: Reduce memory consumption
 
