@@ -1,3 +1,4 @@
 sources:
   - type: golang
     path: go.mod
+version: 0.4.4

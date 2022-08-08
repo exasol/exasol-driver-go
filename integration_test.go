@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -399,7 +398,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 }
 
 func (suite *IntegrationTestSuite) generateExampleCSVFile(exampleData string, amount int) (*os.File, error) {
-	file, err := ioutil.TempFile("", "data*.csv")
+	file, err := os.CreateTemp("", "data*.csv")
 	if err != nil {
 		log.Fatal(err)
 	}
