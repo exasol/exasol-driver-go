@@ -594,5 +594,5 @@ func compareDriverVersion(t *testing.T, actualVersion string) {
 	keeperContent := &projectKeeper{}
 	err = yaml.Unmarshal(yamlFile, keeperContent)
 	assert.NoError(t, err)
-	assert.Equal(t, fmt.Sprintf("exasol-driver-go v%s", keeperContent.Version), actualVersion)
+	assert.Equal(t, fmt.Sprintf("exasol-driver-go v%s", keeperContent.Version), strings.TrimRight(actualVersion, " "))
 }
