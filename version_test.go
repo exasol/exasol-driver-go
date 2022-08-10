@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ type projectKeeper struct {
 }
 
 func TestVersionIsUpToDate(t *testing.T) {
-	yamlFile, err := ioutil.ReadFile(".project-keeper.yml")
+	yamlFile, err := os.ReadFile(".project-keeper.yml")
 	assert.NoError(t, err)
 
 	keeperContent := &projectKeeper{}
