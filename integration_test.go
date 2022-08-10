@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"os/user"
@@ -510,7 +512,7 @@ func (suite *IntegrationTestSuite) TestClientMetadataWithDefaultClientName() {
 	err = rows.Scan(&client, &driver, &osUser, &osName)
 	suite.NoError(err)
 	suite.Equal("Go client (unknown version)", client)
-	suite.Equal("exasol-driver-go v0.3.3 ", driver)
+	compareDriverVersion(suite.T(), driver)
 	suite.Equal(expectedOsUser.Username, osUser)
 	suite.Equal(runtime.GOOS, osName)
 }
@@ -580,4 +582,17 @@ func onError(err error) {
 		log.Printf("Error %s", err)
 		panic(err)
 	}
+}
+
+type projectKeeper struct {
+	Version string `yaml:"version"`
+}
+
+func compareDriverVersion(t *testing.T, actualVersion string) {
+	yamlFile, err := os.ReadFile(".project-keeper.yml")
+	assert.NoError(t, err)
+	keeperContent := &projectKeeper{}
+	err = yaml.Unmarshal(yamlFile, keeperContent)
+	assert.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("exasol-driver-go v%s", keeperContent.Version), actualVersion)
 }
