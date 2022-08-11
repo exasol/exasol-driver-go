@@ -1,4 +1,4 @@
-# go-exasol 0.4.5, released 2022-??-??
+# go-exasol 0.4.5, released 2022-08-11
 
 Code name: Driver version
 
@@ -6,7 +6,7 @@ Code name: Driver version
 
 ## Features
 
-* #76: ensure reported driver version matches the released version
+* #76: Ensure reported driver version matches the released version
 
 ## Dependency Updates
 
