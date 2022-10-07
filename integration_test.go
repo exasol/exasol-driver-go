@@ -116,7 +116,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	}
 
 	var errorMsgCertWrongHost string
-	if suite.host != "localhost" {
+	if suite.host == "localhost" {
 		errorMsgCertWrongHost = "x509: certificate is not valid for any names, but wanted to match localhost"
 	} else {
 		errorMsgCertWrongHost = "x509: “*.exacluster.local” certificate is not standards compliant"
