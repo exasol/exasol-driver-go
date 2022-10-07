@@ -118,10 +118,6 @@ func (p *proxy) sendFile(ctx context.Context, file *os.File, rowSeparator string
 			line = append(line, []byte(rowSeparator)...)
 		}
 
-		if b.Buffered() > 0 {
-			fmt.Printf("has Buffered incomming data? %d\n", b.Buffered())
-		}
-
 		if len(line) == 0 {
 			break
 		}
