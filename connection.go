@@ -196,7 +196,7 @@ func (c *connection) exec(ctx context.Context, query string, args []driver.Value
 		}
 		defer p.close()
 		query = updateImportQuery(originalQuery, p)
-		errs.Go(func() error { return c.uploadFiles(p, originalQuery) })
+		errs.Go(func() error { return c.uploadFiles(errctx, p, originalQuery) })
 	}
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
@@ -261,7 +261,7 @@ func (c *connection) getProxy() (*proxy, error) {
 	return newProxy(hosts, c.config.port)
 }
 
-func (c *connection) uploadFiles(p *proxy, query string) error {
+func (c *connection) uploadFiles(ctx context.Context, p *proxy, query string) error {
 	paths, err := getFilePaths(query)
 	if err != nil {
 		return err
@@ -276,7 +276,7 @@ func (c *connection) uploadFiles(p *proxy, query string) error {
 		files = append(files, f)
 	}
 
-	err = p.write(files, getRowSeparator(query))
+	err = p.write(ctx, files, getRowSeparator(query))
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 	"gopkg.in/yaml.v3"
 	"log"
 	"os"
@@ -90,6 +91,7 @@ func getExasolPort(exasolContainer testcontainers.Container, ctx context.Context
 
 func (suite *IntegrationTestSuite) TestConnect() {
 	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;validateservercertificate=0", suite.host, suite.port))
+	defer database.Close()
 	rows, _ := database.Query("SELECT 2 FROM DUAL")
 	columns, _ := rows.Columns()
 	suite.Equal("2", columns[0])
@@ -114,7 +116,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	}
 
 	var errorMsgCertWrongHost string
-	if suite.host == "localhost" {
+	if suite.host != "localhost" {
 		errorMsgCertWrongHost = "x509: certificate is not valid for any names, but wanted to match localhost"
 	} else {
 		errorMsgCertWrongHost = "x509: “*.exacluster.local” certificate is not standards compliant"
@@ -153,6 +155,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	} {
 		suite.Run(fmt.Sprintf("Test%02d %s", i, testCase.description), func() {
 			database := suite.openConnection(testCase.config)
+			defer database.Close()
 			err := database.Ping()
 			if testCase.expectedError == "" {
 				suite.NoError(err)
@@ -170,6 +173,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 
 func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
 	database := suite.openConnection(suite.createDefaultConfig().CertificateFingerprint("wrongFingerprint"))
+	defer database.Close()
 	err := database.Ping()
 	suite.Error(err)
 	re := regexp.MustCompile(`E-EGOD-10: the server's certificate fingerprint '([0-9a-z]{64})' does not match the expected fingerprint 'wrongFingerprint'`)
@@ -182,7 +186,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_1"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = database.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
@@ -193,7 +197,7 @@ func (suite *IntegrationTestSuite) TestFetch() {
 	database := suite.openConnection(suite.createDefaultConfig().FetchSize(200))
 	schemaName := "TEST_SCHEMA_FETCH"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	data := make([]string, 0)
 	for i := 0; i < 10000; i++ {
@@ -219,6 +223,7 @@ func (suite *IntegrationTestSuite) TestFetch() {
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
 	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
 	_, err := database.Exec("CREATE SCHEMAA TEST_SCHEMA")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "syntax error"))
@@ -228,7 +233,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_2"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
 	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABLE not found"))
@@ -238,7 +243,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	preparedStatement, _ := database.Prepare("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (?)")
 	_, _ = preparedStatement.Exec(15)
@@ -251,7 +256,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3_2"
 	_, _ = database.ExecContext(context.Background(), "CREATE SCHEMA "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(context.Background(), "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
 	result, _ := database.ExecContext(context.Background(), "INSERT INTO "+schemaName+".TEST_TABLE VALUES (?)", 15)
 	affectedRow, _ := result.RowsAffected()
@@ -264,7 +269,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3_3"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	result, _ := database.Exec("INSERT INTO "+schemaName+".TEST_TABLE VALUES (?)", 15)
 	affectedRow, _ := result.RowsAffected()
@@ -278,7 +283,7 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Commit()
@@ -291,7 +296,7 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := database.Begin()
 	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
 	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Rollback()
@@ -302,6 +307,7 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	suite.NoError(database.PingContext(ctx))
 	cancel()
@@ -312,7 +318,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
 	_, _ = database.ExecContext(ctx, "INSERT INTO "+schemaName+".TEST_TABLE VALUES (15)")
 	rows, _ := database.QueryContext(ctx, "SELECT x FROM "+schemaName+".TEST_TABLE")
@@ -326,7 +332,7 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 	schemaName := "TEST_SCHEMA_7"
 	transaction, _ := database.BeginTx(ctx, nil)
 	_, _ = transaction.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	cancel()
 	_, err := transaction.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
 	suite.EqualError(err, "context canceled")
@@ -338,7 +344,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	schemaName := "TEST_SCHEMA_8"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
@@ -358,6 +364,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 }
 
 func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
+
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	schemaName := "TEST_SCHEMA_8"
@@ -369,7 +376,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	defer os.Remove(file.Name())
 
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '%s' COLUMN SEPARATOR = ',' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName, file.Name()))
@@ -399,6 +406,30 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	)
 }
 
+// See https://github.com/exasol/exasol-driver-go/issues/79
+func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
+
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_LEAK"
+	tableName := "TEST_TABLE_HUGE"
+
+	exampleData := time.Now().Format(time.RFC3339)
+	file, err := suite.generateExampleCSVFile(exampleData, 20000)
+	suite.NoError(err, "should generate csv file")
+
+	defer os.Remove(file.Name())
+	defer suite.cleanup(database, schemaName)
+
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
+
+	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '%s' COLUMNS SEPARATOR = ',' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName, file.Name()))
+	suite.Error(err, "import should be failing")
+
+}
+
 func (suite *IntegrationTestSuite) generateExampleCSVFile(exampleData string, amount int) (*os.File, error) {
 	file, err := os.CreateTemp("", "data*.csv")
 	if err != nil {
@@ -422,7 +453,7 @@ func (suite *IntegrationTestSuite) TestMultiImportStatement() {
 	schemaName := "TEST_SCHEMA_9"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
@@ -469,7 +500,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	schemaName := "TEST_SCHEMA_10"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
-	defer suite.dropSchema(database, schemaName)
+	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE './testData/data_cr.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'CR'`, schemaName, tableName))
@@ -491,6 +522,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 func (suite *IntegrationTestSuite) TestCustomClientName() {
 	expectedClientName := "My Client Name"
 	database := suite.openConnection(suite.createDefaultConfig().ClientName(expectedClientName))
+	defer database.Close()
 	rows, err := database.Query("select client from exa_user_sessions where session_id = current_session")
 	suite.NoError(err)
 	suite.True(rows.Next())
@@ -505,6 +537,7 @@ func (suite *IntegrationTestSuite) TestClientMetadataWithDefaultClientName() {
 	suite.NoError(err)
 	suite.NotNil(expectedOsUser)
 	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
 	rows, err := database.Query("select client, driver, os_user, os_name from exa_user_sessions where session_id = current_session")
 	suite.NoError(err)
 	suite.True(rows.Next())
@@ -525,12 +558,16 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 	suite.Equal(expected, testValue)
 }
 
-func (suite *IntegrationTestSuite) dropSchema(db *sql.DB, schemaName string) {
+func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
 	_, err := db.Exec("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE")
 	suite.NoError(err, "Failed to drop schema "+schemaName)
+
+	suite.NoError(db.Close(), "Failed to close driver ")
+
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
+	defer goleak.VerifyNone(suite.T())
 	if suite.exasolContainer != nil {
 		err := suite.exasolContainer.Terminate(suite.ctx)
 		onError(err)
