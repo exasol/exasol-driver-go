@@ -203,7 +203,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		ValidateServerCertificate: boolToPtr(true),
 		ClientName:                "Go client",
 		params:                    map[string]string{},
-		FetchSize:                 128 * 1024,
+		FetchSize:                 2000,
 	}
 }
 

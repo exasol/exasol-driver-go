@@ -194,7 +194,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 }
 
 func (suite *IntegrationTestSuite) TestFetch() {
-	database := suite.openConnection(suite.createDefaultConfig().FetchSize(200))
+	database := suite.openConnection(suite.createDefaultConfig().FetchSize(20))
 	schemaName := "TEST_SCHEMA_FETCH"
 	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
 	defer suite.cleanup(database, schemaName)
