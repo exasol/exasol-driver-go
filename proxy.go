@@ -95,7 +95,6 @@ func (p *proxy) write(ctx context.Context, files []*os.File, rowSeparator string
 func (p *proxy) sendFile(ctx context.Context, file *os.File, rowSeparator string, chunkedWriter io.WriteCloser) error {
 
 	reader := bufio.NewReader(file)
-	b := bufio.NewReader(p.connection)
 
 	for {
 
