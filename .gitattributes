@@ -1,3 +1,4 @@
+testData/data_cr.csv -text
 *.sh text eol=lf
 
 .github/workflows/broken_links_checker.yml linguist-generated=true
