@@ -61,7 +61,7 @@ func getDbVersion() string {
 	if dbVersion != "" {
 		return dbVersion
 	}
-	return "7.1.9"
+	return "7.1.14"
 }
 
 func getExasolPortFromEnv() int {
