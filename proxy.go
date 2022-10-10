@@ -3,6 +3,7 @@ package exasol
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -68,7 +69,7 @@ func (p *proxy) startProxy() error {
 	return nil
 }
 
-func (p *proxy) write(files []*os.File, rowSeparator string) error {
+func (p *proxy) write(ctx context.Context, files []*os.File, rowSeparator string) error {
 
 	err := p.sendHeaders([]string{
 		"HTTP/1.1 200 OK",
@@ -82,7 +83,7 @@ func (p *proxy) write(files []*os.File, rowSeparator string) error {
 	}
 	chunkedWriter := httputil.NewChunkedWriter(p.connection)
 	for _, file := range files {
-		err = p.sendFile(file, rowSeparator, chunkedWriter)
+		err = p.sendFile(ctx, file, rowSeparator, chunkedWriter)
 		if err != nil {
 			return err
 		}
@@ -91,12 +92,17 @@ func (p *proxy) write(files []*os.File, rowSeparator string) error {
 	return err
 }
 
-func (p *proxy) sendFile(file *os.File, rowSeparator string, chunkedWriter io.WriteCloser) error {
+func (p *proxy) sendFile(ctx context.Context, file *os.File, rowSeparator string, chunkedWriter io.WriteCloser) error {
 
 	reader := bufio.NewReader(file)
-	b := bufio.NewReader(p.connection)
 
 	for {
+
+		if ctx.Err() != nil {
+			p.close()
+			return ctx.Err()
+		}
+
 		delimiter := '\n'
 		// Handle files which end on CR
 		if rowSeparator == "\r" {
@@ -109,10 +115,6 @@ func (p *proxy) sendFile(file *os.File, rowSeparator string, chunkedWriter io.Wr
 
 		if err != nil && len(line) != 0 {
 			line = append(line, []byte(rowSeparator)...)
-		}
-
-		if b.Buffered() > 0 {
-			fmt.Printf("has Buffered incomming data? %d\n", b.Buffered())
 		}
 
 		if len(line) == 0 {

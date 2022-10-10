@@ -25,7 +25,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	suite.Equal("", dsn.ClientVersion)
 	suite.Equal("", dsn.Schema)
 	suite.Equal(true, *dsn.Autocommit)
-	suite.Equal(128*1024, dsn.FetchSize)
+	suite.Equal(2000, dsn.FetchSize)
 	suite.Equal(false, *dsn.Compression)
 	suite.Equal(0, dsn.ResultSetMaxRows)
 	suite.Equal(true, *dsn.Encryption)
