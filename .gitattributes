@@ -1,1 +1,6 @@
-testData/data_cr.csv -text
+*.sh text eol=lf
+
+.github/workflows/broken_links_checker.yml linguist-generated=true
+dependencies.md                            linguist-generated=true
+doc/changes/changelog.md                   linguist-generated=true
+go.sum                                     linguist-generated=true
