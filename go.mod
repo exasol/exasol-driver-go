@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/exasol/error-reporting-go v0.1.1
-	github.com/exasol/exasol-test-setup-abstraction-server/go-client v0.2.4
+	github.com/exasol/exasol-test-setup-abstraction-server/go-client v0.3.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/goleak v1.2.0

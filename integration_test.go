@@ -45,7 +45,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = getContext()
 	suite.dbVersion = getDbVersion()
 	var err error
-	suite.exasol, err = testSetupAbstraction.Create("myConfig.json")
+	suite.exasol, err = testSetupAbstraction.New().DockerDbVersion(suite.dbVersion).Start()
 	if err != nil {
 		suite.FailNowf("setup failed", "failed to start test setup: %v", err)
 	}
