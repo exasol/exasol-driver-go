@@ -10,7 +10,6 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -44,25 +43,18 @@ func TestIntegrationSuite(t *testing.T) {
 
 func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = getContext()
-	exasolHostEnv := os.Getenv("EXASOL_HOST")
-	if exasolHostEnv != "" {
-		suite.exasol = nil
-		suite.host = exasolHostEnv
-		suite.port = getExasolPortFromEnv()
-	} else {
-		suite.dbVersion = getDbVersion()
-		var err error
-		suite.exasol, err = testSetupAbstraction.Create("myConfig.json")
-		if err != nil {
-			suite.FailNowf("setup failed", "failed to start test setup: %v", err)
-		}
-		connectionInfo, err := suite.exasol.GetConnectionInfo()
-		if err != nil {
-			suite.FailNowf("setup failed", "failed to get connection info: %v", err)
-		}
-		suite.port = connectionInfo.Port
-		suite.host = connectionInfo.Host
+	suite.dbVersion = getDbVersion()
+	var err error
+	suite.exasol, err = testSetupAbstraction.Create("myConfig.json")
+	if err != nil {
+		suite.FailNowf("setup failed", "failed to start test setup: %v", err)
 	}
+	connectionInfo, err := suite.exasol.GetConnectionInfo()
+	if err != nil {
+		suite.FailNowf("setup failed", "failed to get connection info: %v", err)
+	}
+	suite.port = connectionInfo.Port
+	suite.host = connectionInfo.Host
 }
 
 func getDbVersion() string {
@@ -71,19 +63,6 @@ func getDbVersion() string {
 		return dbVersion
 	}
 	return "7.1.15"
-}
-
-func getExasolPortFromEnv() int {
-	envValue := os.Getenv("EXASOL_PORT")
-	if envValue == "" {
-		envValue = "8563"
-	}
-	if intValue, err := strconv.Atoi(envValue); err == nil {
-		return intValue
-	} else {
-		log.Fatalf("Error parsing port %q from environment variable EXASOL_PORT", envValue)
-		return -1
-	}
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
