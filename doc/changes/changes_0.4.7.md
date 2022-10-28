@@ -1,6 +1,6 @@
 # exasol-driver-go 0.4.7, released 2022-10-??
 
-Code name: Improve documentation
+Code name: Improve documentation and make internal APIs private.
 
 ## Summary
 
