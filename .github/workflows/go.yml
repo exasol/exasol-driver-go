@@ -10,10 +10,10 @@ jobs:
     strategy:
       matrix:
         go: [ "1.18", "1.19" ]
-        db: [ "7.0.20", "7.1.14" ]
+        db: [ "7.0.20", "7.1.15" ]
     env:
       DEFAULT_GO: "1.19"
-      DEFAULT_DB: "7.1.14"
+      DEFAULT_DB: "7.1.15"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
