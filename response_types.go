@@ -5,10 +5,10 @@ import "encoding/json"
 type baseResponse struct {
 	Status       string          `json:"status"`
 	ResponseData json.RawMessage `json:"responseData"`
-	Exception    *Exception      `json:"exception"`
+	Exception    *exception      `json:"exception"`
 }
 
-type Exception struct {
+type exception struct {
 	Text    string `json:"text"`
 	SQLCode string `json:"sqlCode"`
 }

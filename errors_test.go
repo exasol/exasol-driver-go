@@ -77,7 +77,7 @@ func (suite *ErrorsTestSuite) TestNewErrCertificateFingerprintMismatch() {
 }
 
 func (suite *ErrorsTestSuite) TestNewSqlErr() {
-	exception := Exception{SQLCode: "sqlCode", Text: "text"}
+	exception := exception{SQLCode: "sqlCode", Text: "text"}
 	suite.EqualError(newSqlErr(&exception), "E-EGOD-11: execution failed with SQL error code 'sqlCode' and message 'text'")
 }
 
