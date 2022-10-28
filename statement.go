@@ -57,8 +57,8 @@ func (s *statement) Close() error {
 	if s.connection.isClosed {
 		return driver.ErrBadConn
 	}
-	return s.connection.send(context.Background(), &ClosePreparedStatementCommand{
-		Command:         Command{"closePreparedStatement"},
+	return s.connection.send(context.Background(), &closePreparedStatementCommand{
+		command:         command{"closePreparedStatement"},
 		StatementHandle: s.statementHandle,
 	}, nil)
 }
@@ -93,14 +93,14 @@ func (s *statement) executePreparedStatement(ctx context.Context, args []driver.
 		data[i%len(columns)] = append(data[i%len(columns)], arg)
 	}
 
-	command := &ExecutePreparedStatementCommand{
-		Command:         Command{"executePreparedStatement"},
+	command := &executePreparedStatementCommand{
+		command:         command{"executePreparedStatement"},
 		StatementHandle: s.statementHandle,
 		Columns:         columns,
 		NumColumns:      len(columns),
 		NumRows:         len(data[0]),
 		Data:            data,
-		Attributes: Attributes{
+		Attributes: attributes{
 			ResultSetMaxRows: s.connection.config.resultSetMaxRows,
 		},
 	}

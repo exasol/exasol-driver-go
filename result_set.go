@@ -66,8 +66,8 @@ func (results *queryResults) Close() error {
 	if results.data.ResultSetHandle == 0 {
 		return nil
 	}
-	return results.con.send(context.Background(), &CloseResultSetCommand{
-		Command:          Command{"closeResultSet"},
+	return results.con.send(context.Background(), &closeResultSetCommand{
+		command:          command{"closeResultSet"},
 		ResultSetHandles: []int{results.data.ResultSetHandle},
 	}, nil)
 }
@@ -83,8 +83,8 @@ func (results *queryResults) Next(dest []driver.Value) error {
 
 	if results.data.NumRowsInMessage < results.data.NumRows && results.totalRowPointer == results.fetchedRows {
 		result := &SQLQueryResponseResultSetData{}
-		err := results.con.send(context.Background(), &FetchCommand{
-			Command:         Command{"fetch"},
+		err := results.con.send(context.Background(), &fetchCommand{
+			command:         command{"fetch"},
 			ResultSetHandle: results.data.ResultSetHandle,
 			StartPosition:   results.totalRowPointer,
 			NumBytes:        results.con.config.fetchSize * 1024,

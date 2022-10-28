@@ -23,42 +23,42 @@ func (suite *RequestTypesTestSuite) TestMarshallLoginCommand() {
 		value    interface{}
 		expected string
 	}{
-		{"login command", LoginCommand{
-			Command:         Command{"login"},
+		{"login command", loginCommand{
+			command:         command{"login"},
 			ProtocolVersion: 42}, `{"command":"login","protocolVersion":42,"attributes":{}}`},
-		{"login token command", LoginTokenCommand{
-			Command:         Command{"loginToken"},
+		{"login token command", loginTokenCommand{
+			command:         command{"loginToken"},
 			ProtocolVersion: 42}, `{"command":"loginToken","protocolVersion":42,"attributes":{}}`},
-		{"login command with attributes", LoginCommand{
-			Command:         Command{"login"},
+		{"login command with attributes", loginCommand{
+			command:         command{"login"},
 			ProtocolVersion: 42,
-			Attributes: Attributes{
+			Attributes: attributes{
 				ResultSetMaxRows: 100,
 			}}, `{"command":"login","protocolVersion":42,"attributes":{"resultSetMaxRows":100}}`},
-		{"auth command", AuthCommand{
+		{"auth command", authCommand{
 			Username: "user", Password: "pass", UseCompression: false, SessionID: 1234,
-			Attributes: Attributes{Autocommit: boolToPtr(true)},
+			Attributes: attributes{Autocommit: boolToPtr(true)},
 		}, `{"username":"user","password":"pass","useCompression":false,"sessionId":1234,"attributes":{"autocommit":true}}`},
-		{"sql command", SQLCommand{
-			Command: Command{"command"}, SQLText: "sql", Attributes: Attributes{FeedbackInterval: 2},
+		{"sql command", sqlCommand{
+			command: command{"command"}, SQLText: "sql", Attributes: attributes{FeedbackInterval: 2},
 		}, `{"command":"command","sqlText":"sql","attributes":{"feedbackInterval":2}}`},
-		{"empty attributes", Attributes{}, `{}`},
-		{"execute prepared statement", ExecutePreparedStatementCommand{
-			Command: Command{"command"}, StatementHandle: 321, NumColumns: 4, NumRows: 6, Columns: []SQLQueryColumn{{Name: "col"}},
+		{"empty attributes", attributes{}, `{}`},
+		{"execute prepared statement", executePreparedStatementCommand{
+			command: command{"command"}, StatementHandle: 321, NumColumns: 4, NumRows: 6, Columns: []SQLQueryColumn{{Name: "col"}},
 			Data:       [][]interface{}{{"a", "b"}, {1, 2}},
-			Attributes: Attributes{DateLanguage: "format"},
+			Attributes: attributes{DateLanguage: "format"},
 		}, `{"command":"command","statementHandle":321,"numColumns":4,"numRows":6,"columns":[{"name":"col","dataType":{"type":""}}],"data":[["a","b"],[1,2]],"attributes":{"dateLanguage":"format"}}`},
-		{"fetch command", FetchCommand{
-			Command: Command{"cmd"}, ResultSetHandle: 4321, StartPosition: 5, NumBytes: 100,
+		{"fetch command", fetchCommand{
+			command: command{"cmd"}, ResultSetHandle: 4321, StartPosition: 5, NumBytes: 100,
 		}, `{"command":"cmd","resultSetHandle":4321,"startPosition":5,"numBytes":100}`},
-		{"create prepared statement", CreatePreparedStatementCommand{
-			Command: Command{"cmd"}, SQLText: "sql", Attributes: Attributes{TimestampUtcEnabled: boolToPtr(false)},
+		{"create prepared statement", createPreparedStatementCommand{
+			command: command{"cmd"}, SQLText: "sql", Attributes: attributes{TimestampUtcEnabled: boolToPtr(false)},
 		}, `{"command":"cmd","sqlText":"sql","attributes":{"timestampUtcEnabled":false}}`},
-		{"close prepared statement", ClosePreparedStatementCommand{
-			Command: Command{"cmd"}, StatementHandle: 4321, Attributes: Attributes{Timezone: "abc"},
+		{"close prepared statement", closePreparedStatementCommand{
+			command: command{"cmd"}, StatementHandle: 4321, Attributes: attributes{Timezone: "abc"},
 		}, `{"command":"cmd","statementHandle":4321,"attributes":{"timezone":"abc"}}`},
-		{"close result set command", CloseResultSetCommand{
-			Command: Command{"cmd"}, ResultSetHandles: []int{123, 321}, Attributes: Attributes{NumericCharacters: "abc"},
+		{"close result set command", closeResultSetCommand{
+			command: command{"cmd"}, ResultSetHandles: []int{123, 321}, Attributes: attributes{NumericCharacters: "abc"},
 		}, `{"command":"cmd","resultSetHandles":[123,321],"attributes":{"numericCharacters":"abc"}}`},
 	} {
 		valueType := reflect.TypeOf(testCase.value)

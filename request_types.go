@@ -1,57 +1,57 @@
 package exasol
 
-type Command struct {
+type command struct {
 	Command string `json:"command"`
 }
 
-type LoginCommand struct {
-	Command
+type loginCommand struct {
+	command
 	ProtocolVersion int        `json:"protocolVersion"`
-	Attributes      Attributes `json:"attributes,omitempty"`
+	Attributes      attributes `json:"attributes,omitempty"`
 }
 
-type LoginTokenCommand struct {
-	Command
+type loginTokenCommand struct {
+	command
 	ProtocolVersion int        `json:"protocolVersion"`
-	Attributes      Attributes `json:"attributes,omitempty"`
+	Attributes      attributes `json:"attributes,omitempty"`
 }
 
-type CloseResultSetCommand struct {
-	Command
+type closeResultSetCommand struct {
+	command
 	ResultSetHandles []int      `json:"resultSetHandles"`
-	Attributes       Attributes `json:"attributes,omitempty"`
+	Attributes       attributes `json:"attributes,omitempty"`
 }
 
-type ClosePreparedStatementCommand struct {
-	Command
+type closePreparedStatementCommand struct {
+	command
 	StatementHandle int        `json:"statementHandle"`
-	Attributes      Attributes `json:"attributes,omitempty"`
+	Attributes      attributes `json:"attributes,omitempty"`
 }
 
-type CreatePreparedStatementCommand struct {
-	Command
+type createPreparedStatementCommand struct {
+	command
 	SQLText    string     `json:"sqlText"`
-	Attributes Attributes `json:"attributes,omitempty"`
+	Attributes attributes `json:"attributes,omitempty"`
 }
 
-type FetchCommand struct {
-	Command
+type fetchCommand struct {
+	command
 	ResultSetHandle int `json:"resultSetHandle"`
 	StartPosition   int `json:"startPosition"`
 	NumBytes        int `json:"numBytes"`
 }
 
-type ExecutePreparedStatementCommand struct {
-	Command
+type executePreparedStatementCommand struct {
+	command
 	StatementHandle int              `json:"statementHandle"`
 	NumColumns      int              `json:"numColumns,omitempty"`
 	NumRows         int              `json:"numRows"`
 	Columns         []SQLQueryColumn `json:"columns,omitempty"`
 	Data            [][]interface{}  `json:"data"`
-	Attributes      Attributes       `json:"attributes,omitempty"`
+	Attributes      attributes       `json:"attributes,omitempty"`
 }
 
-type Attributes struct {
+type attributes struct {
 	Autocommit                  *bool  `json:"autocommit,omitempty"`
 	CompressionEnabled          *bool  `json:"compressionEnabled,omitempty"`
 	CurrentSchema               string `json:"currentSchema,omitempty"`
@@ -70,7 +70,7 @@ type Attributes struct {
 	ResultSetMaxRows            int    `json:"resultSetMaxRows,omitempty"`
 }
 
-type AuthCommand struct {
+type authCommand struct {
 	Username         string     `json:"username,omitempty"`
 	Password         string     `json:"password,omitempty"`
 	AccessToken      string     `json:"accessToken,omitempty"`
@@ -84,11 +84,11 @@ type AuthCommand struct {
 	ClientLanguage   string     `json:"clientLanguage,omitempty"`
 	ClientVersion    string     `json:"clientVersion,omitempty"`
 	ClientRuntime    string     `json:"clientRuntime,omitempty"`
-	Attributes       Attributes `json:"attributes,omitempty"`
+	Attributes       attributes `json:"attributes,omitempty"`
 }
 
-type SQLCommand struct {
-	Command
+type sqlCommand struct {
+	command
 	SQLText    string     `json:"sqlText"`
-	Attributes Attributes `json:"attributes,omitempty"`
+	Attributes attributes `json:"attributes,omitempty"`
 }

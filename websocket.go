@@ -120,7 +120,7 @@ func (c *connection) send(ctx context.Context, request, response interface{}) er
 	go func() { channel <- receiver(response) }()
 	select {
 	case <-ctx.Done():
-		_, err := c.asyncSend(&Command{Command: "abortQuery"})
+		_, err := c.asyncSend(&command{Command: "abortQuery"})
 		if err != nil {
 			return newErrCouldNotAbort(ctx.Err())
 		}
