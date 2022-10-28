@@ -2,7 +2,7 @@ package exasol
 
 import "encoding/json"
 
-type BaseResponse struct {
+type baseResponse struct {
 	Status       string          `json:"status"`
 	ResponseData json.RawMessage `json:"responseData"`
 	Exception    *Exception      `json:"exception"`
@@ -13,7 +13,7 @@ type Exception struct {
 	SQLCode string `json:"sqlCode"`
 }
 
-type AuthResponse struct {
+type authResponse struct {
 	SessionID             int    `json:"sessionId"`
 	ProtocolVersion       int    `json:"protocolVersion"`
 	ReleaseVersion        string `json:"releaseVersion"`
@@ -27,42 +27,42 @@ type AuthResponse struct {
 	TimeZoneBehavior      string `json:"timeZoneBehavior"`
 }
 
-type PublicKeyResponse struct {
+type publicKeyResponse struct {
 	PublicKeyPem      string `json:"publicKeyPem"`
 	PublicKeyModulus  string `json:"publicKeyModulus"`
 	PublicKeyExponent string `json:"publicKeyExponent"`
 }
 
-type SQLQueriesResponse struct {
+type sqlQueriesResponse struct {
 	NumResults int               `json:"numResults"`
 	Results    []json.RawMessage `json:"results"`
 }
 
-type SQLQueryResponseRowCount struct {
+type sqlQueryResponseRowCount struct {
 	ResultType string `json:"resultType"`
 	RowCount   int    `json:"rowCount"`
 }
 
-type SQLQueryResponseResultSet struct {
+type sqlQueryResponseResultSet struct {
 	ResultType string                        `json:"resultType"`
-	ResultSet  SQLQueryResponseResultSetData `json:"resultSet"`
+	ResultSet  sqlQueryResponseResultSetData `json:"resultSet"`
 }
 
-type SQLQueryResponseResultSetData struct {
+type sqlQueryResponseResultSetData struct {
 	ResultSetHandle  int              `json:"resultSetHandle"`
 	NumColumns       int              `json:"numColumns,omitempty"`
 	NumRows          int              `json:"numRows"`
 	NumRowsInMessage int              `json:"numRowsInMessage"`
-	Columns          []SQLQueryColumn `json:"columns,omitempty"`
+	Columns          []sqlQueryColumn `json:"columns,omitempty"`
 	Data             [][]interface{}  `json:"data"`
 }
 
-type SQLQueryColumn struct {
+type sqlQueryColumn struct {
 	Name     string             `json:"name"`
-	DataType SQLQueryColumnType `json:"dataType"`
+	DataType sqlQueryColumnType `json:"dataType"`
 }
 
-type SQLQueryColumnType struct {
+type sqlQueryColumnType struct {
 	Type              string  `json:"type"`
 	Precision         *int64  `json:"precision,omitempty"`
 	Scale             *int64  `json:"scale,omitempty"`
@@ -73,13 +73,13 @@ type SQLQueryColumnType struct {
 	SRID              *int    `json:"srid,omitempty"`
 }
 
-type CreatePreparedStatementResponse struct {
+type createPreparedStatementResponse struct {
 	StatementHandle int           `json:"statementHandle"`
-	ParameterData   ParameterData `json:"parameterData,omitempty"`
+	ParameterData   parameterData `json:"parameterData,omitempty"`
 }
 
-type ParameterData struct {
+type parameterData struct {
 	NumColumns int              `json:"numColumns"`
-	Columns    []SQLQueryColumn `json:"columns"`
-	SQLQueriesResponse
+	Columns    []sqlQueryColumn `json:"columns"`
+	sqlQueriesResponse
 }

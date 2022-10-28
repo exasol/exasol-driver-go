@@ -16,10 +16,10 @@ func TestResultSetSuite(t *testing.T) {
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{Type: "boolean"}},
-		{DataType: SQLQueryColumnType{Type: "char"}},
-		{DataType: SQLQueryColumnType{}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{Type: "boolean"}},
+		{DataType: sqlQueryColumnType{Type: "char"}},
+		{DataType: sqlQueryColumnType{}},
 	}}
 	queryResults := queryResults{data: &data}
 	suite.Equal("boolean", queryResults.ColumnTypeDatabaseTypeName(0))
@@ -30,8 +30,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScale() {
 	expectedPrecision := int64(10)
 	expectedScale := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{Precision: &expectedPrecision, Scale: &expectedScale}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{Precision: &expectedPrecision, Scale: &expectedScale}},
 	}}
 	queryResults := queryResults{data: &data}
 	precision, scale, ok := queryResults.ColumnTypePrecisionScale(0)
@@ -42,8 +42,8 @@ func (suite *ResultSetTestSuite) TestColumnTypePrecisionScale() {
 
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutPrecision() {
 	expectedScale := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{Scale: &expectedScale}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{Scale: &expectedScale}},
 	}}
 	queryResults := queryResults{data: &data}
 	precision, scale, ok := queryResults.ColumnTypePrecisionScale(0)
@@ -54,8 +54,8 @@ func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutPrecision() 
 
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutScale() {
 	expectedScale := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{Scale: &expectedScale}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{Scale: &expectedScale}},
 	}}
 	queryResults := queryResults{data: &data}
 	precision, scale, ok := queryResults.ColumnTypePrecisionScale(0)
@@ -76,8 +76,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeScanTypeVarchar() {
 }
 
 func (suite *ResultSetTestSuite) assertColumnType(columnType string, sqlType interface{}) {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{Type: columnType}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{Type: columnType}},
 	}}
 	queryResults := queryResults{data: &data}
 	suite.Equal(reflect.TypeOf(sqlType), queryResults.ColumnTypeScanType(0))
@@ -117,8 +117,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeScanTypeDefault() {
 
 func (suite *ResultSetTestSuite) TestColumnTypeLength() {
 	expectedLength := int64(3)
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{Size: &expectedLength}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{Size: &expectedLength}},
 	}}
 	queryResults := queryResults{data: &data}
 	length, ok := queryResults.ColumnTypeLength(0)
@@ -127,8 +127,8 @@ func (suite *ResultSetTestSuite) TestColumnTypeLength() {
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeLengthInvalid() {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
-		{DataType: SQLQueryColumnType{}},
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
+		{DataType: sqlQueryColumnType{}},
 	}}
 	queryResults := queryResults{data: &data}
 	length, ok := queryResults.ColumnTypeLength(0)
@@ -137,7 +137,7 @@ func (suite *ResultSetTestSuite) TestColumnTypeLengthInvalid() {
 }
 
 func (suite *ResultSetTestSuite) TestColumns() {
-	data := SQLQueryResponseResultSetData{Columns: []SQLQueryColumn{
+	data := sqlQueryResponseResultSetData{Columns: []sqlQueryColumn{
 		{Name: "col_1"},
 		{Name: "col_2"},
 		{Name: "col_3"},
@@ -147,13 +147,13 @@ func (suite *ResultSetTestSuite) TestColumns() {
 }
 
 func (suite *ResultSetTestSuite) TestNextWithoutRows() {
-	data := SQLQueryResponseResultSetData{NumRows: 0}
+	data := sqlQueryResponseResultSetData{NumRows: 0}
 	queryResults := queryResults{data: &data}
 	suite.EqualError(queryResults.Next(nil), "EOF")
 }
 
 func (suite *ResultSetTestSuite) TestNextPointerDoesNotMatch() {
-	data := SQLQueryResponseResultSetData{NumRows: 1}
+	data := sqlQueryResponseResultSetData{NumRows: 1}
 	queryResults := queryResults{data: &data, totalRowPointer: 2}
 	suite.EqualError(queryResults.Next(nil), "EOF")
 }

@@ -11,7 +11,7 @@ import (
 
 type queryResults struct {
 	sync.Mutex      // guards following
-	data            *SQLQueryResponseResultSetData
+	data            *sqlQueryResponseResultSetData
 	con             *connection
 	fetchedRows     int
 	totalRowPointer int
@@ -82,7 +82,7 @@ func (results *queryResults) Next(dest []driver.Value) error {
 	}
 
 	if results.data.NumRowsInMessage < results.data.NumRows && results.totalRowPointer == results.fetchedRows {
-		result := &SQLQueryResponseResultSetData{}
+		result := &sqlQueryResponseResultSetData{}
 		err := results.con.send(context.Background(), &fetchCommand{
 			command:         command{"fetch"},
 			ResultSetHandle: results.data.ResultSetHandle,

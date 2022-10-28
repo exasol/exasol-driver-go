@@ -168,7 +168,7 @@ func (c *connection) callback() func(response interface{}) error {
 			return driver.ErrBadConn
 		}
 
-		result := &BaseResponse{}
+		result := &baseResponse{}
 
 		var reader io.Reader
 		reader = bytes.NewReader(message)

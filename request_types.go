@@ -46,7 +46,7 @@ type executePreparedStatementCommand struct {
 	StatementHandle int              `json:"statementHandle"`
 	NumColumns      int              `json:"numColumns,omitempty"`
 	NumRows         int              `json:"numRows"`
-	Columns         []SQLQueryColumn `json:"columns,omitempty"`
+	Columns         []sqlQueryColumn `json:"columns,omitempty"`
 	Data            [][]interface{}  `json:"data"`
 	Attributes      attributes       `json:"attributes,omitempty"`
 }

@@ -56,7 +56,7 @@ func (c *connection) PrepareContext(ctx context.Context, query string) (driver.S
 		errorLogger.Print(ErrClosed)
 		return nil, driver.ErrBadConn
 	}
-	response := &CreatePreparedStatementResponse{}
+	response := &createPreparedStatementResponse{}
 	err := c.createPreparedStatement(ctx, query, response)
 	if err != nil {
 		return nil, err
@@ -64,14 +64,14 @@ func (c *connection) PrepareContext(ctx context.Context, query string) (driver.S
 	return c.createStatement(response), nil
 }
 
-func (c *connection) createPreparedStatement(ctx context.Context, query string, response *CreatePreparedStatementResponse) error {
+func (c *connection) createPreparedStatement(ctx context.Context, query string, response *createPreparedStatementResponse) error {
 	return c.send(ctx, &createPreparedStatementCommand{
 		command: command{"createPreparedStatement"},
 		SQLText: query,
 	}, response)
 }
 
-func (c *connection) createStatement(result *CreatePreparedStatementResponse) *statement {
+func (c *connection) createStatement(result *createPreparedStatementResponse) *statement {
 	return &statement{
 		connection:      c,
 		statementHandle: result.StatementHandle,
@@ -112,7 +112,7 @@ func (c *connection) query(ctx context.Context, query string, args []driver.Valu
 		return c.executeSimpleWithRows(ctx, query)
 	}
 
-	response := &CreatePreparedStatementResponse{}
+	response := &createPreparedStatementResponse{}
 	err := c.createPreparedStatement(ctx, query, response)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (c *connection) executeSimpleWithRows(ctx context.Context, query string) (d
 	return toRow(result, c)
 }
 
-func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePreparedStatementResponse, args []driver.Value) (*SQLQueriesResponse, error) {
+func (c *connection) executePreparedStatement(ctx context.Context, s *createPreparedStatementResponse, args []driver.Value) (*sqlQueriesResponse, error) {
 	columns := s.ParameterData.Columns
 	if len(args)%len(columns) != 0 {
 		return nil, ErrInvalidValuesCount
@@ -158,7 +158,7 @@ func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePrep
 			ResultSetMaxRows: c.config.resultSetMaxRows,
 		},
 	}
-	result := &SQLQueriesResponse{}
+	result := &sqlQueriesResponse{}
 	err := c.send(ctx, command, result)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (c *connection) executePreparedStatement(ctx context.Context, s *CreatePrep
 	return result, c.closePreparedStatement(ctx, s)
 }
 
-func (c *connection) closePreparedStatement(ctx context.Context, s *CreatePreparedStatementResponse) error {
+func (c *connection) closePreparedStatement(ctx context.Context, s *createPreparedStatementResponse) error {
 	return c.send(ctx, &closePreparedStatementCommand{
 		command:         command{"closePreparedStatement"},
 		StatementHandle: s.StatementHandle,
@@ -227,7 +227,7 @@ func (c *connection) executeSimpleWrapper(ctx context.Context, query string, res
 
 func (c *connection) executePreparedStatementWrapper(ctx context.Context, query string, args []driver.Value, result chan driver.Result) func() error {
 	return func() error {
-		prepResponse := &CreatePreparedStatementResponse{}
+		prepResponse := &createPreparedStatementResponse{}
 		err := c.send(ctx, &createPreparedStatementCommand{
 			command: command{"createPreparedStatement"},
 			SQLText: query,
@@ -292,7 +292,7 @@ func (c *connection) executeSimpleWithResult(ctx context.Context, query string) 
 	return toResult(result)
 }
 
-func (c *connection) simpleExec(ctx context.Context, query string) (*SQLQueriesResponse, error) {
+func (c *connection) simpleExec(ctx context.Context, query string) (*sqlQueriesResponse, error) {
 	command := &sqlCommand{
 		command: command{"execute"},
 		SQLText: query,
@@ -300,7 +300,7 @@ func (c *connection) simpleExec(ctx context.Context, query string) (*SQLQueriesR
 			ResultSetMaxRows: c.config.resultSetMaxRows,
 		},
 	}
-	result := &SQLQueriesResponse{}
+	result := &sqlQueriesResponse{}
 	err := c.send(ctx, command, result)
 	if err != nil {
 		return nil, err
@@ -333,7 +333,7 @@ func (c *connection) login(ctx context.Context) error {
 	} else {
 		logCouldNotGetOsUser(err)
 	}
-	authResponse := &AuthResponse{}
+	authResponse := &authResponse{}
 	err = c.send(ctx, authRequest, authResponse)
 	if err != nil {
 		return err
@@ -386,7 +386,7 @@ func (c *connection) prepareLoginViaPassword(ctx context.Context) (string, error
 		command:         command{"login"},
 		ProtocolVersion: c.config.apiVersion,
 	}
-	loginResponse := &PublicKeyResponse{}
+	loginResponse := &publicKeyResponse{}
 	err := c.send(ctx, loginCommand, loginResponse)
 	if err != nil {
 		return "", err

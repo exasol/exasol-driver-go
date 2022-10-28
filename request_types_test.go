@@ -44,7 +44,7 @@ func (suite *RequestTypesTestSuite) TestMarshallLoginCommand() {
 		}, `{"command":"command","sqlText":"sql","attributes":{"feedbackInterval":2}}`},
 		{"empty attributes", attributes{}, `{}`},
 		{"execute prepared statement", executePreparedStatementCommand{
-			command: command{"command"}, StatementHandle: 321, NumColumns: 4, NumRows: 6, Columns: []SQLQueryColumn{{Name: "col"}},
+			command: command{"command"}, StatementHandle: 321, NumColumns: 4, NumRows: 6, Columns: []sqlQueryColumn{{Name: "col"}},
 			Data:       [][]interface{}{{"a", "b"}, {1, 2}},
 			Attributes: attributes{DateLanguage: "format"},
 		}, `{"command":"command","statementHandle":321,"numColumns":4,"numRows":6,"columns":[{"name":"col","dataType":{"type":""}}],"data":[["a","b"],[1,2]],"attributes":{"dateLanguage":"format"}}`},
