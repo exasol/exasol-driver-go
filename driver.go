@@ -1,3 +1,8 @@
+// Copyright 2022 Exasol AG. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the MIT License,
+// see https://github.com/exasol/exasol-driver-go/blob/main/LICENSE
+
 // Package exasol implements a driver for the Exasol database.
 package exasol
 
