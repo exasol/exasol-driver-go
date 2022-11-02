@@ -9,7 +9,7 @@ import (
 type statement struct {
 	connection      *connection
 	statementHandle int
-	columns         []SQLQueryColumn
+	columns         []sqlQueryColumn
 	numInput        int
 }
 
@@ -57,8 +57,8 @@ func (s *statement) Close() error {
 	if s.connection.isClosed {
 		return driver.ErrBadConn
 	}
-	return s.connection.send(context.Background(), &ClosePreparedStatementCommand{
-		Command:         Command{"closePreparedStatement"},
+	return s.connection.send(context.Background(), &closePreparedStatementCommand{
+		command:         command{"closePreparedStatement"},
 		StatementHandle: s.statementHandle,
 	}, nil)
 }
@@ -67,8 +67,8 @@ func (s *statement) NumInput() int {
 	return s.numInput
 }
 
-func toResult(result *SQLQueriesResponse) (driver.Result, error) {
-	rowCountResult := &SQLQueryResponseRowCount{}
+func toResult(result *sqlQueriesResponse) (driver.Result, error) {
+	rowCountResult := &sqlQueryResponseRowCount{}
 	err := json.Unmarshal(result.Results[0], rowCountResult)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func toResult(result *SQLQueriesResponse) (driver.Result, error) {
 	}, err
 }
 
-func (s *statement) executePreparedStatement(ctx context.Context, args []driver.Value) (*SQLQueriesResponse, error) {
+func (s *statement) executePreparedStatement(ctx context.Context, args []driver.Value) (*sqlQueriesResponse, error) {
 	columns := s.columns
 	if len(args)%len(columns) != 0 {
 		return nil, ErrInvalidValuesCount
@@ -93,18 +93,18 @@ func (s *statement) executePreparedStatement(ctx context.Context, args []driver.
 		data[i%len(columns)] = append(data[i%len(columns)], arg)
 	}
 
-	command := &ExecutePreparedStatementCommand{
-		Command:         Command{"executePreparedStatement"},
+	command := &executePreparedStatementCommand{
+		command:         command{"executePreparedStatement"},
 		StatementHandle: s.statementHandle,
 		Columns:         columns,
 		NumColumns:      len(columns),
 		NumRows:         len(data[0]),
 		Data:            data,
-		Attributes: Attributes{
+		Attributes: attributes{
 			ResultSetMaxRows: s.connection.config.resultSetMaxRows,
 		},
 	}
-	result := &SQLQueriesResponse{}
+	result := &sqlQueriesResponse{}
 	err := s.connection.send(ctx, command, result)
 	if err != nil {
 		return nil, err
@@ -115,8 +115,8 @@ func (s *statement) executePreparedStatement(ctx context.Context, args []driver.
 	return result, err
 }
 
-func toRow(result *SQLQueriesResponse, con *connection) (driver.Rows, error) {
-	resultSet := &SQLQueryResponseResultSet{}
+func toRow(result *sqlQueriesResponse, con *connection) (driver.Rows, error) {
+	resultSet := &sqlQueryResponseResultSet{}
 	err := json.Unmarshal(result.Results[0], resultSet)
 	if err != nil {
 		return nil, err

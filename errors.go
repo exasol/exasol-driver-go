@@ -3,7 +3,7 @@ package exasol
 import (
 	"net/url"
 
-	"github.com/exasol/error-reporting-go"
+	exaerror "github.com/exasol/error-reporting-go"
 )
 
 // Various errors the driver might return. Can change between driver versions.
@@ -31,11 +31,11 @@ func newErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint
 		ParameterWithDescription("expected fingerprint", expectedFingerprint, "The expected fingerprint"))
 }
 
-func newSqlErr(exception *Exception) DriverErr {
+func newSqlErr(ex *exception) DriverErr {
 	return newDriverErr(exaerror.New("E-EGOD-11").
 		Message("execution failed with SQL error code {{sql code}} and message {{text}}").
-		Parameter("sql code", exception.SQLCode).
-		Parameter("text", exception.Text))
+		Parameter("sql code", ex.SQLCode).
+		Parameter("text", ex.Text))
 }
 
 func newErrCouldNotAbort(rootCause error) DriverErr {
@@ -147,8 +147,10 @@ func logCouldNotGetOsUser(err error) {
 		String())
 }
 
+// This type represents an error that can occur when working with a database connection.
 type DriverErr string
 
+// Error converts the error to a string.
 func (e DriverErr) Error() string {
 	return string(e)
 }

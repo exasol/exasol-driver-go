@@ -6,30 +6,33 @@ import (
 	"strings"
 )
 
+// DSNConfig is a data source name for an Exasol database.
 type DSNConfig struct {
-	Host                      string
-	Port                      int
-	User                      string
-	Password                  string
-	Autocommit                *bool
-	Encryption                *bool
-	Compression               *bool
-	ClientName                string
-	ClientVersion             string
-	FetchSize                 int
-	ValidateServerCertificate *bool
-	CertificateFingerprint    string
-	Schema                    string
-	ResultSetMaxRows          int
+	Host                      string            // Hostname
+	Port                      int               // Port number
+	User                      string            // Username
+	Password                  string            // Password
+	Autocommit                *bool             // If true, commit() will be executed automatically after each statement. If false, commit() and rollback() must be executed manually. (default: true)
+	Encryption                *bool             // Encrypt the database connection via TLS (default: true)
+	Compression               *bool             // If true, the WebSocket data frame payload data is compressed. If false, it is not compressed. (default: false)
+	ClientName                string            // Client name reported to the database (default: "Go client")
+	ClientVersion             string            // Client version reported to the database (default: "")
+	FetchSize                 int               // Fetch size for results in KiB (default: 2000 KiB)
+	ValidateServerCertificate *bool             // If true, validate the server's TLS certificate (default: true)
+	CertificateFingerprint    string            // Expected SHA256 checksum of the server's TLS certificate in Hex format (default: "")
+	Schema                    string            // Name of the schema to open during connection (default: "")
+	ResultSetMaxRows          int               // Maximum number of result set rows returned (default: 0, means no limit)
 	params                    map[string]string // Connection parameters
-	AccessToken               string
-	RefreshToken              string
+	AccessToken               string            // Access token (alternative to username/password)
+	RefreshToken              string            // Refresh token (alternative to username/password)
 }
 
+// DSNConfigBuilder is a builder for DSNConfig objects.
 type DSNConfigBuilder struct {
 	config *DSNConfig
 }
 
+// NewConfig creates a new builder with username/password authentication.
 func NewConfig(user, password string) *DSNConfigBuilder {
 	return &DSNConfigBuilder{
 		config: &DSNConfig{
@@ -41,6 +44,7 @@ func NewConfig(user, password string) *DSNConfigBuilder {
 	}
 }
 
+// NewConfigWithAccessToken creates a new builder with access token authentication.
 func NewConfigWithAccessToken(token string) *DSNConfigBuilder {
 	return &DSNConfigBuilder{
 		config: &DSNConfig{
@@ -51,6 +55,7 @@ func NewConfigWithAccessToken(token string) *DSNConfigBuilder {
 	}
 }
 
+// NewConfigWithRefreshToken creates a new builder with refresh token authentication.
 func NewConfigWithRefreshToken(token string) *DSNConfigBuilder {
 	return &DSNConfigBuilder{
 		config: &DSNConfig{
@@ -61,61 +66,86 @@ func NewConfigWithRefreshToken(token string) *DSNConfigBuilder {
 	}
 }
 
+// Compression sets the compression flag.
+// If true, the WebSocket data frame payload data is compressed. If false, it is not compressed (default: false).
 func (c *DSNConfigBuilder) Compression(enabled bool) *DSNConfigBuilder {
 	c.config.Compression = &enabled
 	return c
 }
+
+// Encryption defines if the database connection should be encrypted via TLS (default: true).
 func (c *DSNConfigBuilder) Encryption(enabled bool) *DSNConfigBuilder {
 	c.config.Encryption = &enabled
 	return c
 }
+
+// Autocommit defines if commit() will be executed automatically after each statement (true)
+// or if commit() and rollback() must be executed manually (false). Default: true.
 func (c *DSNConfigBuilder) Autocommit(enabled bool) *DSNConfigBuilder {
 	c.config.Autocommit = &enabled
 	return c
 }
+
+// ValidateServerCertificate defines if the driver should validate the server's TLS certificate (default: true).
 func (c *DSNConfigBuilder) ValidateServerCertificate(validate bool) *DSNConfigBuilder {
 	c.config.ValidateServerCertificate = &validate
 	return c
 }
+
+// CertificateFingerprint sets the expected SHA256 checksum of the server's TLS certificate in Hex format (default: "").
 func (c *DSNConfigBuilder) CertificateFingerprint(fingerprint string) *DSNConfigBuilder {
 	c.config.CertificateFingerprint = fingerprint
 	return c
 }
+
+// FetchSize sets the fetch size for results in KiB (default: 2000 KiB).
 func (c *DSNConfigBuilder) FetchSize(size int) *DSNConfigBuilder {
 	c.config.FetchSize = size
 	return c
 }
+
+// ClientName sets the client name reported to the database (default: "Go client")
 func (c *DSNConfigBuilder) ClientName(name string) *DSNConfigBuilder {
 	c.config.ClientName = name
 	return c
 }
+
+// ClientVersion sets the client version reported to the database (default: "")
 func (c *DSNConfigBuilder) ClientVersion(version string) *DSNConfigBuilder {
 	c.config.ClientVersion = version
 	return c
 }
+
+// Host sets the hostname.
 func (c *DSNConfigBuilder) Host(host string) *DSNConfigBuilder {
 	c.config.Host = host
 	return c
 }
+
+// Port sets the port number.
 func (c *DSNConfigBuilder) Port(port int) *DSNConfigBuilder {
 	c.config.Port = port
 	return c
 }
 
+// ResultSetMaxRows sets the maximum number of result set rows returned (default: 0, means no limit).
 func (c *DSNConfigBuilder) ResultSetMaxRows(maxRows int) *DSNConfigBuilder {
 	c.config.ResultSetMaxRows = maxRows
 	return c
 }
 
+// Schema sets the name of the schema to open during connection (default: "").
 func (c *DSNConfigBuilder) Schema(schema string) *DSNConfigBuilder {
 	c.config.Schema = schema
 	return c
 }
 
+// String converts the configuration to a DSN (data source name) that can be used for connecting to an Exasol database.
 func (c *DSNConfigBuilder) String() string {
 	return c.config.ToDSN()
 }
 
+// ToDSN converts the configuration to a DSN (data source name) that can be used for connecting to an Exasol database.
 func (c *DSNConfig) ToDSN() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("exa:%s:%d;", c.Host, c.Port))
@@ -158,6 +188,7 @@ func (c *DSNConfig) ToDSN() string {
 	return strings.TrimRight(sb.String(), ";")
 }
 
+// ParseDSN parses the given DSN (data source name).
 func ParseDSN(dsn string) (*DSNConfig, error) {
 	if !strings.HasPrefix(dsn, "exa:") {
 		return nil, newInvalidConnectionString(dsn)
