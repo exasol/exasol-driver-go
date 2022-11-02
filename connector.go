@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 )
 
+// connector implements the [database/sql/driver.Connector] interface.
 type connector struct {
 	config *config
 }

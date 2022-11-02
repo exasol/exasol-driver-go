@@ -1,3 +1,9 @@
+// Copyright 2022 Exasol AG. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the MIT License,
+// see https://github.com/exasol/exasol-driver-go/blob/main/LICENSE
+
+// Package exasol implements a driver for the Exasol database.
 package exasol
 
 import (
@@ -6,6 +12,7 @@ import (
 	"database/sql/driver"
 )
 
+// ExasolDriver is an implementation of the [database/sql/driver.Driver] interface.
 type ExasolDriver struct{}
 
 type config struct {
@@ -60,6 +67,7 @@ func toInternalConfig(dsnConfig *DSNConfig) *config {
 	}
 }
 
+// Open implements the driver.Driver interface.
 func (e ExasolDriver) Open(dsn string) (driver.Conn, error) {
 	dsnConfig, err := ParseDSN(dsn)
 	if err != nil {
@@ -71,6 +79,7 @@ func (e ExasolDriver) Open(dsn string) (driver.Conn, error) {
 	return c.Connect(context.Background())
 }
 
+// OpenConnector implements the driver.DriverContext interface.
 func (e ExasolDriver) OpenConnector(dsn string) (driver.Connector, error) {
 	dsnConfig, err := ParseDSN(dsn)
 	if err != nil {
