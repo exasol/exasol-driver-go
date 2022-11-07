@@ -9,6 +9,11 @@ In this release we improved the Godoc documentation available at [pkg.go.dev](ht
 ## Features
 
 * #82: Improve Godoc documentation.
+
+## Refactoring
+
+* #83: Use exasol test setup in integration tests.
+
 ## Dependency Updates
 
 ### Test Dependency Updates
