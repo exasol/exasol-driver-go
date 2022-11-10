@@ -2,9 +2,10 @@ package exasol
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestErrorsSetLogger(t *testing.T) {

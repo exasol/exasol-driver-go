@@ -5,9 +5,6 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/goleak"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"os/user"
@@ -17,6 +14,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
+	"gopkg.in/yaml.v3"
 
 	"github.com/exasol/exasol-driver-go"
 
@@ -364,7 +365,6 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 }
 
 func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
-
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	schemaName := "TEST_SCHEMA_8"
@@ -408,7 +408,6 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 
 // See https://github.com/exasol/exasol-driver-go/issues/79
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
-
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	schemaName := "TEST_SCHEMA_LEAK"
@@ -427,7 +426,6 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 
 	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '%s' COLUMNS SEPARATOR = ',' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName, file.Name()))
 	suite.Error(err, "import should be failing")
-
 }
 
 func (suite *IntegrationTestSuite) generateExampleCSVFile(exampleData string, amount int) (*os.File, error) {
@@ -491,7 +489,6 @@ func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCol
 		suite.Equal(expectedRows[i], columns)
 		i = i + 1
 	}
-
 }
 
 func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
@@ -563,7 +560,6 @@ func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
 	suite.NoError(err, "Failed to drop schema "+schemaName)
 
 	suite.NoError(db.Close(), "Failed to close driver ")
-
 }
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
