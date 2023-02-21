@@ -62,7 +62,7 @@ func getDbVersion() string {
 	if dbVersion != "" {
 		return dbVersion
 	}
-	return "7.1.15"
+	return "7.1.18"
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
