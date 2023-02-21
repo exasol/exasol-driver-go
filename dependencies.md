@@ -24,4 +24,4 @@
 [3]: https://github.com/stretchr/testify/blob/HEAD/LICENSE
 [4]: https://github.com/uber-go/goleak/blob/HEAD/LICENSE
 [5]: https://cs.opensource.google/go/x/sync/+/v0.1.0:LICENSE
-[6]: https://github.com/go-yaml/yaml/blob/496545a6307b/LICENSE
+[6]: https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE
