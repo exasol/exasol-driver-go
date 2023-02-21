@@ -46,7 +46,7 @@ func (c *connection) connect() error {
 		skipVerify := !c.config.validateServerCertificate || c.config.certificateFingerprint != ""
 		dialer := *websocket.DefaultDialer
 		dialer.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: skipVerify,
+			InsecureSkipVerify: skipVerify, //nolint:gosec
 			CipherSuites: []uint16{
 				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
@@ -161,7 +161,6 @@ func (c *connection) asyncSend(request interface{}) (func(interface{}) error, er
 
 func (c *connection) callback() func(response interface{}) error {
 	return func(response interface{}) error {
-
 		_, message, err := c.websocket.ReadMessage()
 		if err != nil {
 			logReceivingError(err)

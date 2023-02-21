@@ -2,9 +2,10 @@ package exasol
 
 import (
 	"database/sql"
-	"github.com/stretchr/testify/suite"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 type ResultSetTestSuite struct {
