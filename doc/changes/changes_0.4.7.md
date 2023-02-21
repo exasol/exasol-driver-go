@@ -18,9 +18,10 @@ In this release we improved the Godoc documentation available at [pkg.go.dev](ht
 
 ### Test Dependency Updates
 
+* Updated `go.uber.org/goleak:v1.2.0` to `v1.2.1`
 * Updated `golang.org/x/sync:v0.0.0-20220722155255-886fb9371eb4` to `v0.1.0`
 * Updated `github.com/stretchr/testify:v1.8.0` to `v1.8.1`
-* Added `github.com/exasol/exasol-test-setup-abstraction-server/go-client:v0.3.0`
+* Added `github.com/exasol/exasol-test-setup-abstraction-server/go-client:v0.3.2`
 
 ### Other Dependency Updates
 

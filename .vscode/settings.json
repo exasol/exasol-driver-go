@@ -5,4 +5,8 @@
         "source.generate.finalModifiers": true,
         "source.fixAll": true
     },
+    "sonarlint.connectedMode.project": {
+        "connectionId": "exasol",
+        "projectKey": "com.exasol:exasol-driver-go"
+    }
 }
