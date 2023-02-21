@@ -10,7 +10,6 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,17 +21,17 @@ import (
 	"github.com/exasol/exasol-driver-go"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+
+	testSetupAbstraction "github.com/exasol/exasol-test-setup-abstraction-server/go-client"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	ctx             context.Context
-	exasolContainer testcontainers.Container
-	dbVersion       string
-	port            int
-	host            string
+	ctx       context.Context
+	exasol    *testSetupAbstraction.TestSetupAbstraction
+	dbVersion string
+	port      int
+	host      string
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -44,17 +43,18 @@ func TestIntegrationSuite(t *testing.T) {
 
 func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = getContext()
-	exasolHostEnv := os.Getenv("EXASOL_HOST")
-	if exasolHostEnv != "" {
-		suite.exasolContainer = nil
-		suite.host = exasolHostEnv
-		suite.port = getExasolPortFromEnv()
-	} else {
-		suite.dbVersion = getDbVersion()
-		suite.exasolContainer = runExasolContainer(suite.ctx, suite.dbVersion)
-		suite.port = getExasolPort(suite.exasolContainer, suite.ctx)
-		suite.host = getExasolHost(suite.exasolContainer, suite.ctx)
+	suite.dbVersion = getDbVersion()
+	var err error
+	suite.exasol, err = testSetupAbstraction.New().DockerDbVersion(suite.dbVersion).Start()
+	if err != nil {
+		suite.FailNowf("setup failed", "failed to start test setup: %v", err)
 	}
+	connectionInfo, err := suite.exasol.GetConnectionInfo()
+	if err != nil {
+		suite.FailNowf("setup failed", "failed to get connection info: %v", err)
+	}
+	suite.port = connectionInfo.Port
+	suite.host = connectionInfo.Host
 }
 
 func getDbVersion() string {
@@ -62,32 +62,7 @@ func getDbVersion() string {
 	if dbVersion != "" {
 		return dbVersion
 	}
-	return "7.1.14"
-}
-
-func getExasolPortFromEnv() int {
-	envValue := os.Getenv("EXASOL_PORT")
-	if envValue == "" {
-		envValue = "8563"
-	}
-	if intValue, err := strconv.Atoi(envValue); err == nil {
-		return intValue
-	} else {
-		log.Fatalf("Error parsing port %q from environment variable EXASOL_PORT", envValue)
-		return -1
-	}
-}
-
-func getExasolHost(exasolContainer testcontainers.Container, ctx context.Context) string {
-	host, err := exasolContainer.Host(ctx)
-	onError(err)
-	return host
-}
-
-func getExasolPort(exasolContainer testcontainers.Container, ctx context.Context) int {
-	port, err := exasolContainer.MappedPort(ctx, "8563")
-	onError(err)
-	return port.Int()
+	return "7.1.18"
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
@@ -564,8 +539,8 @@ func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
 
 func (suite *IntegrationTestSuite) TearDownSuite() {
 	defer goleak.VerifyNone(suite.T())
-	if suite.exasolContainer != nil {
-		err := suite.exasolContainer.Terminate(suite.ctx)
+	if suite.exasol != nil {
+		err := suite.exasol.Stop()
 		onError(err)
 	}
 }
@@ -585,29 +560,6 @@ func (suite *IntegrationTestSuite) openConnection(config *exasol.DSNConfigBuilde
 
 func getContext() context.Context {
 	return context.Background()
-}
-
-func runExasolContainer(ctx context.Context, dbVersion string) testcontainers.Container {
-	start := time.Now()
-
-	request := testcontainers.ContainerRequest{
-		Image:        fmt.Sprintf("exasol/docker-db:%s", dbVersion),
-		ExposedPorts: []string{"8563", "2580"},
-		WaitingFor:   wait.ForLog("All stages finished"),
-		Privileged:   true,
-	}
-	exasolContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: request,
-		Started:          true,
-	})
-	onError(err)
-
-	containerID := exasolContainer.GetContainerID()
-	name, err := exasolContainer.Name(ctx)
-	onError(err)
-
-	log.Printf("Started Exasol %s in container %s with ID %s in %s", dbVersion, name, containerID, time.Since(start))
-	return exasolContainer
 }
 
 func onError(err error) {
