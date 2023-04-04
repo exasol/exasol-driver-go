@@ -575,7 +575,7 @@ type projectKeeper struct {
 }
 
 func compareDriverVersion(t *testing.T, actualVersion string) {
-	yamlFile, err := os.ReadFile(".project-keeper.yml")
+	yamlFile, err := os.ReadFile("../.project-keeper.yml")
 	assert.NoError(t, err)
 	keeperContent := &projectKeeper{}
 	err = yaml.Unmarshal(yamlFile, keeperContent)
