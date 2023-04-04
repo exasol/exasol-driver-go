@@ -4,7 +4,7 @@ Code name: Upgrade to Go 1.19
 
 ## Summary
 
-This release upgrades the Go version to 1.19.
+This release upgrades the Go version to 1.19. It also restructures the code and moves it to to the `pkg` directory.
 
 ## Dependency Updates
 
