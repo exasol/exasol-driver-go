@@ -1,7 +1,7 @@
 sources:
   - type: golang
     path: go.mod
-version: 0.4.7
+version: 0.4.8
 excludes:
   # Workaround for https://github.com/exasol/project-keeper/issues/428
   - "E-PK-CORE-18: Outdated content: '.github/workflows/project-keeper-verify.yml'"
