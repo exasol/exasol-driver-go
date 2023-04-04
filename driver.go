@@ -10,82 +10,100 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+
+	"github.com/exasol/exasol-driver-go/internal/config"
+	"github.com/exasol/exasol-driver-go/pkg/connection"
+	"github.com/exasol/exasol-driver-go/pkg/dsn"
 )
-
-// ExasolDriver is an implementation of the [database/sql/driver.Driver] interface.
-type ExasolDriver struct{}
-
-type config struct {
-	user                      string
-	password                  string
-	accessToken               string
-	refreshToken              string
-	host                      string
-	port                      int
-	params                    map[string]string // Connection parameters
-	apiVersion                int
-	clientName                string
-	clientVersion             string
-	schema                    string
-	autocommit                bool
-	fetchSize                 int
-	compression               bool
-	resultSetMaxRows          int
-	encryption                bool
-	validateServerCertificate bool
-	certificateFingerprint    string
-}
 
 func init() {
 	sql.Register("exasol", &ExasolDriver{})
 }
 
-func toInternalConfig(dsnConfig *DSNConfig) *config {
-	apiVersion := 2
-	if dsnConfig.AccessToken != "" || dsnConfig.RefreshToken != "" {
-		apiVersion = 3
-	}
-	return &config{
-		user:                      dsnConfig.User,
-		password:                  dsnConfig.Password,
-		accessToken:               dsnConfig.AccessToken,
-		refreshToken:              dsnConfig.RefreshToken,
-		host:                      dsnConfig.Host,
-		port:                      dsnConfig.Port,
-		params:                    dsnConfig.params,
-		apiVersion:                apiVersion,
-		clientName:                dsnConfig.ClientName,
-		clientVersion:             dsnConfig.ClientVersion,
-		schema:                    dsnConfig.Schema,
-		autocommit:                *dsnConfig.Autocommit,
-		fetchSize:                 dsnConfig.FetchSize,
-		compression:               *dsnConfig.Compression,
-		resultSetMaxRows:          dsnConfig.ResultSetMaxRows,
-		encryption:                *dsnConfig.Encryption,
-		validateServerCertificate: *dsnConfig.ValidateServerCertificate,
-		certificateFingerprint:    dsnConfig.CertificateFingerprint,
-	}
-}
+// ExasolDriver is an implementation of the [database/sql/driver.Driver] interface.
+type ExasolDriver struct{}
 
 // Open implements the driver.Driver interface.
-func (e ExasolDriver) Open(dsn string) (driver.Conn, error) {
-	dsnConfig, err := ParseDSN(dsn)
+func (e ExasolDriver) Open(input string) (driver.Conn, error) {
+	dsnConfig, err := dsn.ParseDSN(input)
 	if err != nil {
 		return nil, err
 	}
-	c := &connector{
-		config: toInternalConfig(dsnConfig),
+	c := &Connector{
+		Config: dsn.ToInternalConfig(dsnConfig),
 	}
 	return c.Connect(context.Background())
 }
 
 // OpenConnector implements the driver.DriverContext interface.
-func (e ExasolDriver) OpenConnector(dsn string) (driver.Connector, error) {
-	dsnConfig, err := ParseDSN(dsn)
+func (e ExasolDriver) OpenConnector(input string) (driver.Connector, error) {
+	dsnConfig, err := dsn.ParseDSN(input)
 	if err != nil {
 		return nil, err
 	}
-	return &connector{
-		config: toInternalConfig(dsnConfig),
+	return &Connector{
+		Config: dsn.ToInternalConfig(dsnConfig),
 	}, nil
+}
+
+// Connector implements the [database/sql/driver.Connector] interface.
+type Connector struct {
+	Config *config.Config
+}
+
+func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
+	conn := &connection.Connection{
+		Config:   c.Config,
+		Ctx:      ctx,
+		IsClosed: true,
+	}
+	err := conn.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.Login(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, err
+}
+
+func (c Connector) Driver() driver.Driver {
+	return &ExasolDriver{}
+}
+
+// NewConfig creates a new builder with username/password authentication.
+func NewConfig(user, password string) *dsn.DSNConfigBuilder {
+	return &dsn.DSNConfigBuilder{
+		Config: &dsn.DSNConfig{
+			Host:     "localhost",
+			Port:     8563,
+			User:     user,
+			Password: password,
+		},
+	}
+}
+
+// NewConfigWithAccessToken creates a new builder with access token authentication.
+func NewConfigWithAccessToken(token string) *dsn.DSNConfigBuilder {
+	return &dsn.DSNConfigBuilder{
+		Config: &dsn.DSNConfig{
+			Host:        "localhost",
+			Port:        8563,
+			AccessToken: token,
+		},
+	}
+}
+
+// NewConfigWithRefreshToken creates a new builder with refresh token authentication.
+func NewConfigWithRefreshToken(token string) *dsn.DSNConfigBuilder {
+	return &dsn.DSNConfigBuilder{
+		Config: &dsn.DSNConfig{
+			Host:         "localhost",
+			Port:         8563,
+			RefreshToken: token,
+		},
+	}
 }
