@@ -44,7 +44,6 @@ func (results *queryResults) ColumnTypeScanType(index int) reflect.Type {
 	default:
 		return reflect.TypeOf(new(interface{}))
 	}
-
 }
 
 func (results *queryResults) ColumnTypeLength(index int) (length int64, ok bool) {
@@ -97,7 +96,6 @@ func (results *queryResults) Next(dest []driver.Value) error {
 
 		// Overwrite old data, user needs to collect the whole data if needed
 		results.data.Data = result.Data
-
 	}
 
 	for i := range dest {

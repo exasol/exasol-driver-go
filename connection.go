@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"math/big"
 	mathRand "math/rand"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/gorilla/websocket"
 )

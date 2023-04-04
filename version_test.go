@@ -2,10 +2,11 @@ package exasol
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 type projectKeeper struct {
@@ -22,5 +23,4 @@ func TestVersionIsUpToDate(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, fmt.Sprintf("v%s", keeperContent.Version), driverVersion)
-
 }

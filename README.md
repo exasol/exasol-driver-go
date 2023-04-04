@@ -183,7 +183,7 @@ There are two driver properties that control how TLS certificates are verified: 
     This is useful when the database has a self-signed certificate with invalid hostname but you still want to verify connecting to the corrrect host.
 
     **Note:** You can find the fingerprint by first specifiying an invalid fingerprint and connecting to the database. The error will contain the actual fingerprint.
-* With `validateservercertificate=1` (or `config.ValidateServerCertificate(false)`) the driver will ignore any TLS certificate errors.
+* With `validateservercertificate=0` (or `config.ValidateServerCertificate(false)`) the driver will ignore any TLS certificate errors.
 
     Use this if the server uses a self-signed certificate and you don't know the fingerprint. **This is not recommended.**
 
@@ -203,14 +203,14 @@ go test ./... -short
 
 Run unit tests and integration tests:
 
-For running the integrations tests you need [Docker](https://www.docker.com/) installed.
+For running the integrations tests you need [Docker](https://www.docker.com/) and [Java](https://adoptium.net/) installed.
 
 ```shell
 go test ./...
 ```
 
-To save time for starting the Docker container, you can use an already running database:
+Integration tests use [exasol-test-setup-abstraction-server](https://github.com/exasol/exasol-test-setup-abstraction-server) and thus indirectly [exasol-testcontainers](https://github.com/exasol/exasol-testcontainers/). To speedup tests during development you need to enable reusing of test containers by creating file `~/.testcontainers.properties` with the following content:
 
-```shell
-EXASOL_HOST=<IP-address> EXASOL_PORT=8563 go test ./...
+```properties
+testcontainers.reuse.enable=true
 ```

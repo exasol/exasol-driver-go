@@ -1,0 +1,12 @@
+{
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": true,
+        "source.generate.finalModifiers": true,
+        "source.fixAll": true
+    },
+    "sonarlint.connectedMode.project": {
+        "connectionId": "exasol",
+        "projectKey": "com.exasol:exasol-driver-go"
+    }
+}
