@@ -86,7 +86,7 @@ func OpenFile(path string) (*os.File, error) {
 	return file, nil
 }
 
-func UpdateImportQuery(query string, host string, port uint32) string {
+func UpdateImportQuery(query string, host string, port int) string {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	for i, matches := range r {
 		if i == 0 {

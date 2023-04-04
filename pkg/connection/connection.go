@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"os"
 	"os/user"
 	"runtime"
 	"strconv"
@@ -19,7 +18,6 @@ import (
 	"github.com/exasol/exasol-driver-go/internal/version"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/logger"
-	"github.com/exasol/exasol-driver-go/pkg/proxy"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 	"golang.org/x/sync/errgroup"
 
@@ -62,19 +60,27 @@ func (c *Connection) PrepareContext(ctx context.Context, query string) (driver.S
 		logger.ErrorLogger.Print(errors.ErrClosed)
 		return nil, driver.ErrBadConn
 	}
-	response := &types.CreatePreparedStatementResponse{}
-	err := c.createPreparedStatement(ctx, query, response)
+
+	response, err := c.createPreparedStatement(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	return c.CreateStatement(response), nil
 }
 
-func (c *Connection) createPreparedStatement(ctx context.Context, query string, response *types.CreatePreparedStatementResponse) error {
-	return c.Send(ctx, &types.CreatePreparedStatementCommand{
+func (c *Connection) createPreparedStatement(ctx context.Context, query string) (*types.CreatePreparedStatementResponse, error) {
+	response := &types.CreatePreparedStatementResponse{}
+
+	err := c.Send(ctx, &types.CreatePreparedStatementCommand{
 		Command: types.Command{Command: "createPreparedStatement"},
 		SQLText: query,
 	}, response)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 func (c *Connection) CreateStatement(result *types.CreatePreparedStatementResponse) *Statement {
@@ -111,8 +117,7 @@ func (c *Connection) query(ctx context.Context, query string, args []driver.Valu
 		return c.executeSimpleWithRows(ctx, query)
 	}
 
-	response := &types.CreatePreparedStatementResponse{}
-	err := c.createPreparedStatement(ctx, query, response)
+	response, err := c.createPreparedStatement(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -140,10 +145,11 @@ func (c *Connection) executePreparedStatement(ctx context.Context, s *types.Crea
 
 	data := make([][]interface{}, len(columns))
 	for i, arg := range args {
-		if data[i%len(columns)] == nil {
-			data[i%len(columns)] = make([]interface{}, 0)
+		index := i % len(columns)
+		if data[index] == nil {
+			data[index] = make([]interface{}, 0)
 		}
-		data[i%len(columns)] = append(data[i%len(columns)], arg)
+		data[index] = append(data[index], arg)
 	}
 
 	command := &types.ExecutePreparedStatementCommand{
@@ -184,18 +190,14 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 	errs, errctx := errgroup.WithContext(ctx)
 
 	if utils.IsImportQuery(query) {
-		originalQuery := query
-		p, err := c.getProxy()
+		importStatement, err := NewImportStatement(query, c.Config.Host, c.Config.Port)
 		if err != nil {
 			return nil, err
 		}
-		err = p.StartProxy()
-		if err != nil {
-			return nil, err
-		}
-		defer p.Close()
-		query = utils.UpdateImportQuery(originalQuery, p.Host, p.Port)
-		errs.Go(func() error { return c.uploadFiles(errctx, p, originalQuery) })
+
+		defer importStatement.Close()
+		query = importStatement.GetUpdatedQuery()
+		errs.Go(func() error { return importStatement.UploadFiles(errctx) })
 	}
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
@@ -245,38 +247,6 @@ func (c *Connection) executePreparedStatementWrapper(ctx context.Context, query 
 		result <- r
 		return nil
 	}
-}
-
-func (c *Connection) getProxy() (*proxy.Proxy, error) {
-	hosts, err := utils.ResolveHosts(c.Config.Host)
-	if err != nil {
-		return nil, err
-	}
-	utils.ShuffleHosts(hosts)
-	return proxy.NewProxy(hosts, c.Config.Port)
-}
-
-func (c *Connection) uploadFiles(ctx context.Context, p *proxy.Proxy, query string) error {
-	paths, err := utils.GetFilePaths(query)
-	if err != nil {
-		return err
-	}
-
-	var files []*os.File
-	for _, path := range paths {
-		f, ferr := utils.OpenFile(path)
-		if ferr != nil {
-			return ferr
-		}
-		files = append(files, f)
-	}
-
-	err = p.Write(ctx, files, utils.GetRowSeparator(query))
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *Connection) executeSimpleWithResult(ctx context.Context, query string) (driver.Result, error) {

@@ -13,7 +13,7 @@ type Config struct {
 	ClientVersion             string
 	Schema                    string
 	Autocommit                bool
-	FetchSize                 int
+	FetchSize                 int // Fetch size in kB
 	Compression               bool
 	ResultSetMaxRows          int
 	Encryption                bool
