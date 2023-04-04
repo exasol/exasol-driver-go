@@ -254,7 +254,8 @@ func (c *connection) getProxy() (*proxy, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+
+	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	r.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
