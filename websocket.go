@@ -33,8 +33,9 @@ func (c *connection) connect() error {
 	if err != nil {
 		return err
 	}
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(hosts), func(i, j int) {
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
 

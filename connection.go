@@ -253,8 +253,8 @@ func (c *connection) getProxy() (*proxy, error) {
 	if err != nil {
 		return nil, err
 	}
-	mathRand.Seed(time.Now().UnixNano())
-	mathRand.Shuffle(len(hosts), func(i, j int) {
+	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
 
