@@ -83,7 +83,6 @@ func openFile(path string) (*os.File, error) {
 }
 
 func updateImportQuery(query string, p *proxy) string {
-
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	for i, matches := range r {
 		if i == 0 {

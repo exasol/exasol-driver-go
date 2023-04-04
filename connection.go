@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"math/big"
 	mathRand "math/rand"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/gorilla/websocket"
 )
@@ -253,8 +254,9 @@ func (c *connection) getProxy() (*proxy, error) {
 	if err != nil {
 		return nil, err
 	}
-	mathRand.Seed(time.Now().UnixNano())
-	mathRand.Shuffle(len(hosts), func(i, j int) {
+
+	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	r.Shuffle(len(hosts), func(i, j int) {
 		hosts[i], hosts[j] = hosts[j], hosts[i]
 	})
 

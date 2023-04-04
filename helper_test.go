@@ -66,7 +66,6 @@ func TestUpdateImportQueryMulti2(t *testing.T) {
 }
 
 func TestGetFilePaths(t *testing.T) {
-
 	quotes := []struct {
 		name  string
 		value string
@@ -91,7 +90,6 @@ func TestGetFilePaths(t *testing.T) {
 	for _, quote := range quotes {
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("%s %s", tt.name, quote.name), func(t *testing.T) {
-
 				var preparedPaths []string
 				for _, path := range tt.paths {
 					preparedPaths = append(preparedPaths, fmt.Sprintf("%s%s%s", quote.value, path, quote.value))
@@ -138,7 +136,6 @@ func TestGetRowSeparator(t *testing.T) {
 		{name: "CR lowercase", separator: "cr", want: "\r"},
 	}
 	for _, tt := range tests {
-
 		query := fmt.Sprintf("IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR =  '%s'", tt.separator)
 
 		t.Run(tt.name, func(t *testing.T) {

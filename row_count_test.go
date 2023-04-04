@@ -1,8 +1,9 @@
 package exasol
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLastInsertId(t *testing.T) {

@@ -70,7 +70,6 @@ func (p *proxy) startProxy() error {
 }
 
 func (p *proxy) write(ctx context.Context, files []*os.File, rowSeparator string) error {
-
 	err := p.sendHeaders([]string{
 		"HTTP/1.1 200 OK",
 		"Content-Type: application/octet-stream",
@@ -93,11 +92,9 @@ func (p *proxy) write(ctx context.Context, files []*os.File, rowSeparator string
 }
 
 func (p *proxy) sendFile(ctx context.Context, file *os.File, rowSeparator string, chunkedWriter io.WriteCloser) error {
-
 	reader := bufio.NewReader(file)
 
 	for {
-
 		if ctx.Err() != nil {
 			p.close()
 			return ctx.Err()
@@ -124,7 +121,6 @@ func (p *proxy) sendFile(ctx context.Context, file *os.File, rowSeparator string
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

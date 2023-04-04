@@ -1,8 +1,9 @@
 package exasol
 
 import (
-	"github.com/stretchr/testify/suite"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 type DsnTestSuite struct {

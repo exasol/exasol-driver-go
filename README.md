@@ -183,7 +183,7 @@ There are two driver properties that control how TLS certificates are verified: 
     This is useful when the database has a self-signed certificate with invalid hostname but you still want to verify connecting to the corrrect host.
 
     **Note:** You can find the fingerprint by first specifiying an invalid fingerprint and connecting to the database. The error will contain the actual fingerprint.
-* With `validateservercertificate=1` (or `config.ValidateServerCertificate(false)`) the driver will ignore any TLS certificate errors.
+* With `validateservercertificate=0` (or `config.ValidateServerCertificate(false)`) the driver will ignore any TLS certificate errors.
 
     Use this if the server uses a self-signed certificate and you don't know the fingerprint. **This is not recommended.**
 
