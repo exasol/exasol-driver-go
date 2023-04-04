@@ -24,8 +24,7 @@ func NewImportStatement(query string, host string, port int) (*ImportStatement, 
 	if err != nil {
 		return nil, err
 	}
-
-	return &ImportStatement{query: query, host: host, port: port}, nil
+	return &ImportStatement{query: query, host: host, port: port, proxy: p}, nil
 }
 
 func createProxy(host string, port int) (*proxy.Proxy, error) {
