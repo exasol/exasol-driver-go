@@ -8,6 +8,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"os/user"
+	"runtime"
+	"strconv"
+
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/internal/utils"
 	"github.com/exasol/exasol-driver-go/internal/version"
@@ -15,10 +20,6 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 	"golang.org/x/sync/errgroup"
-	"math/big"
-	"os/user"
-	"runtime"
-	"strconv"
 
 	"github.com/gorilla/websocket"
 )
@@ -197,7 +198,6 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 		defer importStatement.Close()
 		query = importStatement.GetUpdatedQuery()
 		errs.Go(func() error { return importStatement.UploadFiles(errctx) })
-
 	}
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
