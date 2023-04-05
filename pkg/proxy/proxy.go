@@ -19,7 +19,7 @@ type Proxy struct {
 	isClosed   bool
 	connection io.ReadWriteCloser
 	Host       string
-	Port       uint32
+	Port       int
 }
 
 var magicWords = []interface{}{uint32(0x02212102), uint32(1), uint32(1)}
@@ -66,7 +66,7 @@ func (p *Proxy) StartProxy() error {
 		return wrappedErr
 	}
 
-	p.Port = result.Port
+	p.Port = int(result.Port)
 	p.Host = string(bytes.Trim(result.Host[:], "\x00"))
 
 	return nil

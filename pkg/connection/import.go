@@ -37,7 +37,7 @@ func createProxy(host string, port int) (*proxy.Proxy, error) {
 }
 
 func (i *ImportStatement) GetUpdatedQuery() string {
-	return utils.UpdateImportQuery(i.query, i.host, i.port)
+	return utils.UpdateImportQuery(i.query, i.proxy.Host, i.proxy.Port)
 }
 
 func (i *ImportStatement) Close() {
