@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.0, released 2023-04-05
+# Exasol Driver go 1.0.0, released 2023-04-11
 
 Code name: Upgrade to Go 1.19
 
