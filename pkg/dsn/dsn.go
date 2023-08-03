@@ -78,7 +78,7 @@ func (c *DSNConfigBuilder) FetchSize(size int) *DSNConfigBuilder {
 	return c
 }
 
-// QueryTimeout sets the query timeout in seconds. If a query runs longer than the specified time, it will be aborted (default: 0).
+// QueryTimeout sets the query timeout in seconds. If a query runs longer than the specified time, it will be aborted (default: 0, i.e. no timeout).
 func (c *DSNConfigBuilder) QueryTimeout(timeout int) *DSNConfigBuilder {
 	c.Config.QueryTimeout = timeout
 	return c
