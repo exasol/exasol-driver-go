@@ -21,6 +21,7 @@ type DSNConfig struct {
 	ClientName                string            // Client name reported to the database (default: "Go client")
 	ClientVersion             string            // Client version reported to the database (default: "")
 	FetchSize                 int               // Fetch size for results in KiB (default: 2000 KiB)
+	QueryTimeout              int               // QueryTimeout sets the query timeout in seconds. If a query runs longer than the specified time, it will be aborted (default: 0)
 	ValidateServerCertificate *bool             // If true, validate the server's TLS certificate (default: true)
 	CertificateFingerprint    string            // Expected SHA256 checksum of the server's TLS certificate in Hex format (default: "")
 	Schema                    string            // Name of the schema to open during connection (default: "")
@@ -74,6 +75,12 @@ func (c *DSNConfigBuilder) CertificateFingerprint(fingerprint string) *DSNConfig
 // FetchSize sets the fetch size for results in KiB (default: 2000 KiB).
 func (c *DSNConfigBuilder) FetchSize(size int) *DSNConfigBuilder {
 	c.Config.FetchSize = size
+	return c
+}
+
+// QueryTimeout sets the query timeout in seconds. If a query runs longer than the specified time, it will be aborted (default: 0, i.e. no timeout).
+func (c *DSNConfigBuilder) QueryTimeout(timeout int) *DSNConfigBuilder {
+	c.Config.QueryTimeout = timeout
 	return c
 }
 
@@ -149,6 +156,9 @@ func (c *DSNConfig) ToDSN() string {
 	if c.FetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.FetchSize))
 	}
+	if c.QueryTimeout != 0 {
+		sb.WriteString(fmt.Sprintf("querytimeout=%d;", c.QueryTimeout))
+	}
 	if c.ClientName != "" {
 		sb.WriteString(fmt.Sprintf("clientname=%s;", c.ClientName))
 	}
@@ -208,6 +218,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		ClientName:                "Go client",
 		Params:                    map[string]string{},
 		FetchSize:                 2000,
+		QueryTimeout:              0,
 	}
 }
 
@@ -253,6 +264,12 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 				return nil, errors.NewInvalidConnectionStringInvalidIntParam("fetchsize", value)
 			}
 			config.FetchSize = fetchSizeValue
+		case "querytimeout":
+			queryTimeoutValue, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, errors.NewInvalidConnectionStringInvalidIntParam("querytimeout", value)
+			}
+			config.QueryTimeout = queryTimeoutValue
 		case "resultsetmaxrows":
 			maxRowsValue, err := strconv.Atoi(value)
 			if err != nil {

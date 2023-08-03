@@ -321,6 +321,7 @@ func (c *Connection) preLogin(ctx context.Context, compression bool) (*types.Aut
 			Autocommit:         utils.BoolToPtr(c.Config.Autocommit),
 			CurrentSchema:      c.Config.Schema,
 			CompressionEnabled: utils.BoolToPtr(compression),
+			QueryTimeout:       c.Config.QueryTimeout,
 		},
 	}
 	if c.Config.AccessToken != "" {

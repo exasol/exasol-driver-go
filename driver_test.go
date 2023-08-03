@@ -1,7 +1,6 @@
 package exasol
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -31,14 +30,14 @@ func (suite *DriverTestSuite) TestOpen() {
 	exasolDriver := ExasolDriver{}
 	_, err := exasolDriver.Open("exa:localhost:1234")
 	suite.Error(err)
-	suite.True(strings.Contains(err.Error(), "connection refused"))
+	suite.ErrorContains(err, "connection refused")
 }
 
 func (suite *DriverTestSuite) TestOpenBadDsn() {
 	exasolDriver := ExasolDriver{}
 	_, err := exasolDriver.Open("")
 	suite.Error(err)
-	suite.True(strings.Contains(err.Error(), "invalid connection string"))
+	suite.ErrorContains(err, "invalid connection string")
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesTrue() {

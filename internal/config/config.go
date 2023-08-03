@@ -14,6 +14,7 @@ type Config struct {
 	Schema                    string
 	Autocommit                bool
 	FetchSize                 int // Fetch size in kB
+	QueryTimeout              int // query timeout in seconds
 	Compression               bool
 	ResultSetMaxRows          int
 	Encryption                bool
