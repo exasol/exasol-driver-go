@@ -14,6 +14,10 @@ This repository contains a Go library for connection to the [Exasol](https://www
 
 This library uses the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
 
+## Prerequisites
+
+To use the Exasol Go Driver you need an Exasol database in the latest 7.1 or 8 version. Older versions might work but are not supported.
+
 ## Usage
 
 ### Create Connection
