@@ -21,6 +21,7 @@ func ToInternalConfig(dsnConfig *DSNConfig) *config.Config {
 		Schema:                    dsnConfig.Schema,
 		Autocommit:                *dsnConfig.Autocommit,
 		FetchSize:                 dsnConfig.FetchSize,
+		QueryTimeout:              dsnConfig.QueryTimeout,
 		Compression:               *dsnConfig.Compression,
 		ResultSetMaxRows:          dsnConfig.ResultSetMaxRows,
 		Encryption:                *dsnConfig.Encryption,

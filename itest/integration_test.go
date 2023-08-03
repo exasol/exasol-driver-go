@@ -534,6 +534,14 @@ func (suite *IntegrationTestSuite) TestClientMetadataWithDefaultClientName() {
 	suite.Equal(runtime.GOOS, osName)
 }
 
+func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
+	database := suite.openConnection(suite.createDefaultConfig().QueryTimeout(1))
+	defer database.Close()
+	rows, err := database.Query(`SELECT "$SLEEP"(2)`)
+	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code 'R0001' and message 'Query terminated because timeout has been reached.")
+	suite.Nil(rows)
+}
+
 func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
 	rows.Next()
 	var testValue string
