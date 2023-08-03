@@ -43,7 +43,7 @@ func TestIntegrationSuite(t *testing.T) {
 }
 
 func (suite *IntegrationTestSuite) SetupSuite() {
-	suite.ctx = getContext()
+	suite.ctx = context.Background()
 	suite.dbVersion = getDbVersion()
 	var err error
 	suite.exasol, err = testSetupAbstraction.New().DockerDbVersion(suite.dbVersion).Start()
@@ -80,10 +80,11 @@ func (suite *IntegrationTestSuite) isExasol7_0_x() bool {
 
 func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
-	wrongFingerprint := "wrongFingerprint"
+	const wrongFingerprint = "wrongFingerprint"
+	const noError = ""
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
-	errorMsgAuthFailed := "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
+	const errorMsgAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
 
 	var errorMsgTokenAuthFailed string
 	if suite.isExasol7_0_x() {
@@ -98,7 +99,13 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	} else {
 		errorMsgCertWrongHost = "x509: “*.exacluster.local” certificate is not standards compliant"
 	}
-	noError := ""
+
+	var errorMsgEncryptionOff string
+	if suite.isExasolVersion8() {
+		errorMsgEncryptionOff = "EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - Only TLS connections are allowed.'"
+	} else {
+		errorMsgEncryptionOff = noError
+	}
 
 	for i, testCase := range []struct {
 		description   string
@@ -120,7 +127,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 		{"compression off", suite.createDefaultConfig().Compression(false), noError},
 
 		{"encryption on", suite.createDefaultConfig().Encryption(true), noError},
-		{"encryption off", suite.createDefaultConfig().Encryption(false), noError},
+		{"encryption off", suite.createDefaultConfig().Encryption(false), errorMsgEncryptionOff},
 
 		{"don't validate cert, no fingerprint", suite.createDefaultConfig().ValidateServerCertificate(false).CertificateFingerprint(""), noError},
 		{"don't validate cert, wrong fingerprint", suite.createDefaultConfig().ValidateServerCertificate(false).CertificateFingerprint(wrongFingerprint), errorMsgWrongFingerprint},
@@ -136,10 +143,14 @@ func (suite *IntegrationTestSuite) TestConnection() {
 			err := database.Ping()
 			if testCase.expectedError == "" {
 				suite.NoError(err)
-				rows, _ := database.Query("SELECT 2 FROM DUAL")
-				columns, _ := rows.Columns()
-				suite.Equal("2", columns[0])
-				suite.assertSingleValueResult(rows, "2")
+				if err == nil {
+					rows, err := database.Query("SELECT 2 FROM DUAL")
+					suite.NoError(err)
+					columns, err := rows.Columns()
+					suite.NoError(err)
+					suite.Equal("2", columns[0])
+					suite.assertSingleValueResult(rows, "2")
+				}
 			} else {
 				suite.Error(err)
 				suite.Contains(err.Error(), testCase.expectedError)
@@ -559,8 +570,36 @@ func (suite *IntegrationTestSuite) openConnection(config *dsn.DSNConfigBuilder) 
 	return database
 }
 
-func getContext() context.Context {
-	return context.Background()
+func (suite *IntegrationTestSuite) isExasolVersion8() bool {
+	version, err := suite.getExasolMajorVersion()
+	if err != nil {
+		suite.FailNow("error getting exasol version: " + err.Error())
+	}
+	return version == "8"
+}
+
+func (suite *IntegrationTestSuite) getExasolMajorVersion() (string, error) {
+	db, err := suite.exasol.CreateConnection()
+	suite.NoError(err)
+	defer db.Close()
+	result, err := db.Query("SELECT PARAM_VALUE FROM SYS.EXA_METADATA WHERE PARAM_NAME='databaseMajorVersion'")
+	if err != nil {
+		return "", fmt.Errorf("querying exasol version failed: %w", err)
+	}
+	defer result.Close()
+	if !result.Next() {
+		if result.Err() != nil {
+			return "", fmt.Errorf("failed to iterate exasol version: %w", result.Err())
+		}
+		return "", fmt.Errorf("no result found for exasol version query")
+	}
+	var majorVersion string
+	err = result.Scan(&majorVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to read exasol version result: %w", err)
+	}
+	suite.T().Logf("Got Exasol major version %q", majorVersion)
+	return majorVersion, nil
 }
 
 func onError(err error) {
