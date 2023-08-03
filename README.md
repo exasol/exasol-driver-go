@@ -14,6 +14,10 @@ This repository contains a Go library for connection to the [Exasol](https://www
 
 This library uses the standard Golang [SQL driver interface](https://golang.org/pkg/database/sql/) for easy use.
 
+## Prerequisites
+
+To use the Exasol Go Driver you need an Exasol database in the latest 7.1 or 8 version. Older versions might work but are not supported.
+
 ## Usage
 
 ### Create Connection
@@ -193,24 +197,6 @@ There are two driver properties that control how TLS certificates are verified: 
 * [Changelog](doc/changes/changelog.md)
 * [Dependencies](dependencies.md)
 
-## Testing / Development
+## Information for Developers
 
-Run unit tests only:
-
-```shell
-go test ./... -short
-```
-
-Run unit tests and integration tests:
-
-For running the integrations tests you need [Docker](https://www.docker.com/) and [Java](https://adoptium.net/) installed.
-
-```shell
-go test ./...
-```
-
-Integration tests use [exasol-test-setup-abstraction-server](https://github.com/exasol/exasol-test-setup-abstraction-server) and thus indirectly [exasol-testcontainers](https://github.com/exasol/exasol-testcontainers/). To speedup tests during development you need to enable reusing of test containers by creating file `~/.testcontainers.properties` with the following content:
-
-```properties
-testcontainers.reuse.enable=true
-```
+* [Developer guide](doc/developer_guide.md)

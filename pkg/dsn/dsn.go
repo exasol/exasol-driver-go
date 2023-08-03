@@ -43,6 +43,10 @@ func (c *DSNConfigBuilder) Compression(enabled bool) *DSNConfigBuilder {
 }
 
 // Encryption defines if the database connection should be encrypted via TLS (default: true).
+// Please note that starting with version 8, Exasol does not support unencrypted connections
+// and connections will fail with the following error:
+//
+//	EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - Only TLS connections are allowed.'
 func (c *DSNConfigBuilder) Encryption(enabled bool) *DSNConfigBuilder {
 	c.Config.Encryption = &enabled
 	return c
