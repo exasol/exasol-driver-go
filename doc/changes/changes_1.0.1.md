@@ -9,6 +9,7 @@ This release adds integration tests with Exasol v8. Exasol version 7.0 is deprec
 ## Features
 
 * #92: Added tests with Exasol v8
+* #89: Added query timeout to DSN
 
 ## Dependency Updates
 

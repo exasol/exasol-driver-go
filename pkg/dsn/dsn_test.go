@@ -27,6 +27,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	suite.Equal("", dsn.Schema)
 	suite.Equal(true, *dsn.Autocommit)
 	suite.Equal(2000, dsn.FetchSize)
+	suite.Equal(0, dsn.QueryTimeout)
 	suite.Equal(false, *dsn.Compression)
 	suite.Equal(0, dsn.ResultSetMaxRows)
 	suite.Equal(true, *dsn.Encryption)
@@ -40,6 +41,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 			"autocommit=0;" +
 			"encryption=0;" +
 			"fetchsize=1000;" +
+			"querytimeout=10;" +
 			"clientname=Exasol Go client;" +
 			"clientversion=1.0.0;" +
 			"schema=MY_SCHEMA;" +
@@ -57,6 +59,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 	suite.Equal("MY_SCHEMA", dsn.Schema)
 	suite.Equal(false, *dsn.Autocommit)
 	suite.Equal(1000, dsn.FetchSize)
+	suite.Equal(10, dsn.QueryTimeout)
 	suite.Equal(true, *dsn.Compression)
 	suite.Equal(100, dsn.ResultSetMaxRows)
 	suite.Equal(false, *dsn.Encryption)
@@ -66,7 +69,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters2() {
 	dsn, err := ParseDSN(
-		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0")
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=1;encryption=1;compression=0;querytimeout=42;fetchsize=17")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.User)
 	suite.Equal("exasol", dsn.Password)
@@ -75,6 +78,8 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters2() {
 	suite.Equal(true, *dsn.Autocommit)
 	suite.Equal(true, *dsn.Encryption)
 	suite.Equal(false, *dsn.Compression)
+	suite.Equal(42, dsn.QueryTimeout)
+	suite.Equal(17, dsn.FetchSize)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithSpecialChars() {
@@ -126,6 +131,12 @@ func (suite *DsnTestSuite) TestInvalidFetchsize() {
 	suite.EqualError(err, "E-EGOD-25: invalid 'fetchsize' value 'size', numeric expected")
 }
 
+func (suite *DsnTestSuite) TestInvalidQueryTimeout() {
+	dsn, err := ParseDSN("exa:localhost:1234;querytimeout=timeout")
+	suite.Nil(dsn)
+	suite.EqualError(err, "E-EGOD-25: invalid 'querytimeout' value 'timeout', numeric expected")
+}
+
 func (suite *DsnTestSuite) TestInvalidValidateservercertificateUsesDefaultValue() {
 	dsn, err := ParseDSN("exa:localhost:1234;validateservercertificate=false")
 	suite.NoError(err)
@@ -138,9 +149,9 @@ func (suite *DsnTestSuite) TestInvalidResultsetmaxrows() {
 	suite.EqualError(err, "E-EGOD-25: invalid 'resultsetmaxrows' value 'size', numeric expected")
 }
 
-func (suite *DsnTestSuite) TestConfigToDsnCustomValues() {
+func (suite *DsnTestSuite) TestConfigParseDsnCustomValues() {
 	dsn, err := ParseDSN(
-		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0;certificatefingerprint=fingerprint;clientname=clientName;clientversion=clientVersion")
+		"exa:localhost:1234;user=sys;password=exasol;autocommit=0;encryption=0;compression=1;validateservercertificate=0;certificatefingerprint=fingerprint;fetchsize=13;querytimeout=42;clientname=clientName;clientversion=clientVersion")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.User)
 	suite.Equal("exasol", dsn.Password)
@@ -151,8 +162,31 @@ func (suite *DsnTestSuite) TestConfigToDsnCustomValues() {
 	suite.Equal(true, *dsn.Compression)
 	suite.Equal(false, *dsn.ValidateServerCertificate)
 	suite.Equal("fingerprint", dsn.CertificateFingerprint)
+	suite.Equal(13, dsn.FetchSize)
+	suite.Equal(42, dsn.QueryTimeout)
 	suite.Equal("clientName", dsn.ClientName)
 	suite.Equal("clientVersion", dsn.ClientVersion)
+}
+
+func (suite *DsnTestSuite) TestToDsnWithUserPassword() {
+	const value = "exa:localhost:1234;user=sys;password=exasol;autocommit=0;compression=1;encryption=0;validateservercertificate=0;certificatefingerprint=fingerprint;fetchsize=13;querytimeout=42;clientname=clientName;clientversion=clientVersion;schema=schema"
+	dsn, err := ParseDSN(value)
+	suite.NoError(err)
+	suite.Equal(value, dsn.ToDSN())
+}
+
+func (suite *DsnTestSuite) TestToDsnWithAccessToken() {
+	const value = "exa:localhost:1234;accesstoken=token;autocommit=1;compression=0;encryption=1;validateservercertificate=1;fetchsize=2000;clientname=Go client"
+	dsn, err := ParseDSN(value)
+	suite.NoError(err)
+	suite.Equal(value, dsn.ToDSN())
+}
+
+func (suite *DsnTestSuite) TestToDsnWithRefreshToken() {
+	const value = "exa:localhost:1234;refreshtoken=token;autocommit=1;compression=0;encryption=1;validateservercertificate=1;fetchsize=2000;clientname=Go client"
+	dsn, err := ParseDSN(value)
+	suite.NoError(err)
+	suite.Equal(value, dsn.ToDSN())
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithAccessToken() {
