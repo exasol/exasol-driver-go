@@ -214,7 +214,7 @@ func (suite *IntegrationTestSuite) TestExecuteWithError() {
 	defer database.Close()
 	_, err := database.Exec("CREATE SCHEMAA TEST_SCHEMA")
 	suite.Error(err)
-	suite.True(strings.Contains(err.Error(), "syntax error"))
+	suite.ErrorContains(err, "syntax error")
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithError() {
@@ -224,7 +224,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	defer suite.cleanup(database, schemaName)
 	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
-	suite.True(strings.Contains(err.Error(), "object TEST_SCHEMA_2.TEST_TABLE not found"))
+	suite.ErrorContains(err, "object TEST_SCHEMA_2.TEST_TABLE not found")
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
@@ -290,7 +290,7 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	_ = transaction.Rollback()
 	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
 	suite.Error(err)
-	suite.True(strings.Contains(err.Error(), "object "+schemaName+".TEST_TABLE not found"))
+	suite.ErrorContains(err, "object "+schemaName+".TEST_TABLE not found")
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
