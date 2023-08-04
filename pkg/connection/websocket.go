@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 
 	"github.com/exasol/exasol-driver-go/internal/utils"
@@ -41,19 +40,22 @@ func (c *Connection) Connect() error {
 			Scheme: c.getURIScheme(),
 			Host:   fmt.Sprintf("%s:%d", host, c.Config.Port),
 		}
-		skipVerify := !c.Config.ValidateServerCertificate || c.Config.CertificateFingerprint != ""
-		var ws wsconn.WebsocketConnection
-		ws, err := wsconn.CreateConnection(c.Ctx, skipVerify, c.Config.CertificateFingerprint, url)
+		c.websocket, err = c.connectToHost(url)
 		if err == nil {
-			log.Printf("Connected to %v", url)
-			c.websocket = ws
-			c.websocket.EnableWriteCompression(false)
-			break
-		} else {
-			logger.ErrorLogger.Print(errors.NewConnectionFailedError(url, err))
+			return nil
 		}
 	}
 	return err
+}
+
+func (c *Connection) connectToHost(url url.URL) (wsconn.WebsocketConnection, error) {
+	skipVerify := !c.Config.ValidateServerCertificate || c.Config.CertificateFingerprint != ""
+	ws, err := wsconn.CreateConnection(c.Ctx, skipVerify, c.Config.CertificateFingerprint, url)
+	if err != nil {
+		logger.ErrorLogger.Print(errors.NewConnectionFailedError(url, err))
+		return nil, err
+	}
+	return ws, nil
 }
 
 func (c *Connection) Send(ctx context.Context, request, response interface{}) error {
@@ -95,7 +97,6 @@ func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, er
 		messageType = websocket.BinaryMessage
 	}
 
-	log.Printf("Sending async request %v", string(message))
 	if c.websocket == nil {
 		return nil, errors.NewWebsocketNotConnected(string(message))
 	}
