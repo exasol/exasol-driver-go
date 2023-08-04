@@ -1,10 +1,8 @@
-package connection
+package wsconn
 
 import (
 	"fmt"
 	"testing"
-
-	"github.com/exasol/exasol-driver-go/internal/config"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -39,8 +37,8 @@ func (suite *WebsocketTestSuite) TestVerifyPeerCertificate() {
 		{[][]byte{[]byte("certificateContent\n")}, noFingerprint, ""},
 	} {
 		suite.Run(fmt.Sprintf("Test %v: rawCerts=%q expectedFingerprint=%q", i, testCase.certificate, testCase.fingerprint), func() {
-			connection := Connection{Config: &config.Config{CertificateFingerprint: testCase.fingerprint}}
-			err := connection.verifyPeerCertificate(testCase.certificate, nil)
+			verifier := certificateVerifier(testCase.fingerprint)
+			err := verifier(testCase.certificate, nil)
 			if testCase.expectedError == "" {
 				suite.NoError(err)
 			} else {

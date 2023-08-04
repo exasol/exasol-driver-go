@@ -16,17 +16,16 @@ import (
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/internal/utils"
 	"github.com/exasol/exasol-driver-go/internal/version"
+	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/gorilla/websocket"
 )
 
 type Connection struct {
 	Config    *config.Config
-	websocket *websocket.Conn
+	websocket wsconn.WebsocketConnection
 	Ctx       context.Context
 	IsClosed  bool
 }
