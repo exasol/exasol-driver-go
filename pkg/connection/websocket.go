@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 
 	"github.com/exasol/exasol-driver-go/internal/utils"
@@ -44,6 +45,7 @@ func (c *Connection) Connect() error {
 		var ws wsconn.WebsocketConnection
 		ws, err := wsconn.CreateConnection(c.Ctx, skipVerify, c.Config.CertificateFingerprint, url)
 		if err == nil {
+			log.Printf("Connected to %v", url)
 			c.websocket = ws
 			c.websocket.EnableWriteCompression(false)
 			break
@@ -74,9 +76,6 @@ func (c *Connection) Send(ctx context.Context, request, response interface{}) er
 }
 
 func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, error) {
-	if c.websocket == nil {
-		return nil, fmt.Errorf("cannot send request %v because websocket is not connected", request)
-	}
 	message, err := json.Marshal(request)
 	if err != nil {
 		logger.ErrorLogger.Print(errors.NewMarshallingError(request, err))
@@ -96,6 +95,10 @@ func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, er
 		messageType = websocket.BinaryMessage
 	}
 
+	log.Printf("Sending async request %v", string(message))
+	if c.websocket == nil {
+		return nil, errors.NewWebsocketNotConnected(string(message))
+	}
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
 		logger.ErrorLogger.Print(errors.NewRequestSendingError(err))

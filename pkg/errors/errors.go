@@ -140,6 +140,12 @@ func NewCouldNotGetOsUser(err error) DriverErr {
 		Parameter("error", err))
 }
 
+func NewWebsocketNotConnected(request interface{}) DriverErr {
+	return NewDriverErr(exaerror.New("E-EGOD-29").
+		Message("could not send request {{request}}: not connected to server").
+		Parameter("request", request))
+}
+
 // DriverErr This type represents an error that can occur when working with a database connection.
 type DriverErr string
 
