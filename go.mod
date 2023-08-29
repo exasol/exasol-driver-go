@@ -1,6 +1,6 @@
 module github.com/exasol/exasol-driver-go
 
-go 1.19
+go 1.20
 
 require (
 	github.com/exasol/error-reporting-go v0.2.0

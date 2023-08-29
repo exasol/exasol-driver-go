@@ -8,3 +8,8 @@ Code name:
 
 * ISSUE_NUMBER: description
 
+## Dependency Updates
+
+### Compile Dependency Updates
+
+* Updated `golang:1.19` to `1.20`
