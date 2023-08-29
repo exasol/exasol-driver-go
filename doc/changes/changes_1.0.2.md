@@ -4,9 +4,9 @@ Code name:
 
 ## Summary
 
-## Features
+## Refactoring
 
-* ISSUE_NUMBER: description
+* #95: Improved unit test coverage
 
 ## Dependency Updates
 
