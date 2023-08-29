@@ -1,6 +1,7 @@
 package integrationTesting
 
 import (
+	"database/sql"
 	"fmt"
 	"net/url"
 	"os"
@@ -16,6 +17,7 @@ type DbTestSetup struct {
 	suite          *suite.Suite
 	Exasol         *testSetupAbstraction.TestSetupAbstraction
 	ConnectionInfo *testSetupAbstraction.ConnectionInfo
+	DbVersion      string
 }
 
 func StartDbSetup(suite *suite.Suite) *DbTestSetup {
@@ -32,7 +34,7 @@ func StartDbSetup(suite *suite.Suite) *DbTestSetup {
 	if err != nil {
 		suite.FailNowf("error getting connection info: %v", err.Error())
 	}
-	setup := DbTestSetup{suite: suite, Exasol: exasol, ConnectionInfo: connectionInfo}
+	setup := DbTestSetup{suite: suite, Exasol: exasol, ConnectionInfo: connectionInfo, DbVersion: exasolDbVersion}
 	return &setup
 }
 
@@ -52,6 +54,44 @@ func (setup *DbTestSetup) hostAndPort() string {
 // HostAndPort returns a string with host and port
 func (setup *DbTestSetup) GetUrl() url.URL {
 	return url.URL{Scheme: "wss", Host: setup.hostAndPort()}
+}
+
+func (setup *DbTestSetup) IsExasolVersion8() bool {
+	version, err := setup.getExasolMajorVersion()
+	if err != nil {
+		setup.suite.FailNow("error getting exasol version: " + err.Error())
+	}
+	return version == "8"
+}
+
+func (setup *DbTestSetup) getExasolMajorVersion() (string, error) {
+	db := setup.createConnection()
+	defer db.Close()
+	result, err := db.Query("SELECT PARAM_VALUE FROM SYS.EXA_METADATA WHERE PARAM_NAME='databaseMajorVersion'")
+	if err != nil {
+		return "", fmt.Errorf("querying exasol version failed: %w", err)
+	}
+	defer result.Close()
+	if !result.Next() {
+		if result.Err() != nil {
+			return "", fmt.Errorf("failed to iterate exasol version: %w", result.Err())
+		}
+		return "", fmt.Errorf("no result found for exasol version query")
+	}
+	var majorVersion string
+	err = result.Scan(&majorVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to read exasol version result: %w", err)
+	}
+	return majorVersion, nil
+}
+
+func (setup *DbTestSetup) createConnection() *sql.DB {
+	conn, err := setup.Exasol.CreateConnection()
+	if err != nil {
+		setup.suite.FailNow("failed to create connection: " + err.Error())
+	}
+	return conn
 }
 
 func (setup *DbTestSetup) StopDb() {
