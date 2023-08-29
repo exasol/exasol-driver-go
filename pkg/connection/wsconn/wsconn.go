@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -66,7 +67,7 @@ func CreateConnection(ctx context.Context, skipVerify bool, expectedFingerprint 
 	}
 	ws, _, err := dialer.DialContext(ctx, url.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to URL %q: %w", url.String(), err)
 	}
 	ws.EnableWriteCompression(false)
 	return &wsConnImpl{socket: ws}, nil
