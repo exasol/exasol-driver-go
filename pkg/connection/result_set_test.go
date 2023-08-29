@@ -56,9 +56,9 @@ func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutPrecision() 
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypePrecisionScaleWithoutScale() {
-	expectedScale := int64(3)
+	expectedPrecision := int64(3)
 	data := types.SqlQueryResponseResultSetData{Columns: []types.SqlQueryColumn{
-		{DataType: types.SqlQueryColumnType{Scale: &expectedScale}},
+		{DataType: types.SqlQueryColumnType{Precision: &expectedPrecision}},
 	}}
 	queryResults := QueryResults{data: &data}
 	precision, scale, ok := queryResults.ColumnTypePrecisionScale(0)
