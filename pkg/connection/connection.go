@@ -169,6 +169,7 @@ func (c *Connection) executePreparedStatement(ctx context.Context, s *types.Crea
 		return nil, err
 	}
 	if result.NumResults == 0 {
+		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, c.closePreparedStatement(ctx, s)
@@ -271,6 +272,7 @@ func (c *Connection) SimpleExec(ctx context.Context, query string) (*types.SqlQu
 		return nil, err
 	}
 	if result.NumResults == 0 {
+		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, err

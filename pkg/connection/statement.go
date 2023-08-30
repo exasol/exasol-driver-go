@@ -6,6 +6,7 @@ import (
 
 	"github.com/exasol/exasol-driver-go/internal/utils"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
+	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 )
 
@@ -105,6 +106,7 @@ func (s *Statement) executePreparedStatement(ctx context.Context, args []driver.
 		return nil, err
 	}
 	if result.NumResults == 0 {
+		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, err

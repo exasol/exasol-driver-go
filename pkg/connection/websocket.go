@@ -133,12 +133,16 @@ func (c *Connection) callback() func(response interface{}) error {
 
 		err = json.NewDecoder(reader).Decode(result)
 		if err != nil {
-			logger.ErrorLogger.Print(errors.NewJsonDecodingError(err))
+			logger.ErrorLogger.Print(errors.NewJsonDecodingError(err, message))
 			return driver.ErrBadConn
 		}
 
 		if result.Status != "ok" {
-			return errors.NewSqlErr(result.Exception.SQLCode, result.Exception.Text)
+			if result.Exception != nil {
+				return errors.NewSqlErr(result.Exception.SQLCode, result.Exception.Text)
+			} else {
+				return fmt.Errorf("expected exception in response %v", result)
+			}
 		}
 
 		if response == nil {

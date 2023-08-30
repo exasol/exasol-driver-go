@@ -31,7 +31,7 @@ func (suite *ErrorsTestSuite) TestErrClosed() {
 }
 
 func (suite *ErrorsTestSuite) TestErrMalformedData() {
-	suite.EqualError(ErrMalformedData, "E-EGOD-3: malformed result")
+	suite.EqualError(ErrMalformedData, "E-EGOD-3: malformed empty result")
 }
 
 func (suite *ErrorsTestSuite) TestErrAutocommitEnabled() {
@@ -94,7 +94,7 @@ func (suite *ErrorsTestSuite) TestLogUncompressingError() {
 }
 
 func (suite *ErrorsTestSuite) TestLogJsonDecodingError() {
-	suite.EqualError(NewJsonDecodingError(fmt.Errorf("error")), "W-EGOD-19: could not decode json data: 'error'")
+	suite.EqualError(NewJsonDecodingError(fmt.Errorf("error"), []byte("data")), "W-EGOD-19: could not decode json data 'data': 'error'")
 }
 
 func (suite *ErrorsTestSuite) TestNewInvalidConnectionStringInvalidPort() {
