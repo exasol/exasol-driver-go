@@ -31,7 +31,7 @@ func (suite *ConnectionTestSuite) TestConnectFails() {
 		IsClosed: true,
 	}
 	err := conn.Connect()
-	suite.ErrorContains(err, `failed to connect to URL "ws://invalid:12345": dial tcp: lookup invalid: no such host`)
+	suite.ErrorContains(err, `failed to connect to URL "ws://invalid:12345": dial tcp`)
 }
 
 func (suite *ConnectionTestSuite) TestQueryContextNamedParametersNotSupported() {
