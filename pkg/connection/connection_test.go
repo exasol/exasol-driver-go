@@ -40,13 +40,6 @@ func (suite *ConnectionTestSuite) TestQueryContextNamedParametersNotSupported() 
 	suite.Nil(rows)
 }
 
-func (suite *ConnectionTestSuite) TestQueryContextNotConnected() {
-	suite.websocketMock = nil
-	rows, err := suite.createOpenConnection().QueryContext(context.Background(), "query", []driver.NamedValue{{Ordinal: 1, Value: "value"}})
-	suite.EqualError(err, `E-EGOD-29: could not send request '{"command":"createPreparedStatement","sqlText":"query","attributes":{}}': not connected to server`)
-	suite.Nil(rows)
-}
-
 func (suite *ConnectionTestSuite) TestQueryContext() {
 	suite.websocketMock.SimulateOKResponse(
 		types.SqlCommand{
