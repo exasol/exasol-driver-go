@@ -18,19 +18,24 @@ func CreateWebsocketConnectionMock() *WebsocketConnectionMock {
 	return &WebsocketConnectionMock{}
 }
 
-func (mock *WebsocketConnectionMock) SimulateSQLQueriesResponse(request interface{}, results []types.SqlQueryResponseResultSet) {
-	marshalledResults := []json.RawMessage{}
-	for _, r := range results {
-		marshalledResults = append(marshalledResults, JsonMarshall(r))
-	}
-	mock.SimulateResponse(request, baseOKResponse(types.SqlQueriesResponse{NumResults: len(results), Results: marshalledResults}))
+func (mock *WebsocketConnectionMock) SimulateSQLQueriesResponse(request interface{}, results interface{}) {
+	mock.SimulateResponse(request, baseOKResponse(types.SqlQueriesResponse{NumResults: 1, Results: []json.RawMessage{JsonMarshall(results)}}))
 }
+
 func (mock *WebsocketConnectionMock) SimulateOKResponse(request interface{}, response interface{}) {
 	mock.SimulateResponse(request, baseOKResponse(response))
 }
 
+func (mock *WebsocketConnectionMock) SimulateErrorResponse(request interface{}, exception types.Exception) {
+	mock.SimulateResponse(request, baseErrorResponse(exception))
+}
+
 func baseOKResponse(payload interface{}) types.BaseResponse {
 	return types.BaseResponse{Status: "ok", ResponseData: JsonMarshall(payload)}
+}
+
+func baseErrorResponse(exception types.Exception) types.BaseResponse {
+	return types.BaseResponse{Status: "notok", Exception: &exception}
 }
 
 func JsonMarshall(payload interface{}) json.RawMessage {

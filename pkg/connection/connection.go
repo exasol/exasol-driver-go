@@ -65,7 +65,7 @@ func (c *Connection) PrepareContext(ctx context.Context, query string) (driver.S
 	if err != nil {
 		return nil, err
 	}
-	return c.CreateStatement(response), nil
+	return c.createStatement(response), nil
 }
 
 func (c *Connection) createPreparedStatement(ctx context.Context, query string) (*types.CreatePreparedStatementResponse, error) {
@@ -83,7 +83,7 @@ func (c *Connection) createPreparedStatement(ctx context.Context, query string) 
 	return response, nil
 }
 
-func (c *Connection) CreateStatement(result *types.CreatePreparedStatementResponse) *Statement {
+func (c *Connection) createStatement(result *types.CreatePreparedStatementResponse) *Statement {
 	return NewStatement(c, result)
 }
 
@@ -282,9 +282,15 @@ func (c *Connection) close(ctx context.Context) error {
 	log.Printf("Closing connection")
 	c.IsClosed = true
 	err := c.Send(ctx, &types.Command{Command: "disconnect"}, nil)
-	c.websocket.Close()
+	closeError := c.websocket.Close()
 	c.websocket = nil
-	return err
+	if err != nil {
+		return err
+	}
+	if closeError != nil {
+		return fmt.Errorf("failed to close websocket: %w", closeError)
+	}
+	return nil
 }
 
 func (c *Connection) Login(ctx context.Context) error {
