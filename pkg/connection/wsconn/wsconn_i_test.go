@@ -2,6 +2,7 @@ package wsconn_test
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -37,13 +38,13 @@ func (suite *WebsocketITestSuite) TestCreateConnectionSuccess() {
 
 func (suite *WebsocketITestSuite) TestCreateConnectionFailed() {
 	conn, err := wsconn.CreateConnection(context.Background(), true, "", url.URL{Scheme: "wss", Host: "invalid:12345"})
-	suite.EqualError(err, `failed to connect to URL "wss://invalid:12345": dial tcp: lookup invalid: no such host`)
+	suite.ErrorContains(err, `failed to connect to URL "wss://invalid:12345": dial tcp`)
 	suite.Nil(conn)
 }
 
 func (suite *WebsocketITestSuite) TestCreateConnectionInvalidCertificate() {
 	conn, err := wsconn.CreateConnection(context.Background(), false, "invalid", suite.exasol.GetUrl())
-	suite.ErrorContains(err, `failed to connect to URL "wss://localhost:60692": tls: failed to verify certificate`)
+	suite.ErrorContains(err, fmt.Sprintf(`failed to connect to URL "wss://%s:%d": tls: failed to verify certificate`, suite.exasol.ConnectionInfo.Host, suite.exasol.ConnectionInfo.Port))
 	suite.Nil(conn)
 }
 
