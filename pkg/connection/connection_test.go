@@ -147,7 +147,7 @@ func (suite *ConnectionTestSuite) TestPrepareContextFailsClosed() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = true
 	stmt, err := conn.PrepareContext(context.Background(), "query")
-	suite.EqualError(err, "driver: bad connection")
+	suite.EqualError(err, driver.ErrBadConn.Error())
 	suite.Nil(stmt)
 }
 
@@ -226,7 +226,7 @@ func (suite *ConnectionTestSuite) TestBeginFailsWithConnectionClosed() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = true
 	tx, err := conn.Begin()
-	suite.EqualError(err, "driver: bad connection")
+	suite.EqualError(err, driver.ErrBadConn.Error())
 	suite.Nil(tx)
 }
 
@@ -242,7 +242,7 @@ func (suite *ConnectionTestSuite) TestQueryFailsConnectionClosed() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = true
 	rows, err := conn.query(context.Background(), "query", nil)
-	suite.EqualError(err, "driver: bad connection")
+	suite.EqualError(err, driver.ErrBadConn.Error())
 	suite.Nil(rows)
 }
 
