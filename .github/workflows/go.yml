@@ -52,11 +52,15 @@ jobs:
         run: |
           go clean
           go build
+          go build ./...
 
-      - name: test
+      - name: Go test -short
+        run: go test -v -count 1 -short ./...
+
+      - name: Go test with Exasol version ${{ matrix.db }}
         env:
           DB_VERSION: ${{ matrix.db }}
-        run: go test -v -coverprofile=coverage.out ./...
+        run: go test -v -count 1 -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
         if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol'
