@@ -323,6 +323,24 @@ func (suite *ConnectionTestSuite) TestQueryWithArgsFailsInExecute() {
 	suite.Nil(rows)
 }
 
+func (suite *ConnectionTestSuite) TestPasswordLoginFailsInitialRequest() {
+	suite.websocketMock.SimulateErrorResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.Exception{Text: "mock error", SQLCode: "mock sql code"})
+	conn := suite.createOpenConnection()
+	conn.Config.ApiVersion = 42
+	err := conn.Login(context.Background())
+	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+}
+
+func (suite *ConnectionTestSuite) TestPasswordLoginFailsEncryptingPasswordRequest() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: ""})
+	conn := suite.createOpenConnection()
+	conn.Config.ApiVersion = 42
+	err := conn.Login(context.Background())
+	suite.EqualError(err, "driver: bad connection")
+}
+
 func (suite *ConnectionTestSuite) createOpenConnection() *Connection {
 	conn := &Connection{
 		Config:    &config.Config{Host: "invalid", Port: 12345},
