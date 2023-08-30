@@ -8,9 +8,16 @@ import (
 
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
+	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 	"github.com/stretchr/testify/suite"
 )
+
+var mockException = types.Exception{Text: "mock error", SQLCode: "mock sql code"}
+
+func mockExceptionError(exception types.Exception) string {
+	return errors.NewSqlErr(exception.SQLCode, exception.Text).Error()
+}
 
 type ConnectionTestSuite struct {
 	suite.Suite
@@ -158,9 +165,9 @@ func (suite *ConnectionTestSuite) TestPrepareContextPreparedStatementFails() {
 			SQLText:    "query",
 			Attributes: types.Attributes{},
 		},
-		types.Exception{Text: "mock error", SQLCode: "mock sql code"})
+		mockException)
 	stmt, err := suite.createOpenConnection().PrepareContext(context.Background(), "query")
-	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(stmt)
 }
 
@@ -203,10 +210,10 @@ func (suite *ConnectionTestSuite) TestCloseSuccess() {
 }
 
 func (suite *ConnectionTestSuite) TestCloseDisconnectFails() {
-	suite.websocketMock.SimulateErrorResponse(types.Command{Command: "disconnect"}, types.Exception{Text: "mock error", SQLCode: "mock sql code"})
+	suite.websocketMock.SimulateErrorResponse(types.Command{Command: "disconnect"}, mockException)
 	suite.websocketMock.OnClose(nil)
 	err := suite.createOpenConnection().Close()
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+	suite.EqualError(err, mockExceptionError(mockException))
 }
 
 func (suite *ConnectionTestSuite) TestCloseWebsocketCloseFails() {
@@ -258,9 +265,9 @@ func (suite *ConnectionTestSuite) TestQueryNoArgs() {
 func (suite *ConnectionTestSuite) TestQueryNoArgsFails() {
 	suite.websocketMock.SimulateErrorResponse(
 		types.SqlCommand{Command: types.Command{Command: "execute"}, SQLText: "query", Attributes: types.Attributes{}},
-		types.Exception{Text: "mock error", SQLCode: "mock sql code"})
+		mockException)
 	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{})
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(rows)
 }
 
@@ -294,10 +301,10 @@ func (suite *ConnectionTestSuite) TestQueryWithArgsFailsInPrepare() {
 			SQLText:    "query",
 			Attributes: types.Attributes{},
 		},
-		types.Exception{Text: "mock error", SQLCode: "sql mock"})
+		mockException)
 
 	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{"value"})
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'sql mock' and message 'mock error'")
+	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(rows)
 }
 
@@ -316,20 +323,20 @@ func (suite *ConnectionTestSuite) TestQueryWithArgsFailsInExecute() {
 			Columns: []types.SqlQueryColumn{{Name: "col", DataType: types.SqlQueryColumnType{Type: "type"}}},
 			Data:    [][]interface{}{{"value"}},
 		},
-		types.Exception{Text: "mock error", SQLCode: "sql mock"})
+		mockException)
 
 	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{"value"})
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'sql mock' and message 'mock error'")
+	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(rows)
 }
 
 func (suite *ConnectionTestSuite) TestPasswordLoginFailsInitialRequest() {
 	suite.websocketMock.SimulateErrorResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
-		types.Exception{Text: "mock error", SQLCode: "mock sql code"})
+		mockException)
 	conn := suite.createOpenConnection()
 	conn.Config.ApiVersion = 42
 	err := conn.Login(context.Background())
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+	suite.EqualError(err, mockExceptionError(mockException))
 }
 
 func (suite *ConnectionTestSuite) TestPasswordLoginFailsEncryptingPasswordRequest() {
