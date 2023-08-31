@@ -1,6 +1,8 @@
 package wsconn
 
 import (
+	"bytes"
+	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -66,15 +68,23 @@ func (wsMock *WebsocketConnectionMock) SimulateResponse(request interface{}, res
 }
 
 func (wsMock *WebsocketConnectionMock) OnWriteAnyMessage(returnedError error) {
-	wsMock.On("WriteMessage", websocket.TextMessage, mock.Anything).Return(returnedError).Once()
+	wsMock.On("WriteMessage", mock.Anything, mock.Anything).Return(returnedError).Once()
 }
 
 func (mock *WebsocketConnectionMock) OnWriteTextMessage(data []byte, returnedError error) {
 	mock.On("WriteMessage", websocket.TextMessage, data).Return(returnedError).Once()
 }
 
+func (mock *WebsocketConnectionMock) OnWriteCompressedMessage(data []byte, returnedError error) {
+	mock.On("WriteMessage", websocket.BinaryMessage, compress(data)).Return(returnedError).Once()
+}
+
 func (mock *WebsocketConnectionMock) OnReadTextMessage(data []byte, returnedError error) {
 	mock.On("ReadMessage").Return(websocket.TextMessage, data, returnedError).Once()
+}
+
+func (mock *WebsocketConnectionMock) OnReadCompressedMessage(data []byte, returnedError error) {
+	mock.On("ReadMessage").Return(websocket.BinaryMessage, compress(data), returnedError).Once()
 }
 
 func (mock *WebsocketConnectionMock) OnClose(returnedError error) {
@@ -97,4 +107,15 @@ func (mock *WebsocketConnectionMock) ReadMessage() (messageType int, response []
 func (mock *WebsocketConnectionMock) Close() error {
 	mockArgs := mock.Called()
 	return mockArgs.Error(0)
+}
+
+func compress(data []byte) []byte {
+	var buffer bytes.Buffer
+	writer := zlib.NewWriter(&buffer)
+	_, err := writer.Write(data)
+	if err != nil {
+		panic(fmt.Errorf("failed to compress data %v", data))
+	}
+	writer.Close()
+	return buffer.Bytes()
 }

@@ -103,7 +103,6 @@ func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, er
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
 		logger.ErrorLogger.Print(errors.NewRequestSendingError(err))
-
 		return nil, driver.ErrBadConn
 	}
 
@@ -149,6 +148,10 @@ func (c *Connection) callback() func(response interface{}) error {
 			return nil
 		}
 
-		return json.Unmarshal(result.ResponseData, response)
+		err = json.Unmarshal(result.ResponseData, response)
+		if err != nil {
+			return fmt.Errorf("failed to parse response data %q: %w", result.ResponseData, err)
+		}
+		return nil
 	}
 }
