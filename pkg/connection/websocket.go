@@ -141,7 +141,7 @@ func (c *Connection) callback() func(response interface{}) error {
 			if result.Exception != nil {
 				return errors.NewSqlErr(result.Exception.SQLCode, result.Exception.Text)
 			} else {
-				return fmt.Errorf("expected exception in response %v", result)
+				return fmt.Errorf("result status is not 'ok': %q, expected exception in response %v", result.Status, result)
 			}
 		}
 

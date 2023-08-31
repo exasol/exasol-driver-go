@@ -26,8 +26,20 @@ func (mock *WebsocketConnectionMock) SimulateOKResponse(request interface{}, res
 	mock.SimulateResponse(request, baseOKResponse(response))
 }
 
+func (wsMock *WebsocketConnectionMock) SimulateOKResponseOnAnyMessage(response interface{}) {
+	wsMock.OnWriteAnyMessage(nil)
+	if response != nil {
+		wsMock.OnReadTextMessage(JsonMarshall(baseOKResponse(response)), nil)
+	}
+}
+
 func (mock *WebsocketConnectionMock) SimulateErrorResponse(request interface{}, exception types.Exception) {
 	mock.SimulateResponse(request, baseErrorResponse(exception))
+}
+
+func (wsMock *WebsocketConnectionMock) SimulateErrorResponseOnAnyMessage(exception types.Exception) {
+	wsMock.OnWriteAnyMessage(nil)
+	wsMock.OnReadTextMessage(JsonMarshall(baseErrorResponse(exception)), nil)
 }
 
 func baseOKResponse(payload interface{}) types.BaseResponse {
@@ -46,15 +58,15 @@ func JsonMarshall(payload interface{}) json.RawMessage {
 	return data
 }
 
-func (mock *WebsocketConnectionMock) SimulateResponse(request interface{}, response interface{}) {
-	requestMessage := JsonMarshall(request)
-	mock.OnWriteTextMessage(requestMessage, nil)
-	var responseMessage []byte
+func (wsMock *WebsocketConnectionMock) SimulateResponse(request interface{}, response interface{}) {
+	wsMock.OnWriteTextMessage(JsonMarshall(request), nil)
 	if response != nil {
-		responseMessage = JsonMarshall(response)
-		mock.OnReadTextMessage(responseMessage, nil)
+		wsMock.OnReadTextMessage(JsonMarshall(response), nil)
 	}
-	log.Printf("Simulate request: %s -> response: %s", string(requestMessage), string(responseMessage))
+}
+
+func (wsMock *WebsocketConnectionMock) OnWriteAnyMessage(returnedError error) {
+	wsMock.On("WriteMessage", websocket.TextMessage, mock.Anything).Return(returnedError).Once()
 }
 
 func (mock *WebsocketConnectionMock) OnWriteTextMessage(data []byte, returnedError error) {

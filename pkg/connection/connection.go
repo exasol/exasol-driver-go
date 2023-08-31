@@ -309,11 +309,12 @@ func (c *Connection) Login(ctx context.Context) error {
 	}
 	authResponse := &types.AuthResponse{}
 	err = c.Send(ctx, authRequest, authResponse)
+	c.Config.Compression = hasCompression
 	if err != nil {
-		return err
+		c.IsClosed = true
+		return fmt.Errorf("failed to login: %w", err)
 	}
 	c.IsClosed = false
-	c.Config.Compression = hasCompression
 
 	return nil
 }
@@ -336,13 +337,13 @@ func (c *Connection) preLogin(ctx context.Context, compression bool) (*types.Aut
 	if c.Config.AccessToken != "" {
 		err := c.prepareLoginViaToken(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("access token login failed: %w", err)
 		}
 		authRequest.AccessToken = c.Config.AccessToken
 	} else if c.Config.RefreshToken != "" {
 		err := c.prepareLoginViaToken(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("refresh token login failed: %w", err)
 		}
 		authRequest.RefreshToken = c.Config.RefreshToken
 	} else {

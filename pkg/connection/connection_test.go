@@ -334,7 +334,6 @@ func (suite *ConnectionTestSuite) TestPasswordLoginFailsInitialRequest() {
 	suite.websocketMock.SimulateErrorResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
 		mockException)
 	conn := suite.createOpenConnection()
-	conn.Config.ApiVersion = 42
 	err := conn.Login(context.Background())
 	suite.EqualError(err, mockExceptionError(mockException))
 }
@@ -343,14 +342,158 @@ func (suite *ConnectionTestSuite) TestPasswordLoginFailsEncryptingPasswordReques
 	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
 		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: ""})
 	conn := suite.createOpenConnection()
-	conn.Config.ApiVersion = 42
 	err := conn.Login(context.Background())
-	suite.EqualError(err, "driver: bad connection")
+	suite.EqualError(err, driver.ErrBadConn.Error())
+}
+
+func (suite *ConnectionTestSuite) TestPasswordLoginSuccess() {
+	suite.simulatePasswordLoginSuccess()
+	conn := suite.createOpenConnection()
+	conn.IsClosed = true
+
+	suite.True(conn.IsClosed)
+	err := conn.Login(context.Background())
+	suite.False(conn.IsClosed)
+	suite.NoError(err)
+}
+
+func (suite *ConnectionTestSuite) TestAccessTokenLoginSuccess() {
+	suite.simulateTokenLoginSuccess()
+	conn := suite.createOpenConnection()
+	conn.IsClosed = true
+	conn.Config.AccessToken = "accessToken"
+
+	suite.True(conn.IsClosed)
+	err := conn.Login(context.Background())
+	suite.False(conn.IsClosed)
+	suite.NoError(err)
+}
+
+func (suite *ConnectionTestSuite) TestAccessTokenLoginPrepareFails() {
+	suite.websocketMock.SimulateErrorResponse(types.LoginCommand{Command: types.Command{Command: "loginToken"}, ProtocolVersion: 42}, mockException)
+	conn := suite.createOpenConnection()
+	conn.IsClosed = true
+	conn.Config.AccessToken = "accessToken"
+
+	suite.True(conn.IsClosed)
+	err := conn.Login(context.Background())
+	suite.True(conn.IsClosed)
+	suite.EqualError(err, "access token login failed: E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+}
+
+func (suite *ConnectionTestSuite) TestRefreshTokenLoginSuccess() {
+	suite.simulateTokenLoginSuccess()
+	conn := suite.createOpenConnection()
+	conn.IsClosed = true
+	conn.Config.RefreshToken = "refreshToken"
+
+	suite.True(conn.IsClosed)
+	err := conn.Login(context.Background())
+	suite.False(conn.IsClosed)
+	suite.NoError(err)
+}
+
+func (suite *ConnectionTestSuite) TestRefreshTokenLoginPrepareFails() {
+	suite.websocketMock.SimulateErrorResponse(types.LoginCommand{Command: types.Command{Command: "loginToken"}, ProtocolVersion: 42}, mockException)
+	conn := suite.createOpenConnection()
+	conn.IsClosed = true
+	conn.Config.RefreshToken = "refreshToken"
+
+	suite.True(conn.IsClosed)
+	err := conn.Login(context.Background())
+	suite.True(conn.IsClosed)
+	suite.EqualError(err, "refresh token login failed: E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+}
+
+func (suite *ConnectionTestSuite) TestLoginRestoresCompressionToTrue() {
+	suite.simulatePasswordLoginSuccess()
+	conn := suite.createOpenConnection()
+	conn.Config.Compression = true
+
+	err := conn.Login(context.Background())
+	suite.True(conn.Config.Compression)
+	suite.NoError(err)
+}
+func (suite *ConnectionTestSuite) TestLoginRestoresCompressionToFalse() {
+	suite.simulatePasswordLoginSuccess()
+	conn := suite.createOpenConnection()
+	conn.Config.Compression = false
+
+	err := conn.Login(context.Background())
+	suite.False(conn.Config.Compression)
+	suite.NoError(err)
+}
+
+func (suite *ConnectionTestSuite) TestLoginFails() {
+	suite.simulatePasswordLoginFailure(&mockException)
+	conn := suite.createOpenConnection()
+	conn.IsClosed = false
+
+	err := conn.Login(context.Background())
+	suite.True(conn.IsClosed)
+	suite.EqualError(err, "failed to login: E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
+}
+
+func (suite *ConnectionTestSuite) TestLoginFailureRestoresCompressionToTrue() {
+	suite.simulatePasswordLoginFailure(&mockException)
+	conn := suite.createOpenConnection()
+	conn.Config.Compression = true
+
+	conn.Login(context.Background())
+	suite.True(conn.Config.Compression)
+}
+
+func (suite *ConnectionTestSuite) TestLoginFailureRestoresCompressionToFalse() {
+	suite.simulatePasswordLoginFailure(&mockException)
+	conn := suite.createOpenConnection()
+	conn.Config.Compression = false
+
+	conn.Login(context.Background())
+	suite.False(conn.Config.Compression)
+}
+
+func (suite *ConnectionTestSuite) simulatePasswordLoginSuccess() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{
+			PublicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAK4nFBtH5EBOFw+yqga1XS1G/eCkVSBYDDxMXVEHsUMqAcyH1M2khKFX
+ZZqyqPzyU+Gm9Hn0K9YuoteX2l/Ruf4AsvMfm9JujB11bobk9isILutKMfdJ7Pmu
+uYIhswioGpmyPXr/wqz1NFkt5wMzm6sU3lFfCjD5SxU6arQ1zVY3AgMBAAE=
+-----END RSA PUBLIC KEY-----`,
+			PublicKeyModulus:  `AE27141B47E4404E170FB2AA06B55D2D46FDE0A45520580C3C4C5D5107B1432A01CC87D4CDA484A157659AB2A8FCF253E1A6F479F42BD62EA2D797DA5FD1B9FE00B2F31F9BD26E8C1D756E86E4F62B082EEB4A31F749ECF9AEB98221B308A81A99B23D7AFFC2ACF534592DE703339BAB14DE515F0A30F94B153A6AB435CD5637`,
+			PublicKeyExponent: "010001"})
+	suite.websocketMock.SimulateOKResponseOnAnyMessage(types.AuthResponse{})
+}
+
+func (suite *ConnectionTestSuite) simulatePasswordLoginFailure(exception *types.Exception) {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{
+			PublicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAK4nFBtH5EBOFw+yqga1XS1G/eCkVSBYDDxMXVEHsUMqAcyH1M2khKFX
+ZZqyqPzyU+Gm9Hn0K9YuoteX2l/Ruf4AsvMfm9JujB11bobk9isILutKMfdJ7Pmu
+uYIhswioGpmyPXr/wqz1NFkt5wMzm6sU3lFfCjD5SxU6arQ1zVY3AgMBAAE=
+-----END RSA PUBLIC KEY-----`,
+			PublicKeyModulus:  `AE27141B47E4404E170FB2AA06B55D2D46FDE0A45520580C3C4C5D5107B1432A01CC87D4CDA484A157659AB2A8FCF253E1A6F479F42BD62EA2D797DA5FD1B9FE00B2F31F9BD26E8C1D756E86E4F62B082EEB4A31F749ECF9AEB98221B308A81A99B23D7AFFC2ACF534592DE703339BAB14DE515F0A30F94B153A6AB435CD5637`,
+			PublicKeyExponent: "010001"})
+	suite.websocketMock.SimulateErrorResponseOnAnyMessage(*exception)
+}
+
+func (suite *ConnectionTestSuite) simulateTokenLoginSuccess() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "loginToken"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{
+			PublicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAK4nFBtH5EBOFw+yqga1XS1G/eCkVSBYDDxMXVEHsUMqAcyH1M2khKFX
+ZZqyqPzyU+Gm9Hn0K9YuoteX2l/Ruf4AsvMfm9JujB11bobk9isILutKMfdJ7Pmu
+uYIhswioGpmyPXr/wqz1NFkt5wMzm6sU3lFfCjD5SxU6arQ1zVY3AgMBAAE=
+-----END RSA PUBLIC KEY-----`,
+			PublicKeyModulus:  `AE27141B47E4404E170FB2AA06B55D2D46FDE0A45520580C3C4C5D5107B1432A01CC87D4CDA484A157659AB2A8FCF253E1A6F479F42BD62EA2D797DA5FD1B9FE00B2F31F9BD26E8C1D756E86E4F62B082EEB4A31F749ECF9AEB98221B308A81A99B23D7AFFC2ACF534592DE703339BAB14DE515F0A30F94B153A6AB435CD5637`,
+			PublicKeyExponent: "010001"})
+	suite.websocketMock.SimulateOKResponseOnAnyMessage(types.AuthResponse{})
 }
 
 func (suite *ConnectionTestSuite) createOpenConnection() *Connection {
 	conn := &Connection{
-		Config:    &config.Config{Host: "invalid", Port: 12345},
+		Config:    &config.Config{Host: "invalid", Port: 12345, User: "user", Password: "password", ApiVersion: 42},
 		Ctx:       context.Background(),
 		IsClosed:  false,
 		websocket: suite.websocketMock,
