@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.2, released 2023-08-31
+# Exasol Driver go 1.0.2, released 2023-09-04
 
 Code name: Improve Test Coverage
 
