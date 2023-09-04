@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math/big"
 	"os/user"
 	"runtime"
@@ -16,17 +17,16 @@ import (
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/internal/utils"
 	"github.com/exasol/exasol-driver-go/internal/version"
+	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/gorilla/websocket"
 )
 
 type Connection struct {
 	Config    *config.Config
-	websocket *websocket.Conn
+	websocket wsconn.WebsocketConnection
 	Ctx       context.Context
 	IsClosed  bool
 }
@@ -65,7 +65,7 @@ func (c *Connection) PrepareContext(ctx context.Context, query string) (driver.S
 	if err != nil {
 		return nil, err
 	}
-	return c.CreateStatement(response), nil
+	return c.createStatement(response), nil
 }
 
 func (c *Connection) createPreparedStatement(ctx context.Context, query string) (*types.CreatePreparedStatementResponse, error) {
@@ -83,7 +83,7 @@ func (c *Connection) createPreparedStatement(ctx context.Context, query string) 
 	return response, nil
 }
 
-func (c *Connection) CreateStatement(result *types.CreatePreparedStatementResponse) *Statement {
+func (c *Connection) createStatement(result *types.CreatePreparedStatementResponse) *Statement {
 	return NewStatement(c, result)
 }
 
@@ -169,6 +169,7 @@ func (c *Connection) executePreparedStatement(ctx context.Context, s *types.Crea
 		return nil, err
 	}
 	if result.NumResults == 0 {
+		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, c.closePreparedStatement(ctx, s)
@@ -271,17 +272,25 @@ func (c *Connection) SimpleExec(ctx context.Context, query string) (*types.SqlQu
 		return nil, err
 	}
 	if result.NumResults == 0 {
+		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, err
 }
 
 func (c *Connection) close(ctx context.Context) error {
+	log.Printf("Closing connection")
 	c.IsClosed = true
 	err := c.Send(ctx, &types.Command{Command: "disconnect"}, nil)
-	c.websocket.Close()
+	closeError := c.websocket.Close()
 	c.websocket = nil
-	return err
+	if err != nil {
+		return err
+	}
+	if closeError != nil {
+		return fmt.Errorf("failed to close websocket: %w", closeError)
+	}
+	return nil
 }
 
 func (c *Connection) Login(ctx context.Context) error {
@@ -300,11 +309,12 @@ func (c *Connection) Login(ctx context.Context) error {
 	}
 	authResponse := &types.AuthResponse{}
 	err = c.Send(ctx, authRequest, authResponse)
+	c.Config.Compression = hasCompression
 	if err != nil {
-		return err
+		c.IsClosed = true
+		return fmt.Errorf("failed to login: %w", err)
 	}
 	c.IsClosed = false
-	c.Config.Compression = hasCompression
 
 	return nil
 }
@@ -327,13 +337,13 @@ func (c *Connection) preLogin(ctx context.Context, compression bool) (*types.Aut
 	if c.Config.AccessToken != "" {
 		err := c.prepareLoginViaToken(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("access token login failed: %w", err)
 		}
 		authRequest.AccessToken = c.Config.AccessToken
 	} else if c.Config.RefreshToken != "" {
 		err := c.prepareLoginViaToken(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("refresh token login failed: %w", err)
 		}
 		authRequest.RefreshToken = c.Config.RefreshToken
 	} else {

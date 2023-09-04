@@ -16,23 +16,21 @@ import (
 
 	"github.com/exasol/exasol-driver-go"
 	"github.com/exasol/exasol-driver-go/pkg/dsn"
+	"github.com/exasol/exasol-driver-go/pkg/integrationTesting"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"gopkg.in/yaml.v3"
 
 	"github.com/stretchr/testify/suite"
-
-	testSetupAbstraction "github.com/exasol/exasol-test-setup-abstraction-server/go-client"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	ctx       context.Context
-	exasol    *testSetupAbstraction.TestSetupAbstraction
-	dbVersion string
-	port      int
-	host      string
+	ctx    context.Context
+	exasol *integrationTesting.DbTestSetup
+	port   int
+	host   string
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -44,26 +42,14 @@ func TestIntegrationSuite(t *testing.T) {
 
 func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = context.Background()
-	suite.dbVersion = getDbVersion()
 	var err error
-	suite.exasol, err = testSetupAbstraction.New().DockerDbVersion(suite.dbVersion).Start()
-	if err != nil {
-		suite.FailNowf("setup failed", "failed to start test setup: %v", err)
-	}
-	connectionInfo, err := suite.exasol.GetConnectionInfo()
+	suite.exasol = integrationTesting.StartDbSetup(&suite.Suite)
+	connectionInfo := suite.exasol.ConnectionInfo
 	if err != nil {
 		suite.FailNowf("setup failed", "failed to get connection info: %v", err)
 	}
 	suite.port = connectionInfo.Port
 	suite.host = connectionInfo.Host
-}
-
-func getDbVersion() string {
-	dbVersion := os.Getenv("DB_VERSION")
-	if dbVersion != "" {
-		return dbVersion
-	}
-	return "8.20.0"
 }
 
 func (suite *IntegrationTestSuite) TestConnect() {
@@ -75,7 +61,7 @@ func (suite *IntegrationTestSuite) TestConnect() {
 }
 
 func (suite *IntegrationTestSuite) isExasol7_0_x() bool {
-	return strings.HasPrefix(suite.dbVersion, "7.0.")
+	return strings.HasPrefix(suite.exasol.DbVersion, "7.0.")
 }
 
 func (suite *IntegrationTestSuite) TestConnection() {
@@ -101,7 +87,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 	}
 
 	var errorMsgEncryptionOff string
-	if suite.isExasolVersion8() {
+	if suite.exasol.IsExasolVersion8() {
 		errorMsgEncryptionOff = "EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - Only TLS connections are allowed.'"
 	} else {
 		errorMsgEncryptionOff = noError
@@ -560,8 +546,7 @@ func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
 func (suite *IntegrationTestSuite) TearDownSuite() {
 	defer goleak.VerifyNone(suite.T())
 	if suite.exasol != nil {
-		err := suite.exasol.Stop()
-		onError(err)
+		suite.exasol.StopDb()
 	}
 }
 
@@ -576,38 +561,6 @@ func (suite *IntegrationTestSuite) openConnection(config *dsn.DSNConfigBuilder) 
 		panic(err)
 	}
 	return database
-}
-
-func (suite *IntegrationTestSuite) isExasolVersion8() bool {
-	version, err := suite.getExasolMajorVersion()
-	if err != nil {
-		suite.FailNow("error getting exasol version: " + err.Error())
-	}
-	return version == "8"
-}
-
-func (suite *IntegrationTestSuite) getExasolMajorVersion() (string, error) {
-	db, err := suite.exasol.CreateConnection()
-	suite.NoError(err)
-	defer db.Close()
-	result, err := db.Query("SELECT PARAM_VALUE FROM SYS.EXA_METADATA WHERE PARAM_NAME='databaseMajorVersion'")
-	if err != nil {
-		return "", fmt.Errorf("querying exasol version failed: %w", err)
-	}
-	defer result.Close()
-	if !result.Next() {
-		if result.Err() != nil {
-			return "", fmt.Errorf("failed to iterate exasol version: %w", result.Err())
-		}
-		return "", fmt.Errorf("no result found for exasol version query")
-	}
-	var majorVersion string
-	err = result.Scan(&majorVersion)
-	if err != nil {
-		return "", fmt.Errorf("failed to read exasol version result: %w", err)
-	}
-	suite.T().Logf("Got Exasol major version %q", majorVersion)
-	return majorVersion, nil
 }
 
 func onError(err error) {

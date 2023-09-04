@@ -14,7 +14,7 @@ func ToRow(result *types.SqlQueriesResponse, con *Connection) (driver.Rows, erro
 		return nil, err
 	}
 
-	return &QueryResults{data: &resultSet.ResultSet, con: con}, err
+	return &QueryResults{data: &resultSet.ResultSet, con: con}, nil
 }
 
 func ToResult(result *types.SqlQueriesResponse) (driver.Result, error) {
@@ -24,7 +24,5 @@ func ToResult(result *types.SqlQueriesResponse) (driver.Result, error) {
 		return nil, err
 	}
 
-	return &RowCount{
-		affectedRows: int64(rowCountResult.RowCount),
-	}, err
+	return &RowCount{affectedRows: int64(rowCountResult.RowCount)}, nil
 }

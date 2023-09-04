@@ -10,7 +10,7 @@ import (
 var (
 	ErrInvalidConn              = NewDriverErr(exaerror.New("E-EGOD-1").Message("invalid connection"))
 	ErrClosed                   = NewDriverErr(exaerror.New("E-EGOD-2").Message("connection was closed"))
-	ErrMalformedData            = NewDriverErr(exaerror.New("E-EGOD-3").Message("malformed result"))
+	ErrMalformedData            = NewDriverErr(exaerror.New("E-EGOD-3").Message("malformed empty result"))
 	ErrAutocommitEnabled        = NewDriverErr(exaerror.New("E-EGOD-4").Message("begin not working when autocommit is enabled"))
 	ErrInvalidValuesCount       = NewDriverErr(exaerror.New("E-EGOD-5").Message("invalid value count for prepared status"))
 	ErrNoLastInsertID           = NewDriverErr(exaerror.New("E-EGOD-6").Message("no LastInsertId available"))
@@ -87,9 +87,10 @@ func NewUncompressingError(err error) DriverErr {
 		Parameter("error", err))
 }
 
-func NewJsonDecodingError(err error) DriverErr {
+func NewJsonDecodingError(err error, message []byte) DriverErr {
 	return NewDriverErr(exaerror.New("W-EGOD-19").
-		Message("could not decode json data: {{error}}").
+		Message("could not decode json data {{data}}: {{error}}").
+		Parameter("data", string(message)).
 		Parameter("error", err))
 }
 
@@ -138,6 +139,12 @@ func NewCouldNotGetOsUser(err error) DriverErr {
 	return NewDriverErr(exaerror.New("W-EGOD-28").
 		Message("could not get current OS user: {{error}}").
 		Parameter("error", err))
+}
+
+func NewWebsocketNotConnected(request interface{}) DriverErr {
+	return NewDriverErr(exaerror.New("E-EGOD-29").
+		Message("could not send request {{request}}: not connected to server").
+		Parameter("request", request))
 }
 
 // DriverErr This type represents an error that can occur when working with a database connection.

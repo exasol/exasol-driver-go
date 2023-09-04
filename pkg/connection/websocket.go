@@ -4,18 +4,14 @@ import (
 	"bytes"
 	"compress/zlib"
 	"context"
-	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
 	"database/sql/driver"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
-	"strings"
 
 	"github.com/exasol/exasol-driver-go/internal/utils"
+	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
@@ -44,72 +40,22 @@ func (c *Connection) Connect() error {
 			Scheme: c.getURIScheme(),
 			Host:   fmt.Sprintf("%s:%d", host, c.Config.Port),
 		}
-		skipVerify := !c.Config.ValidateServerCertificate || c.Config.CertificateFingerprint != ""
-		dialer := *websocket.DefaultDialer
-		dialer.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: skipVerify, //nolint:gosec
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, // Workaround, set db suit in first place to fix handshake issue
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-
-				tls.TLS_AES_128_GCM_SHA256,
-				tls.TLS_AES_256_GCM_SHA384,
-				tls.TLS_CHACHA20_POLY1305_SHA256,
-
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-			},
-			VerifyPeerCertificate: c.verifyPeerCertificate,
-		}
-
-		var ws *websocket.Conn
-		ws, _, err = dialer.DialContext(c.Ctx, url.String(), nil)
+		c.websocket, err = c.connectToHost(url)
 		if err == nil {
-			c.websocket = ws
-			c.websocket.EnableWriteCompression(false)
-			break
-		} else {
-			logger.ErrorLogger.Print(errors.NewConnectionFailedError(url, err))
+			return nil
 		}
 	}
 	return err
 }
 
-func (c *Connection) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-	expectedFingerprint := c.Config.CertificateFingerprint
-	if len(expectedFingerprint) == 0 {
-		return nil
+func (c *Connection) connectToHost(url url.URL) (wsconn.WebsocketConnection, error) {
+	skipVerify := !c.Config.ValidateServerCertificate || c.Config.CertificateFingerprint != ""
+	ws, err := wsconn.CreateConnection(c.Ctx, skipVerify, c.Config.CertificateFingerprint, url)
+	if err != nil {
+		logger.ErrorLogger.Print(errors.NewConnectionFailedError(url, err))
+		return nil, err
 	}
-	if len(rawCerts) == 0 {
-		return errors.ErrMissingServerCertificate
-	}
-	actualFingerprint := sha256Hex(rawCerts[0])
-	if !strings.EqualFold(expectedFingerprint, actualFingerprint) {
-		return errors.NewErrCertificateFingerprintMismatch(actualFingerprint, expectedFingerprint)
-	}
-	return nil
-}
-
-func sha256Hex(data []byte) string {
-	sha256Sum := sha256.Sum256(data)
-	return bytesToHexString(sha256Sum[:])
-}
-
-func bytesToHexString(data []byte) string {
-	return hex.EncodeToString(data)
+	return ws, nil
 }
 
 func (c *Connection) Send(ctx context.Context, request, response interface{}) error {
@@ -151,10 +97,12 @@ func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, er
 		messageType = websocket.BinaryMessage
 	}
 
+	if c.websocket == nil {
+		return nil, errors.NewWebsocketNotConnected(string(message))
+	}
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
 		logger.ErrorLogger.Print(errors.NewRequestSendingError(err))
-
 		return nil, driver.ErrBadConn
 	}
 
@@ -184,18 +132,26 @@ func (c *Connection) callback() func(response interface{}) error {
 
 		err = json.NewDecoder(reader).Decode(result)
 		if err != nil {
-			logger.ErrorLogger.Print(errors.NewJsonDecodingError(err))
+			logger.ErrorLogger.Print(errors.NewJsonDecodingError(err, message))
 			return driver.ErrBadConn
 		}
 
 		if result.Status != "ok" {
-			return errors.NewSqlErr(result.Exception.SQLCode, result.Exception.Text)
+			if result.Exception != nil {
+				return errors.NewSqlErr(result.Exception.SQLCode, result.Exception.Text)
+			} else {
+				return fmt.Errorf("result status is not 'ok': %q, expected exception in response %v", result.Status, result)
+			}
 		}
 
 		if response == nil {
 			return nil
 		}
 
-		return json.Unmarshal(result.ResponseData, response)
+		err = json.Unmarshal(result.ResponseData, response)
+		if err != nil {
+			return fmt.Errorf("failed to parse response data %q: %w", result.ResponseData, err)
+		}
+		return nil
 	}
 }

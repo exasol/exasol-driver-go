@@ -16,28 +16,30 @@ func TestDriverSuite(t *testing.T) {
 
 func (suite *DriverTestSuite) TestOpenConnector() {
 	exasolDriver := ExasolDriver{}
-	_, err := exasolDriver.OpenConnector("exa:localhost:1234")
+	conn, err := exasolDriver.OpenConnector("exa:localhost:1234")
 	suite.NoError(err)
+	suite.NotNil(conn)
 }
 
 func (suite *DriverTestSuite) TestOpenConnectorBadDsn() {
 	exasolDriver := ExasolDriver{}
-	_, err := exasolDriver.OpenConnector("")
-	suite.Error(err)
+	conn, err := exasolDriver.OpenConnector("")
+	suite.EqualError(err, "E-EGOD-21: invalid connection string, must start with 'exa:': ''")
+	suite.Nil(conn)
 }
 
 func (suite *DriverTestSuite) TestOpen() {
 	exasolDriver := ExasolDriver{}
-	_, err := exasolDriver.Open("exa:localhost:1234")
-	suite.Error(err)
+	conn, err := exasolDriver.Open("exa:localhost:1234")
 	suite.ErrorContains(err, "connection refused")
+	suite.Nil(conn)
 }
 
 func (suite *DriverTestSuite) TestOpenBadDsn() {
 	exasolDriver := ExasolDriver{}
-	_, err := exasolDriver.Open("")
-	suite.Error(err)
-	suite.ErrorContains(err, "invalid connection string")
+	conn, err := exasolDriver.Open("")
+	suite.EqualError(err, "E-EGOD-21: invalid connection string, must start with 'exa:': ''")
+	suite.Nil(conn)
 }
 
 func (suite *DriverTestSuite) TestConfigToDsnWithBooleanValuesTrue() {
