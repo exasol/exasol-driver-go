@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"math/big"
 	"os/user"
 	"runtime"
@@ -279,7 +278,6 @@ func (c *Connection) SimpleExec(ctx context.Context, query string) (*types.SqlQu
 }
 
 func (c *Connection) close(ctx context.Context) error {
-	log.Printf("Closing connection")
 	c.IsClosed = true
 	err := c.Send(ctx, &types.Command{Command: "disconnect"}, nil)
 	closeError := c.websocket.Close()
