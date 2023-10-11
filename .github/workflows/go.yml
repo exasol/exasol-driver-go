@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         go: ["1.20", "1.21"]
-        db: ["7.1.22", "8.22.0"]
+        db: ["7.1.23", "8.22.0"]
     env:
       DEFAULT_GO: "1.21"
       DEFAULT_DB: "8.22.0"
@@ -18,7 +18,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -40,6 +40,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go }}
             ${{ runner.os }}-go-
+
+      - name: Enable testcontainer reuse
+        run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -63,7 +66,7 @@ jobs:
         run: go test -v -count 1 -coverprofile=coverage.out ./...
 
       - name: SonarCloud Scan
-        if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol'
+        if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol' && env.SONAR_TOKEN != null
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -60,10 +60,6 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	suite.Equal("2", columns[0])
 }
 
-func (suite *IntegrationTestSuite) isExasol7_0_x() bool {
-	return strings.HasPrefix(suite.exasol.DbVersion, "7.0.")
-}
-
 func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	const wrongFingerprint = "wrongFingerprint"
@@ -71,13 +67,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
 	const errorMsgAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
-
-	var errorMsgTokenAuthFailed string
-	if suite.isExasol7_0_x() {
-		errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '00000' and message 'Invalid login request command: loginToken'"
-	} else {
-		errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed'"
-	}
+	const errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed'"
 
 	var errorMsgCertWrongHost string
 	if suite.host == "localhost" {
