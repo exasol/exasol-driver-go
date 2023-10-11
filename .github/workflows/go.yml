@@ -41,6 +41,9 @@ jobs:
             ${{ runner.os }}-go-${{ matrix.go }}
             ${{ runner.os }}-go-
 
+      - name: Enable testcontainer reuse
+       run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
