@@ -18,7 +18,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
