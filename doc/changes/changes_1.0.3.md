@@ -8,7 +8,8 @@ This release reduces log verbosity.
 
 ## Features
 
-* #97: Reduced log verbosity
+* #97: Reduced log verbosity (contributed by [@sabitor](https://github.com/sabitor))
+
 ## Dependency Updates
 
 ### Test Dependency Updates
