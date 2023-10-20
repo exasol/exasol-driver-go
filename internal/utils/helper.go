@@ -35,7 +35,7 @@ func BoolToPtr(b bool) *bool {
 	return &b
 }
 
-var localImportRegex = regexp.MustCompile(`(?i)(FROM LOCAL CSV )`)
+var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM\s+LOCAL\s+CSV.*$`)
 
 func IsImportQuery(query string) bool {
 	return localImportRegex.MatchString(query)
@@ -93,6 +93,9 @@ func OpenFile(path string) (*os.File, error) {
 }
 
 func UpdateImportQuery(query string, host string, port int) string {
+	if !IsImportQuery(query) {
+		return query
+	}
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	for i, matches := range r {
 		if i == 0 {

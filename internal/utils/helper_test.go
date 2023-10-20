@@ -27,20 +27,23 @@ func TestNamedValuesToValuesInvalidName(t *testing.T) {
 
 func TestIsImportQuery(t *testing.T) {
 	tests := []struct {
+		name           string
 		query          string
 		expectedResult bool
 	}{
-		{query: "IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n", expectedResult: true},
-		{query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: true},
-		{query: "import into schema.table from local csv file '/path/to/filename.csv'", expectedResult: true},
-		{query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL FBV FILE '/path/to/filename.fbf'", expectedResult: false},
-		{query: "select * from schema.table", expectedResult: false},
-		{query: "insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');", expectedResult: false},
-		{query: "insert into table1 values ('import into schema.table from local csv file ''/path/to/filename.csv''');", expectedResult: false},
-		{query: "insert into schema.tab1 values ('IMPORT into schema.table FROM LOCAL CSV file ''/path/to/filename.csv'';')", expectedResult: false},
+		{name: "with options", query: "IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n", expectedResult: true},
+		{name: "upper case", query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: true},
+		{name: "with brackets", query: "IMPORT(something) INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: true},
+		{name: "lower case", query: "import into schema.table from local csv file '/path/to/filename.csv'", expectedResult: true},
+		{name: "with additional whitespace", query: " IMPORT \t INTO SCHEMA.TABLE\n\tFROM  LOCAL  CSV  FILE  '/path/to/filename.csv'", expectedResult: true},
+		{name: "FBV not supported", query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL FBV FILE '/path/to/filename.fbf'", expectedResult: false},
+		{name: "select query unsupported", query: "select * from schema.table", expectedResult: false},
+		{name: "import in string with placeholders", query: "insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');", expectedResult: false},
+		{name: "import in string", query: "insert into table1 values ('import into schema.table from local csv file ''/path/to/filename.csv''');", expectedResult: false},
+		{name: "import in string with schema", query: "insert into schema.tab1 values ('IMPORT into schema.table FROM LOCAL CSV file ''/path/to/filename.csv'';')", expectedResult: false},
 	}
 	for _, test := range tests {
-		t.Run(test.query, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, test.expectedResult, IsImportQuery(test.query))
 		})
 	}
@@ -87,6 +90,9 @@ func TestUpdateImportQuery(t *testing.T) {
 		{name: "with options",
 			query:    "IMPORT INTO table_1 FROM LOCAL CSV USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.csv' FILE 'tab1_part2.csv' COLUMN SEPARATOR = ';' SKIP = 5;",
 			expected: "IMPORT INTO table_1 FROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv' COLUMN SEPARATOR = ';' SKIP = 5;"},
+		{name: "with newline",
+			query:    "IMPORT INTO table_1\nFROM LOCAL CSV USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.csv' FILE 'tab1_part2.csv' COLUMN SEPARATOR = ';'\r\nSKIP = 5;",
+			expected: "IMPORT INTO table_1\nFROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv' COLUMN SEPARATOR = ';'\r\nSKIP = 5;"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
