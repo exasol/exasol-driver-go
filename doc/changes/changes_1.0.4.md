@@ -1,12 +1,20 @@
-# Exasol Driver go 1.0.4, released 2023-??-??
+# Exasol Driver go 1.0.4, released 2023-10-23
 
-Code name:
+Code name: Fixed `IMPORT LOCAL CSV FILE`
 
 ## Summary
 
-## Features
+This release fixes the detection of `IMPORT LOCAL CSV FILE`. Before, the Go driver also detected this inside strings which broke e.g. running the following `INSERT` statement:
 
-* ISSUE_NUMBER: description
+```sql
+insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');
+```
+
+Thanks to [@cyrixsimon](https://github.com/cyrixsimon) and [@ssteinhauser](https://github.com/ssteinhauser) for reporting this.
+
+## Bugfixes
+
+* #98: Fixed detection of `IMPORT LOCAL CSV FILE`
 
 ## Dependency Updates
 
