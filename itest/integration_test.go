@@ -327,6 +327,27 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	)
 }
 
+func (suite *IntegrationTestSuite) TestImportStatementInString() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "table1"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (text VARCHAR(20))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, `insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');`)
+	suite.NoError(err, "insert should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(1), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"TEXT"},
+		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' "}},
+	)
+}
+
 func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()

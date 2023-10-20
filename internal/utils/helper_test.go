@@ -26,7 +26,23 @@ func TestNamedValuesToValuesInvalidName(t *testing.T) {
 }
 
 func TestIsImportQuery(t *testing.T) {
-	assert.True(t, IsImportQuery("IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n"))
+	tests := []struct {
+		query          string
+		expectedResult bool
+	}{
+		{query: "IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n", expectedResult: true},
+		{query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: true},
+		{query: "import into schema.table from local csv file '/path/to/filename.csv'", expectedResult: true},
+		{query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL FBV FILE '/path/to/filename.fbf'", expectedResult: false},
+		{query: "select * from schema.table", expectedResult: false},
+		{query: `insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');`, expectedResult: false},
+		{query: `insert into table1 values ('import into schema.table from local csv file ''/path/to/filename.csv''');`, expectedResult: false},
+	}
+	for _, test := range tests {
+		t.Run(test.query, func(t *testing.T) {
+			assert.Equal(t, test.expectedResult, IsImportQuery(test.query))
+		})
+	}
 }
 
 func TestGetFilePathNotFound(t *testing.T) {
