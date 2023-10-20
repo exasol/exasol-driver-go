@@ -13,9 +13,7 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 )
 
-var localImportRegex = regexp.MustCompile(`(?i)(FROM LOCAL CSV )`)
 var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`)
-var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<RowSeparator>[a-zA-Z]+)(["|']?))`)
 
 func NamedValuesToValues(namedValues []driver.NamedValue) ([]driver.Value, error) {
 	values := make([]driver.Value, len(namedValues))
@@ -39,9 +37,13 @@ func BoolToPtr(b bool) *bool {
 	return &b
 }
 
+var localImportRegex = regexp.MustCompile(`(?i)(FROM LOCAL CSV )`)
+
 func IsImportQuery(query string) bool {
 	return localImportRegex.MatchString(query)
 }
+
+var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<RowSeparator>[a-zA-Z]+)(["|']?))`)
 
 func GetRowSeparator(query string) string {
 	r := rowSeparatorQueryRegex.FindStringSubmatch(query)
