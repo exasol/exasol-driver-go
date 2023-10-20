@@ -13,8 +13,6 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 )
 
-var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`)
-
 func NamedValuesToValues(namedValues []driver.NamedValue) ([]driver.Value, error) {
 	values := make([]driver.Value, len(namedValues))
 	for index, namedValue := range namedValues {
@@ -63,6 +61,8 @@ func GetRowSeparator(query string) string {
 		return "\n"
 	}
 }
+
+var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`)
 
 func GetFilePaths(query string) ([]string, error) {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
