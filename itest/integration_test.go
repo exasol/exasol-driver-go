@@ -334,7 +334,7 @@ func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	tableName := "table1"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (text VARCHAR(20))", schemaName, tableName))
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (text VARCHAR(200))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, `insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');`)
 	suite.NoError(err, "insert should be successful")
@@ -344,7 +344,7 @@ func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
 	suite.assertTableResult(rows,
 		[]string{"TEXT"},
-		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' "}},
+		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) from local csv file '{{file.path}}' "}},
 	)
 }
 
