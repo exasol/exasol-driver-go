@@ -41,13 +41,15 @@ func IsImportQuery(query string) bool {
 	return localImportRegex.MatchString(query)
 }
 
-var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<RowSeparator>[a-zA-Z]+)(["|']?))`)
+const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"
+
+var rowSeparatorQueryRegex = regexp.MustCompile(fmt.Sprintf(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<%s>[a-zA-Z]+)(["|']?))`, ROW_SEPARATOR_PLACEHOLDER))
 
 func GetRowSeparator(query string) string {
 	r := rowSeparatorQueryRegex.FindStringSubmatch(query)
 	separator := "LF"
 	for i, name := range rowSeparatorQueryRegex.SubexpNames() {
-		if name == "RowSeparator" && len(r) >= i {
+		if name == ROW_SEPARATOR_PLACEHOLDER && len(r) >= i {
 			separator = r[i]
 		}
 	}
@@ -62,14 +64,16 @@ func GetRowSeparator(query string) string {
 	}
 }
 
-var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`)
+const FILE_PLACEHOLDER = "FilePlaceholder"
+
+var fileQueryRegex = regexp.MustCompile(fmt.Sprintf(`(?i)(FILE\s+(["|'])?(?P<%s>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`, FILE_PLACEHOLDER))
 
 func GetFilePaths(query string) ([]string, error) {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	var files []string
 	for _, matches := range r {
 		for i, name := range fileQueryRegex.SubexpNames() {
-			if name == "File" {
+			if name == FILE_PLACEHOLDER {
 				files = append(files, matches[i])
 			}
 		}

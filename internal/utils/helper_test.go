@@ -137,19 +137,28 @@ func TestGetFilePaths(t *testing.T) {
 	}
 }
 
-func TestGetRowSeparatorLF(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'LF'"
-	assert.Equal(t, GetRowSeparator(query), "\n")
-}
-
-func TestGetRowSeparatorCR(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CR'"
-	assert.Equal(t, GetRowSeparator(query), "\r")
-}
-
-func TestGetRowSeparatorCRLF(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR =  'CRLF'"
-	assert.Equal(t, GetRowSeparator(query), "\r\n")
+func TestGetRowSeparatorCompleteQuery(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		expected string
+	}{
+		{name: "LF", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'LF'", expected: "\n"},
+		{name: "CR", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CR'", expected: "\r"},
+		{name: "CRLF", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CRLF'", expected: "\r\n"},
+		{name: "only row separator fragment", query: "ROW SEPARATOR = 'CRLF'", expected: "\r\n"},
+		{name: "unknown value returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'unknown'", expected: "\n"},
+		{name: "missing expression returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'", expected: "\n"},
+		{name: "trailing text", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CRLF' trailing text", expected: "\r\n"},
+		{name: "multiple spaces", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR \t = \t 'CRLF';", expected: "\r\n"},
+		{name: "no spaces returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR='CRLF';", expected: "\n"},
+		{name: "unknown query returns default", query: "select * from table", expected: "\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, GetRowSeparator(test.query))
+		})
+	}
 }
 
 func TestGetRowSeparator(t *testing.T) {
@@ -160,10 +169,13 @@ func TestGetRowSeparator(t *testing.T) {
 	}{
 		{name: "LF", separator: "LF", want: "\n"},
 		{name: "LF lowercase", separator: "lf", want: "\n"},
+		{name: "Lf mixed case returns default", separator: "Lf", want: "\n"},
 		{name: "CRLF", separator: "CRLF", want: "\r\n"},
 		{name: "CRLF lowercase", separator: "crlf", want: "\r\n"},
+		{name: "CrLf mixed case returns default", separator: "CrLf", want: "\n"},
 		{name: "CR", separator: "CR", want: "\r"},
 		{name: "CR lowercase", separator: "cr", want: "\r"},
+		{name: "Cr mixed case returns default", separator: "Cr", want: "\n"},
 	}
 	for _, tt := range tests {
 		query := fmt.Sprintf("IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR =  '%s'", tt.separator)
