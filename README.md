@@ -129,15 +129,14 @@ To rollback a transaction use `Rollback()`:
 err = transaction.Rollback()
 ```
 
-## Import local CSV files
+## Import Local CSV Files
 
-Use the sql driver to load data into your Exasol Database.
+Use the sql driver to load data from one or more CSV files into your Exasol Database. These files must be local to the machine where you execute the `IMPORT` statement.
 
-```
-!! Limitation !!
+**Limitations:**
+* Only import of CSV files is supported at the moment, FBV is not supported.
+* The `SECURE` option is not supported at the moment.
 
-Only import of CSV files is supported at the moment.
-```
 
 ```go
 result, err := exasol.Exec(`
@@ -147,6 +146,8 @@ IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData
  ROW SEPARATOR = 'LF'
 `)
 ```
+
+See also the [usage notes](https://docs.exasol.com/db/latest/sql/import.htm#UsageNotes) about the `file_src` element for local files of the `IMPORT` statement.
 
 ## Connection String
 

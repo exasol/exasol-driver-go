@@ -13,10 +13,6 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 )
 
-var localImportRegex = regexp.MustCompile(`(?i)(FROM LOCAL CSV )`)
-var fileQueryRegex = regexp.MustCompile(`(?i)(FILE\s+(["|'])?(?P<File>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`)
-var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<RowSeparator>[a-zA-Z]+)(["|']?))`)
-
 func NamedValuesToValues(namedValues []driver.NamedValue) ([]driver.Value, error) {
 	values := make([]driver.Value, len(namedValues))
 	for index, namedValue := range namedValues {
@@ -39,15 +35,30 @@ func BoolToPtr(b bool) *bool {
 	return &b
 }
 
+const WHITESPACE = `\s+`
+
+var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE + `CSV.*$`)
+
 func IsImportQuery(query string) bool {
 	return localImportRegex.MatchString(query)
 }
+
+const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"
+const QUOTE = `["']`
+
+func namedGroup(name, regexp string) string {
+	return fmt.Sprintf("(?P<%s>%s)", name, regexp)
+}
+
+var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)` +
+	`ROW` + WHITESPACE + `SEPARATOR` + WHITESPACE + `=` + WHITESPACE +
+	QUOTE + namedGroup(ROW_SEPARATOR_PLACEHOLDER, "[a-zA-Z]+") + QUOTE)
 
 func GetRowSeparator(query string) string {
 	r := rowSeparatorQueryRegex.FindStringSubmatch(query)
 	separator := "LF"
 	for i, name := range rowSeparatorQueryRegex.SubexpNames() {
-		if name == "RowSeparator" && len(r) >= i {
+		if name == ROW_SEPARATOR_PLACEHOLDER && len(r) >= i {
 			separator = r[i]
 		}
 	}
@@ -62,12 +73,17 @@ func GetRowSeparator(query string) string {
 	}
 }
 
+const FILE_PLACEHOLDER = "FilePlaceholder"
+
+var fileQueryRegex = regexp.MustCompile(`(?i)` + `FILE` + WHITESPACE +
+	QUOTE + namedGroup(FILE_PLACEHOLDER, `[a-zA-Z0-9:<> \\\/._-]+`) + QUOTE + ` ?`)
+
 func GetFilePaths(query string) ([]string, error) {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	var files []string
 	for _, matches := range r {
 		for i, name := range fileQueryRegex.SubexpNames() {
-			if name == "File" {
+			if name == FILE_PLACEHOLDER {
 				files = append(files, matches[i])
 			}
 		}
@@ -87,6 +103,9 @@ func OpenFile(path string) (*os.File, error) {
 }
 
 func UpdateImportQuery(query string, host string, port int) string {
+	if !IsImportQuery(query) {
+		return query
+	}
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	for i, matches := range r {
 		if i == 0 {

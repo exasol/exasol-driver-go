@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/exasol/error-reporting-go v0.2.0
-	github.com/exasol/exasol-test-setup-abstraction-server/go-client v0.3.3
+	github.com/exasol/exasol-test-setup-abstraction-server/go-client v0.3.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/goleak v1.2.1
@@ -18,5 +18,4 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/stretchr/objx v0.5.1 // indirect
-	golang.org/x/net v0.17.0 // indirect
 )

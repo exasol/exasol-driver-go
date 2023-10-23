@@ -19,7 +19,7 @@
 | golang.org/x/sync  | [BSD-3-Clause][6] |
 
 [0]: https://github.com/exasol/error-reporting-go/blob/v0.2.0/LICENSE
-[1]: https://github.com/exasol/exasol-test-setup-abstraction-server/blob/go-client/v0.3.3/go-client/LICENSE
+[1]: https://github.com/exasol/exasol-test-setup-abstraction-server/blob/go-client/v0.3.4/go-client/LICENSE
 [2]: https://github.com/gorilla/websocket/blob/v1.5.0/LICENSE
 [3]: https://github.com/stretchr/testify/blob/v1.8.4/LICENSE
 [4]: https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE
