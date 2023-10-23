@@ -35,15 +35,24 @@ func BoolToPtr(b bool) *bool {
 	return &b
 }
 
-var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM\s+LOCAL\s+CSV.*$`)
+const WHITESPACE = `\s+`
+
+var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE + `CSV.*$`)
 
 func IsImportQuery(query string) bool {
 	return localImportRegex.MatchString(query)
 }
 
 const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"
+const QUOTE = `["']`
 
-var rowSeparatorQueryRegex = regexp.MustCompile(fmt.Sprintf(`(?i)(ROW\s+SEPARATOR\s+=\s+(["|'])?(?P<%s>[a-zA-Z]+)(["|']?))`, ROW_SEPARATOR_PLACEHOLDER))
+func namedGroup(name, regexp string) string {
+	return fmt.Sprintf("(?P<%s>%s)", name, regexp)
+}
+
+var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)` +
+	`ROW` + WHITESPACE + `SEPARATOR` + WHITESPACE + `=` + WHITESPACE +
+	QUOTE + namedGroup(ROW_SEPARATOR_PLACEHOLDER, "[a-zA-Z]+") + QUOTE)
 
 func GetRowSeparator(query string) string {
 	r := rowSeparatorQueryRegex.FindStringSubmatch(query)
@@ -66,7 +75,8 @@ func GetRowSeparator(query string) string {
 
 const FILE_PLACEHOLDER = "FilePlaceholder"
 
-var fileQueryRegex = regexp.MustCompile(fmt.Sprintf(`(?i)(FILE\s+(["|'])?(?P<%s>[a-zA-Z0-9:<> \\\/._]+)(["|']? ?))`, FILE_PLACEHOLDER))
+var fileQueryRegex = regexp.MustCompile(`(?i)` + `FILE` + WHITESPACE +
+	QUOTE + namedGroup(FILE_PLACEHOLDER, `[a-zA-Z0-9:<> \\\/._-]+`) + QUOTE + ` ?`)
 
 func GetFilePaths(query string) ([]string, error) {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)

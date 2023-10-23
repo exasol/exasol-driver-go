@@ -121,6 +121,7 @@ func TestGetFilePaths(t *testing.T) {
 		{name: "Local Dir", paths: []string{"tab1_part1.csv", "tab1_part2.csv"}},
 		{name: "Windows paths", paths: []string{"C:\\Documents\\Newsletters\\Summer2018.csv", "\\Program Files\\Custom Utilities\\StringFinder.csv"}},
 		{name: "Unix paths", paths: []string{"/Users/User/Documents/Data/test.csv"}},
+		{name: "With dash", paths: []string{"/Users/User/Documents/Data/test-1.csv"}},
 	}
 
 	for _, quote := range quotes {
@@ -153,11 +154,13 @@ func TestGetRowSeparatorCompleteQuery(t *testing.T) {
 		{name: "CR", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CR'", expected: "\r"},
 		{name: "CRLF", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CRLF'", expected: "\r\n"},
 		{name: "only row separator fragment", query: "ROW SEPARATOR = 'CRLF'", expected: "\r\n"},
+		{name: "pipe as quote char not supported", query: "ROW SEPARATOR = |CRLF|", expected: "\n"},
 		{name: "unknown value returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'unknown'", expected: "\n"},
 		{name: "missing expression returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'", expected: "\n"},
 		{name: "trailing text", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CRLF' trailing text", expected: "\r\n"},
 		{name: "multiple spaces", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR \t = \t 'CRLF';", expected: "\r\n"},
 		{name: "no spaces returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR='CRLF';", expected: "\n"},
+		{name: "with line breaks", query: "IMPORT into table\nFROM LOCAL CSV file '/path/to/filename.csv'\nROW\r\nSEPARATOR = 'CRLF';", expected: "\r\n"},
 		{name: "unknown query returns default", query: "select * from table", expected: "\n"},
 	}
 	for _, test := range tests {
