@@ -53,6 +53,12 @@ func (suite *ConverterTestSuite) TestConvertQueryTimeout() {
 	suite.Equal(42, config.QueryTimeout)
 }
 
+func (suite *ConverterTestSuite) TestConvertUrlpath() {
+	config := suite.convert("exa:localhost:1234;urlpath=/v1/databases/db123/connect?ticket=123")
+	suite.Equal("/v1/databases/db123/connect?ticket=123", config.UrlPath)
+}
+
+
 func (suite *ConverterTestSuite) convert(dsnValue string) *config.Config {
 	config, err := dsn.ParseDSN(dsnValue)
 	suite.NoError(err)
