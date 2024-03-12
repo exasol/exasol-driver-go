@@ -39,7 +39,7 @@ func (c *Connection) Connect() error {
 		var targetUrl *url.URL
 
 		if len(c.Config.UrlPath) > 0 {
-			targetUrl, err = url.Parse(fmt.Sprintf("%s://%s%s", c.getURIScheme(), c.Config.Host, c.Config.UrlPath))
+			targetUrl, err = url.Parse(fmt.Sprintf("%s://%s:%d%s", c.getURIScheme(), c.Config.Host, c.Config.Port, c.Config.UrlPath))
 			if err != nil {
 				return err
 			}

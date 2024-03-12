@@ -115,7 +115,6 @@ func (c *DSNConfigBuilder) UrlPath(path string) *DSNConfigBuilder {
 	return c
 }
 
-
 // ResultSetMaxRows sets the maximum number of result set rows returned (default: 0, means no limit).
 func (c *DSNConfigBuilder) ResultSetMaxRows(maxRows int) *DSNConfigBuilder {
 	c.Config.ResultSetMaxRows = maxRows
@@ -176,7 +175,7 @@ func (c *DSNConfig) ToDSN() string {
 	if c.Schema != "" {
 		sb.WriteString(fmt.Sprintf("schema=%s;", c.Schema))
 	}
-	if (c.UrlPath != "") {
+	if c.UrlPath != "" {
 		sb.WriteString(fmt.Sprintf("urlpath=%s;", c.UrlPath))
 	}
 
@@ -231,7 +230,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		Params:                    map[string]string{},
 		FetchSize:                 2000,
 		QueryTimeout:              0,
-		UrlPath:				   "",
+		UrlPath:                   "",
 	}
 }
 
