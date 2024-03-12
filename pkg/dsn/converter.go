@@ -27,5 +27,6 @@ func ToInternalConfig(dsnConfig *DSNConfig) *config.Config {
 		Encryption:                *dsnConfig.Encryption,
 		ValidateServerCertificate: *dsnConfig.ValidateServerCertificate,
 		CertificateFingerprint:    dsnConfig.CertificateFingerprint,
+		UrlPath:				   dsnConfig.UrlPath,
 	}
 }

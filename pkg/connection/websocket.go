@@ -36,11 +36,20 @@ func (c *Connection) Connect() error {
 	utils.ShuffleHosts(hosts)
 
 	for _, host := range hosts {
-		url := url.URL{
-			Scheme: c.getURIScheme(),
-			Host:   fmt.Sprintf("%s:%d", host, c.Config.Port),
+		var targetUrl *url.URL
+
+		if len(c.Config.UrlPath) > 0 {
+			targetUrl, err = url.Parse(fmt.Sprintf("%s://%s%s", c.getURIScheme(), c.Config.Host, c.Config.UrlPath))
+			if err != nil {
+				return err
+			}
+		} else {
+			targetUrl = &url.URL{
+				Scheme: c.getURIScheme(),
+				Host:   fmt.Sprintf("%s:%d", host, c.Config.Port),
+			}
 		}
-		c.websocket, err = c.connectToHost(url)
+		c.websocket, err = c.connectToHost(*targetUrl)
 		if err == nil {
 			return nil
 		}

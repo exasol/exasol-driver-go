@@ -29,6 +29,7 @@ type DSNConfig struct {
 	Params                    map[string]string // Connection parameters
 	AccessToken               string            // Access token (alternative to username/password)
 	RefreshToken              string            // Refresh token (alternative to username/password)
+	UrlPath                   string            // If the connection is a Http connection RestApi, this is the path of the query
 }
 
 // DSNConfigBuilder is a builder for DSNConfig objects.
@@ -108,6 +109,13 @@ func (c *DSNConfigBuilder) Port(port int) *DSNConfigBuilder {
 	return c
 }
 
+// Host sets the path.
+func (c *DSNConfigBuilder) UrlPath(path string) *DSNConfigBuilder {
+	c.Config.UrlPath = path
+	return c
+}
+
+
 // ResultSetMaxRows sets the maximum number of result set rows returned (default: 0, means no limit).
 func (c *DSNConfigBuilder) ResultSetMaxRows(maxRows int) *DSNConfigBuilder {
 	c.Config.ResultSetMaxRows = maxRows
@@ -168,6 +176,10 @@ func (c *DSNConfig) ToDSN() string {
 	if c.Schema != "" {
 		sb.WriteString(fmt.Sprintf("schema=%s;", c.Schema))
 	}
+	if (c.UrlPath != "") {
+		sb.WriteString(fmt.Sprintf("urlpath=%s;", c.UrlPath))
+	}
+
 	return strings.TrimRight(sb.String(), ";")
 }
 
@@ -219,6 +231,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		Params:                    map[string]string{},
 		FetchSize:                 2000,
 		QueryTimeout:              0,
+		UrlPath:				   "",
 	}
 }
 
@@ -276,6 +289,8 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 				return nil, errors.NewInvalidConnectionStringInvalidIntParam("resultsetmaxrows", value)
 			}
 			config.ResultSetMaxRows = maxRowsValue
+		case "urlpath":
+			config.UrlPath = value
 		default:
 			config.Params[key] = unescape(value, ";")
 		}
