@@ -52,7 +52,7 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.host = connectionInfo.Host
 }
 
-func (suite *IntegrationTestSuite) TestConnect() {
+func (suite *IntegrationTestSuite) TestConnectWithDsn() {
 	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;validateservercertificate=0", suite.host, suite.port))
 	defer database.Close()
 	suite.assertQueryWorks(database)
@@ -73,7 +73,7 @@ func (suite *IntegrationTestSuite) TestConnectWithUrlPath() {
 	suite.assertQueryWorks(database)
 }
 
-func (suite *IntegrationTestSuite) TestConnection() {
+func (suite *IntegrationTestSuite) TestConnectionParameters() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	const wrongFingerprint = "wrongFingerprint"
 	const noError = ""
