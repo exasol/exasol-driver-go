@@ -235,3 +235,13 @@ func (suite *DsnTestSuite) TestParseValidDsnWithEscapedRefreshToken() {
 	suite.Equal(true, *dsn.Encryption)
 	suite.Equal(false, *dsn.Compression)
 }
+
+func (suite *DsnTestSuite) TestParseValidDsnWithUrlPath() {
+	dsn, err := ParseDSN(
+		`exa:localhost:1234;urlpath=/v1/databases/db123/connect?ticket=123;compression=0`)
+	suite.NoError(err)
+	suite.Equal("localhost", dsn.Host)
+	suite.Equal(1234, dsn.Port)
+	suite.Equal("/v1/databases/db123/connect?ticket=123", dsn.UrlPath)
+	suite.Equal(false, *dsn.Compression)
+}
