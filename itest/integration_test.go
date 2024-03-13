@@ -60,6 +60,14 @@ func (suite *IntegrationTestSuite) TestConnect() {
 	suite.Equal("2", columns[0])
 }
 
+func (suite *IntegrationTestSuite) TestConnectWithUrlPath() {
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Host(suite.host).Port(suite.port).UrlPath("/v1/databases/db123/connect?ticket=123").ValidateServerCertificate(false).String())
+	defer database.Close()
+	rows, _ := database.Query("SELECT 2 FROM DUAL")
+	columns, _ := rows.Columns()
+	suite.Equal("2", columns[0])
+}
+
 func (suite *IntegrationTestSuite) TestConnection() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	const wrongFingerprint = "wrongFingerprint"
