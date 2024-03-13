@@ -1,12 +1,30 @@
 # Exasol Driver go 1.0.5, released 2024-03-13
 
-Code name:
+Code name: Escape connection string
 
 ## Summary
 
+This release supports using `;` in the connection string. When using the builder like this, it will automatically escape the semicolon:
+
+```go
+connectionString := exasol.NewConfig("<username>", "<password>").
+                           Host("<host>").
+                           Port(8563).
+                           ClientName("My Client; Version abc").
+                           String()
+```
+
+When using the connection string directly, you need to escape `;` with a `\`:
+
+```go
+connectionString := `exa:localhost:1234;user=sys;password=exasol;clientname=My Client\; Version abc`
+```
+
+Additionally this release also support specifying an URL path when creating the WebSocket connection to the database. This is only required in special situations and should not be used when connecting to an Exasol database.
+
 ## Features
 
-* ISSUE_NUMBER: description
+* #103: Added support for URL Path when connecting
 
 ## Dependency Updates
 
