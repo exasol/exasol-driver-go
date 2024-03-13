@@ -135,6 +135,33 @@ func (suite *WebsocketTestSuite) TestSendFailsAtParsingResponseData() {
 	suite.EqualError(err, `failed to parse response data "\"invalid\"": json: cannot unmarshal string into Go value of type types.PublicKeyResponse`)
 }
 
+func (suite *WebsocketTestSuite) TestCreateURL() {
+	for i, testCase := range []struct {
+		description string
+		urlPath     string
+		expectedURL string
+	}{
+		{"empty url path", "", "ws://hostName:12345"},
+		{"url path with slash", "/", "ws://hostName:12345/"},
+		{"url path with leading slash", "/path", "ws://hostName:12345/path"},
+		{"url path without leading slash", "path", "ws://hostName:12345/path"},
+		{"url path with trailing slash", "path/", "ws://hostName:12345/path/"},
+		{"url path with leading and trailing slash", "/path/", "ws://hostName:12345/path/"},
+		{"url path with query", "path?query=1", "ws://hostName:12345/path?query=1"},
+		{"url with multiple query parameters", "path?query1=1&query2=2", "ws://hostName:12345/path?query1=1&query2=2"},
+		{"url path with query and fragment", "path?query=1#fragment", "ws://hostName:12345/path?query=1#fragment"},
+		{"url path with fragment", "path#fragment", "ws://hostName:12345/path#fragment"},
+	} {
+		suite.Run(fmt.Sprintf("Test%02d %s", i, testCase.description), func() {
+			connection := suite.createOpenConnection()
+			connection.Config.UrlPath = testCase.urlPath
+			url, err := connection.createURL("hostName")
+			suite.Assert().NoError(err)
+			suite.Equal(testCase.expectedURL, url.String())
+		})
+	}
+}
+
 func (suite *WebsocketTestSuite) createOpenConnection() *Connection {
 	conn := &Connection{
 		Config:    &config.Config{Host: "invalid", Port: 12345, User: "user", Password: "password", ApiVersion: 42},
