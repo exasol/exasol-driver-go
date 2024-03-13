@@ -55,17 +55,22 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 func (suite *IntegrationTestSuite) TestConnect() {
 	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;validateservercertificate=0", suite.host, suite.port))
 	defer database.Close()
-	rows, _ := database.Query("SELECT 2 FROM DUAL")
-	columns, _ := rows.Columns()
+	suite.assertQueryWorks(database)
+}
+
+func (suite *IntegrationTestSuite) assertQueryWorks(database *sql.DB) {
+	rows, err := database.Query("SELECT 2 FROM DUAL")
+	suite.NoError(err)
+	columns, err := rows.Columns()
+	suite.NoError(err)
 	suite.Equal("2", columns[0])
+	suite.assertSingleValueResult(rows, "2")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithUrlPath() {
 	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Host(suite.host).Port(suite.port).UrlPath("/v1/databases/db123/connect?ticket=123").ValidateServerCertificate(false).String())
 	defer database.Close()
-	rows, _ := database.Query("SELECT 2 FROM DUAL")
-	columns, _ := rows.Columns()
-	suite.Equal("2", columns[0])
+	suite.assertQueryWorks(database)
 }
 
 func (suite *IntegrationTestSuite) TestConnection() {
@@ -128,12 +133,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 			if testCase.expectedError == "" {
 				suite.NoError(err)
 				if err == nil {
-					rows, err := database.Query("SELECT 2 FROM DUAL")
-					suite.NoError(err)
-					columns, err := rows.Columns()
-					suite.NoError(err)
-					suite.Equal("2", columns[0])
-					suite.assertSingleValueResult(rows, "2")
+					suite.assertQueryWorks(database)
 				}
 			} else {
 				suite.Error(err)
