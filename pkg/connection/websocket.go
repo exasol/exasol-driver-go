@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 
 	"github.com/exasol/exasol-driver-go/internal/utils"
 	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
@@ -32,21 +33,27 @@ func (c *Connection) Connect() error {
 	if err != nil {
 		return err
 	}
-
 	utils.ShuffleHosts(hosts)
-
 	for _, host := range hosts {
-		url := url.URL{
-			Scheme: c.getURIScheme(),
-			Host:   fmt.Sprintf("%s:%d", host, c.Config.Port),
-			Path:   c.Config.UrlPath,
+		var url *url.URL
+		url, err = c.createURL(host)
+		if err != nil {
+			return err
 		}
-		c.websocket, err = c.connectToHost(url)
+		c.websocket, err = c.connectToHost(*url)
 		if err == nil {
 			return nil
 		}
 	}
 	return err
+}
+
+func (c *Connection) createURL(host string) (*url.URL, error) {
+	urlPath := c.Config.UrlPath
+	if len(urlPath) > 0 && !strings.HasPrefix(urlPath, "/") {
+		urlPath = "/" + urlPath
+	}
+	return url.Parse(fmt.Sprintf("%s://%s:%d%s", c.getURIScheme(), host, c.Config.Port, urlPath))
 }
 
 func (c *Connection) connectToHost(url url.URL) (wsconn.WebsocketConnection, error) {
