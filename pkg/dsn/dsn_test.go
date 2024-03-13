@@ -33,6 +33,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithoutParameters() {
 	suite.Equal(true, *dsn.Encryption)
 	suite.Equal(true, *dsn.ValidateServerCertificate)
 	suite.Equal("", dsn.CertificateFingerprint)
+	suite.Equal("", dsn.UrlPath)
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
@@ -48,6 +49,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 			"compression=1;" +
 			"resultsetmaxrows=100;" +
 			"certificatefingerprint=fingerprint;" +
+			"urlpath=/v1/databases/websocket?token=abc;" +
 			"mycustomparam=value")
 	suite.NoError(err)
 	suite.Equal("sys", dsn.User)
@@ -64,6 +66,7 @@ func (suite *DsnTestSuite) TestParseValidDsnWithParameters() {
 	suite.Equal(100, dsn.ResultSetMaxRows)
 	suite.Equal(false, *dsn.Encryption)
 	suite.Equal("fingerprint", dsn.CertificateFingerprint)
+	suite.Equal("/v1/databases/websocket?token=abc", dsn.UrlPath)
 	suite.Equal(map[string]string{"mycustomparam": "value"}, dsn.Params)
 }
 

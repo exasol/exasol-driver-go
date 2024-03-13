@@ -24,7 +24,7 @@ To use the Exasol Go Driver you need an Exasol database in the latest 7.1 or 8 v
 
 #### With Exasol Config
 
-We recommend using the provided builder to build a connection string:
+We recommend using the provided builder to build a connection string. The builder ensures all values are escaped properly.
 
 ```go
 package main
@@ -47,7 +47,7 @@ If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api
 
 #### With Exasol DSN
 
-There is also a way to build the connection string without the builder:
+You can also create a connection without the builder directly using a string:
 
 ```go
 package main
@@ -63,6 +63,8 @@ func main() {
     // ...
 }
 ```
+
+If a value in the connection string contains a `;` you need to escape it with `\;`. This ensures that the driver can parse the connection string as expected.
 
 ### Execute Statement
 
@@ -96,7 +98,7 @@ rows, err := preparedStatement.Query("Bob")
 
 ## Transaction Commit and Rollback
 
-To control a transaction state manually, you would need to disable autocommit (enabled by default):
+To control the transaction state manually, you need to disable autocommit (enabled by default):
 
 ```go
 database, err := sql.Open("exasol",
@@ -137,13 +139,12 @@ Use the sql driver to load data from one or more CSV files into your Exasol Data
 * Only import of CSV files is supported at the moment, FBV is not supported.
 * The `SECURE` option is not supported at the moment.
 
-
 ```go
 result, err := exasol.Exec(`
-IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv' 
- COLUMN SEPARATOR = ';' 
- ENCODING = 'UTF-8' 
- ROW SEPARATOR = 'LF'
+IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv'
+  COLUMN SEPARATOR = ';' 
+  ENCODING = 'UTF-8' 
+  ROW SEPARATOR = 'LF'
 `)
 ```
 
