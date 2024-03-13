@@ -47,7 +47,7 @@ If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api
 
 #### With Exasol DSN
 
-You can also create a connection without the builder directly using a string:
+You can also create a connection replacing the builder with a simple string:
 
 ```go
 package main
@@ -177,7 +177,7 @@ Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exaso
 
 ### Configuring TLS
 
-We recommend to always enable TLS encryption. This is on by default, but you can enable it explicitly via driver property `encryption=1` or `config.Encryption(true)`. Please note that starting with version 8, Exasol does not support unencrypted connections any more, so you can't use `encryption=0` or `config.Encryption(false)`.
+We recommend to always enable TLS encryption. This is on by default, but you can enable it explicitly via driver property `encryption=1` or `config.Encryption(true)`. Please note that starting with version 8, Exasol does not support unencrypted connections anymore, so you can't use `encryption=0` or `config.Encryption(false)`.
 
 There are two driver properties that control how TLS certificates are verified: `validateservercertificate` and `certificatefingerprint`. You have these three options depending on your setup:
 
