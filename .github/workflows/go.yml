@@ -9,43 +9,37 @@ jobs:
   build:
     strategy:
       matrix:
-        go: ["1.20", "1.21"]
-        db: ["7.1.23", "8.23.0"]
+        go: ["1.21", "1.22"]
+        db: ["7.1.25", "8.24.0"]
     env:
-      DEFAULT_GO: "1.21"
-      DEFAULT_DB: "8.23.0"
+      DEFAULT_GO: "1.22"
+      DEFAULT_DB: "8.24.0"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
     runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: "bash"
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ matrix.go }}
-        id: go
-
       - name: Check out code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - uses: actions/cache@v3
+      - name: Set up Go
+        id: go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ matrix.go }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ matrix.go }}
-            ${{ runner.os }}-go-
+          go-version: ${{ matrix.go }}
+          cache: true
 
       - name: Enable testcontainer reuse
         run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           version: latest
           skip-pkg-cache: true # Caching already done by actions/cache
