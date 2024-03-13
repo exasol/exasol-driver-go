@@ -29,6 +29,7 @@ type DSNConfig struct {
 	Params                    map[string]string // Connection parameters
 	AccessToken               string            // Access token (alternative to username/password)
 	RefreshToken              string            // Refresh token (alternative to username/password)
+	UrlPath                   string            // If the connection is a Http connection RestApi, this is the path of the query
 }
 
 // DSNConfigBuilder is a builder for DSNConfig objects.
@@ -108,6 +109,12 @@ func (c *DSNConfigBuilder) Port(port int) *DSNConfigBuilder {
 	return c
 }
 
+// UrlPath sets the URL path for the WebSocket connection. Use this only in special cases.
+func (c *DSNConfigBuilder) UrlPath(path string) *DSNConfigBuilder {
+	c.Config.UrlPath = path
+	return c
+}
+
 // ResultSetMaxRows sets the maximum number of result set rows returned (default: 0, means no limit).
 func (c *DSNConfigBuilder) ResultSetMaxRows(maxRows int) *DSNConfigBuilder {
 	c.Config.ResultSetMaxRows = maxRows
@@ -131,11 +138,11 @@ func (c *DSNConfig) ToDSN() string {
 	sb.WriteString(fmt.Sprintf("exa:%s:%d;", c.Host, c.Port))
 
 	if c.AccessToken != "" {
-		sb.WriteString(fmt.Sprintf("accesstoken=%s;", c.AccessToken))
+		sb.WriteString(fmt.Sprintf("accesstoken=%s;", escapeDsnParamValue(c.AccessToken)))
 	} else if c.RefreshToken != "" {
-		sb.WriteString(fmt.Sprintf("refreshtoken=%s;", c.RefreshToken))
+		sb.WriteString(fmt.Sprintf("refreshtoken=%s;", escapeDsnParamValue(c.RefreshToken)))
 	} else {
-		sb.WriteString(fmt.Sprintf("user=%s;password=%s;", c.User, c.Password))
+		sb.WriteString(fmt.Sprintf("user=%s;password=%s;", escapeDsnParamValue(c.User), escapeDsnParamValue(c.Password)))
 	}
 
 	if c.Autocommit != nil {
@@ -151,7 +158,7 @@ func (c *DSNConfig) ToDSN() string {
 		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", utils.BoolToInt(*c.ValidateServerCertificate)))
 	}
 	if c.CertificateFingerprint != "" {
-		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", c.CertificateFingerprint))
+		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", escapeDsnParamValue(c.CertificateFingerprint)))
 	}
 	if c.FetchSize != 0 {
 		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.FetchSize))
@@ -160,14 +167,18 @@ func (c *DSNConfig) ToDSN() string {
 		sb.WriteString(fmt.Sprintf("querytimeout=%d;", c.QueryTimeout))
 	}
 	if c.ClientName != "" {
-		sb.WriteString(fmt.Sprintf("clientname=%s;", c.ClientName))
+		sb.WriteString(fmt.Sprintf("clientname=%s;", escapeDsnParamValue(c.ClientName)))
 	}
 	if c.ClientVersion != "" {
-		sb.WriteString(fmt.Sprintf("clientversion=%s;", c.ClientVersion))
+		sb.WriteString(fmt.Sprintf("clientversion=%s;", escapeDsnParamValue(c.ClientVersion)))
 	}
 	if c.Schema != "" {
-		sb.WriteString(fmt.Sprintf("schema=%s;", c.Schema))
+		sb.WriteString(fmt.Sprintf("schema=%s;", escapeDsnParamValue(c.Schema)))
 	}
+	if c.UrlPath != "" {
+		sb.WriteString(fmt.Sprintf("urlpath=%s;", escapeDsnParamValue(c.UrlPath)))
+	}
+
 	return strings.TrimRight(sb.String(), ";")
 }
 
@@ -219,6 +230,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		Params:                    map[string]string{},
 		FetchSize:                 2000,
 		QueryTimeout:              0,
+		UrlPath:                   "",
 	}
 }
 
@@ -235,13 +247,13 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 
 		switch key {
 		case "password":
-			config.Password = unescape(value, ";")
+			config.Password = unescapeDsnParamValue(value)
 		case "accesstoken":
-			config.AccessToken = unescape(value, ";")
+			config.AccessToken = unescapeDsnParamValue(value)
 		case "refreshtoken":
-			config.RefreshToken = unescape(value, ";")
+			config.RefreshToken = unescapeDsnParamValue(value)
 		case "user":
-			config.User = unescape(value, ";")
+			config.User = unescapeDsnParamValue(value)
 		case "autocommit":
 			config.Autocommit = utils.BoolToPtr(value == "1")
 		case "encryption":
@@ -249,15 +261,15 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 		case "validateservercertificate":
 			config.ValidateServerCertificate = utils.BoolToPtr(value != "0")
 		case "certificatefingerprint":
-			config.CertificateFingerprint = value
+			config.CertificateFingerprint = unescapeDsnParamValue(value)
 		case "compression":
 			config.Compression = utils.BoolToPtr(value == "1")
 		case "clientname":
-			config.ClientName = value
+			config.ClientName = unescapeDsnParamValue(value)
 		case "clientversion":
-			config.ClientVersion = value
+			config.ClientVersion = unescapeDsnParamValue(value)
 		case "schema":
-			config.Schema = value
+			config.Schema = unescapeDsnParamValue(value)
 		case "fetchsize":
 			fetchSizeValue, err := strconv.Atoi(value)
 			if err != nil {
@@ -276,8 +288,10 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 				return nil, errors.NewInvalidConnectionStringInvalidIntParam("resultsetmaxrows", value)
 			}
 			config.ResultSetMaxRows = maxRowsValue
+		case "urlpath":
+			config.UrlPath = unescapeDsnParamValue(value)
 		default:
-			config.Params[key] = unescape(value, ";")
+			config.Params[key] = unescapeDsnParamValue(value)
 		}
 	}
 	return config, nil
@@ -294,6 +308,18 @@ func extractParameters(parametersString string) []string {
 	return splitted
 }
 
+func unescapeDsnParamValue(value string) string {
+	return unescape(value, ";")
+}
+
+func escapeDsnParamValue(value string) string {
+	return escape(value, ";")
+}
+
 func unescape(s, char string) string {
 	return strings.ReplaceAll(s, `\`+char, char)
+}
+
+func escape(s, char string) string {
+	return strings.ReplaceAll(s, char, `\`+char)
 }

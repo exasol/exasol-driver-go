@@ -52,15 +52,28 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.host = connectionInfo.Host
 }
 
-func (suite *IntegrationTestSuite) TestConnect() {
+func (suite *IntegrationTestSuite) TestConnectWithDsn() {
 	database, _ := sql.Open("exasol", fmt.Sprintf("exa:%s:%d;user=sys;password=exasol;validateservercertificate=0", suite.host, suite.port))
 	defer database.Close()
-	rows, _ := database.Query("SELECT 2 FROM DUAL")
-	columns, _ := rows.Columns()
-	suite.Equal("2", columns[0])
+	suite.assertQueryWorks(database)
 }
 
-func (suite *IntegrationTestSuite) TestConnection() {
+func (suite *IntegrationTestSuite) assertQueryWorks(database *sql.DB) {
+	rows, err := database.Query("SELECT 2 FROM DUAL")
+	suite.NoError(err)
+	columns, err := rows.Columns()
+	suite.NoError(err)
+	suite.Equal("2", columns[0])
+	suite.assertSingleValueResult(rows, "2")
+}
+
+func (suite *IntegrationTestSuite) TestConnectWithUrlPath() {
+	database, _ := sql.Open("exasol", exasol.NewConfig("sys", "exasol").Host(suite.host).Port(suite.port).UrlPath("/v1/databases/db123/connect?ticket=123").ValidateServerCertificate(false).String())
+	defer database.Close()
+	suite.assertQueryWorks(database)
+}
+
+func (suite *IntegrationTestSuite) TestConnectionParameters() {
 	actualFingerprint := suite.getActualCertificateFingerprint()
 	const wrongFingerprint = "wrongFingerprint"
 	const noError = ""
@@ -120,12 +133,7 @@ func (suite *IntegrationTestSuite) TestConnection() {
 			if testCase.expectedError == "" {
 				suite.NoError(err)
 				if err == nil {
-					rows, err := database.Query("SELECT 2 FROM DUAL")
-					suite.NoError(err)
-					columns, err := rows.Columns()
-					suite.NoError(err)
-					suite.Equal("2", columns[0])
-					suite.assertSingleValueResult(rows, "2")
+					suite.assertQueryWorks(database)
 				}
 			} else {
 				suite.Error(err)

@@ -20,4 +20,5 @@ type Config struct {
 	Encryption                bool
 	ValidateServerCertificate bool
 	CertificateFingerprint    string
+	UrlPath                   string
 }

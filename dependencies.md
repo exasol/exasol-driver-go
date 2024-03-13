@@ -7,7 +7,7 @@
 | ---------------------------------------------------------------- | ----------------- |
 | github.com/exasol/error-reporting-go                             | [MIT][0]          |
 | github.com/exasol/exasol-test-setup-abstraction-server/go-client | [MIT][1]          |
-| github.com/gorilla/websocket                                     | [BSD-2-Clause][2] |
+| github.com/gorilla/websocket                                     | [BSD-3-Clause][2] |
 | github.com/stretchr/testify                                      | [MIT][3]          |
 | gopkg.in/yaml.v3                                                 | [MIT][4]          |
 
@@ -19,9 +19,9 @@
 | golang.org/x/sync  | [BSD-3-Clause][6] |
 
 [0]: https://github.com/exasol/error-reporting-go/blob/v0.2.0/LICENSE
-[1]: https://github.com/exasol/exasol-test-setup-abstraction-server/blob/go-client/v0.3.4/go-client/LICENSE
-[2]: https://github.com/gorilla/websocket/blob/v1.5.0/LICENSE
-[3]: https://github.com/stretchr/testify/blob/v1.8.4/LICENSE
+[1]: https://github.com/exasol/exasol-test-setup-abstraction-server/blob/go-client/v0.3.6/go-client/LICENSE
+[2]: https://github.com/gorilla/websocket/blob/v1.5.1/LICENSE
+[3]: https://github.com/stretchr/testify/blob/v1.9.0/LICENSE
 [4]: https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE
 [5]: https://github.com/uber-go/goleak/blob/HEAD/LICENSE
-[6]: https://cs.opensource.google/go/x/sync/+/v0.4.0:LICENSE
+[6]: https://cs.opensource.google/go/x/sync/+/v0.6.0:LICENSE

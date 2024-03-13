@@ -39,6 +39,7 @@ func (c *Connection) Connect() error {
 		url := url.URL{
 			Scheme: c.getURIScheme(),
 			Host:   fmt.Sprintf("%s:%d", host, c.Config.Port),
+			Path:   c.Config.UrlPath,
 		}
 		c.websocket, err = c.connectToHost(url)
 		if err == nil {
