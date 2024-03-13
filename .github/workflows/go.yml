@@ -1,12 +1,11 @@
 name: Go
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
   pull_request:
 
 jobs:
-  build:
+  matrix-build:
     strategy:
       matrix:
         go: ["1.21", "1.22"]
@@ -35,15 +34,15 @@ jobs:
           go-version: ${{ matrix.go }}
           cache: true
 
-      - name: Enable testcontainer reuse
-        run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
           version: v1.56.2
           skip-pkg-cache: true # Caching already done by actions/cache
           skip-build-cache: true
+
+      - name: Enable testcontainer reuse
+        run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
 
       - name: Go build
         run: |
@@ -65,3 +64,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build:
+    needs: matrix-build
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Build successful"
