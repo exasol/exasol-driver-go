@@ -34,9 +34,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.22"
           cache-dependency-path: |
-            go.sum
+            **/go.sum
             .github/workflows/project-keeper-verify.yml
             .github/workflows/project-keeper.sh
 
