@@ -12,6 +12,8 @@ Fixed CVEs:
 
 * #18: Updated dependencies and fixed vulnerability
 
+## Dependency Updates
+
 ### Test Dependency Updates
 
 * Updated `golang.org/x/sync:v0.6.0` to `v0.7.0`
