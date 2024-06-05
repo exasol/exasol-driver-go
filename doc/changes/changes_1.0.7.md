@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.7, released 2024-06-05
+# Exasol Driver go 1.0.7, released 2024-06-06
 
 Code name: Fix vulnerability CVE-2023-45288
 
