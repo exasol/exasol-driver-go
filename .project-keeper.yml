@@ -2,3 +2,5 @@ sources:
   - type: golang
     path: go.mod
 version: 1.0.7
+excludes:
+- "E-PK-CORE-26: 'release_config.yml' exists but must not exist. Reason: Release-droid configuration is replaced by release.yml"
