@@ -10,7 +10,7 @@ Fixed CVEs:
 
 ## Security
 
-* #18: Updated dependencies and fixed vulnerability
+* #106: Updated dependencies and fixed vulnerability
 
 ## Dependency Updates
 
