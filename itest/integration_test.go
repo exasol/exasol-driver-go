@@ -229,7 +229,8 @@ var dereferenceFloat64 = func(v any) any { return *(v.(*float64)) }
 var dereferenceInt64 = func(v any) any { return *(v.(*int64)) }
 var dereferenceInt = func(v any) any { return *(v.(*int)) }
 var dereferenceBool = func(v any) any { return *(v.(*bool)) }
-var dereferenceTime = func(v any) any { return *(v.(*time.Time)) }
+
+//var dereferenceTime = func(v any) any { return *(v.(*time.Time)) }
 
 func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 	for i, testCase := range []struct {
