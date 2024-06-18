@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"net/url"
 
 	exaerror "github.com/exasol/error-reporting-go"
@@ -145,6 +146,14 @@ func NewWebsocketNotConnected(request interface{}) DriverErr {
 	return NewDriverErr(exaerror.New("E-EGOD-29").
 		Message("could not send request {{request}}: not connected to server").
 		Parameter("request", request))
+}
+
+func NewInvalidArgType(value interface{}, expectedType string) DriverErr {
+	return NewDriverErr(exaerror.New("E-EGOD-30").
+		Message("cannot convert argument {{value}} of type {{type}} to {{expected type}} type").
+		Parameter("value", value).
+		Parameter("type", fmt.Sprintf("%T", value)).
+		Parameter(("expected type"), expectedType))
 }
 
 // DriverErr This type represents an error that can occur when working with a database connection.

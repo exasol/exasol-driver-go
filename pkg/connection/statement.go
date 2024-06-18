@@ -83,10 +83,16 @@ func (s *Statement) executePreparedStatement(ctx context.Context, args []driver.
 
 	data := make([][]interface{}, len(columns))
 	for i, arg := range args {
-		if data[i%len(columns)] == nil {
-			data[i%len(columns)] = make([]interface{}, 0)
+		col := i % len(columns)
+		colType := columns[col]
+		if data[col] == nil {
+			data[col] = make([]interface{}, 0)
 		}
-		data[i%len(columns)] = append(data[i%len(columns)], arg)
+		convertedArg, err := convertArg(arg, colType.DataType)
+		if err != nil {
+			return nil, err
+		}
+		data[col] = append(data[col], convertedArg)
 	}
 
 	command := &types.ExecutePreparedStatementCommand{
