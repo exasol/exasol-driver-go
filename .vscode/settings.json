@@ -1,19 +1,23 @@
 {
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit",
-    "source.generate.finalModifiers": "explicit",
-    "source.fixAll": "explicit"
-  },
-  "go.testTimeout": "240s",
-  "go.testFlags": ["-p", "1", "-v"],
-  "go.coverOnSingleTest": true,
-  "go.coverOnSingleTestFile": true,
-  "go.coverOnTestPackage": true,
-  "go.lintOnSave": "workspace",
-  "go.lintTool": "golangci-lint",
-  "sonarlint.connectedMode.project": {
-    "connectionId": "exasol",
-    "projectKey": "com.exasol:exasol-driver-go"
-  }
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.generate.finalModifiers": "explicit",
+        "source.fixAll": "explicit"
+    },
+    "go.testTimeout": "240s",
+    "go.testFlags": [
+        "-p",
+        "1",
+        "-v"
+    ],
+    "go.coverOnSingleTest": true,
+    "go.coverOnSingleTestFile": true,
+    "go.coverOnTestPackage": true,
+    "go.lintOnSave": "workspace",
+    "go.lintTool": "golangci-lint",
+    "sonarlint.connectedMode.project": {
+        "connectionId": "exasol",
+        "projectKey": "com.exasol:exasol-driver-go"
+    }
 }

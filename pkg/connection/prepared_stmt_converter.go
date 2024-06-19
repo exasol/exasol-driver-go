@@ -16,8 +16,17 @@ func convertArg(arg driver.Value, colType types.SqlQueryColumnType) (interface{}
 		if intArg, ok := arg.(int64); ok {
 			return jsonDoubleValue(float64(intArg)), nil
 		}
+		if intArg, ok := arg.(int32); ok {
+			return jsonDoubleValue(float64(intArg)), nil
+		}
+		if intArg, ok := arg.(int); ok {
+			return jsonDoubleValue(float64(intArg)), nil
+		}
 		if floatArg, ok := arg.(float64); ok {
 			return jsonDoubleValue(floatArg), nil
+		}
+		if floatArg, ok := arg.(float32); ok {
+			return jsonDoubleValue(float64(floatArg)), nil
 		}
 		return nil, errors.NewInvalidArgType(arg, dataType)
 	}
@@ -26,6 +35,7 @@ func convertArg(arg driver.Value, colType types.SqlQueryColumnType) (interface{}
 			return jsonTimestampValue(timeArg), nil
 		}
 		if stringArg, ok := arg.(string); ok {
+			// We assume strings are already formatted correctly
 			return stringArg, nil
 		}
 		return nil, errors.NewInvalidArgType(arg, dataType)
@@ -35,13 +45,8 @@ func convertArg(arg driver.Value, colType types.SqlQueryColumnType) (interface{}
 			return jsonDateValue(timeArg), nil
 		}
 		if stringArg, ok := arg.(string); ok {
+			// We assume strings are already formatted correctly
 			return stringArg, nil
-		}
-		return nil, errors.NewInvalidArgType(arg, dataType)
-	}
-	if dataType == "BOOLEAN" {
-		if boolArg, ok := arg.(bool); ok {
-			return boolArg, nil
 		}
 		return nil, errors.NewInvalidArgType(arg, dataType)
 	}
