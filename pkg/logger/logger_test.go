@@ -32,3 +32,22 @@ func TestErrorsSetLogger(t *testing.T) {
 func TestLoggerIsNil(t *testing.T) {
 	assert.EqualError(t, SetLogger(nil), "E-EGOD-8: logger is nil")
 }
+
+func TestSetTraceLogger(t *testing.T) {
+	// set up logger
+	buffer := bytes.NewBuffer(make([]byte, 0, 64))
+	logger := log.New(buffer, "prefix: ", 0)
+
+	SetTraceLogger(logger)
+	defer SetTraceLogger(nil)
+	TraceLogger.Print("test")
+	const expected = "prefix: test\n"
+	if actual := buffer.String(); actual != expected {
+		t.Errorf("expected %q, got %q", expected, actual)
+	}
+}
+
+func TestDefaultTraceLogger(t *testing.T) {
+	TraceLogger.Print("ignored")
+	TraceLogger.Print("ignored %s", "arg")
+}

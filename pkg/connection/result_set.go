@@ -101,17 +101,11 @@ func (results *QueryResults) Next(dest []driver.Value) error {
 	}
 
 	for i := range dest {
-		dataType := results.data.Columns[i].DataType
-		value := results.data.Data[i][results.rowPointer]
-		dest[i] = convertResultSetValue(dataType, value)
+		dest[i] = results.data.Data[i][results.rowPointer]
 	}
 
 	results.rowPointer = results.rowPointer + 1
 	results.totalRowPointer = results.totalRowPointer + 1
 
 	return nil
-}
-
-func convertResultSetValue(dataType types.SqlQueryColumnType, value any) driver.Value {
-	return value
 }
