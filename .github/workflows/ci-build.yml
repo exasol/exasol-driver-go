@@ -65,6 +65,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: Run vulnerability check
+        if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck -version
+          govulncheck -format text -mode source -scan symbol -show verbose -test ./...
+
   build:
     needs: matrix-build
     runs-on: ubuntu-latest
