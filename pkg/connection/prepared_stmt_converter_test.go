@@ -11,7 +11,6 @@ import (
 )
 
 func TestConvertArgs(t *testing.T) {
-
 	berlinTimeZone, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
 		t.Errorf("Error loading Berlin timezone: %v", err)
