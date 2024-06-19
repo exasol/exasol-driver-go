@@ -224,6 +224,179 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	suite.assertSingleValueResult(rows, "15")
 }
 
+var dereferenceString = func(v any) any { return *(v.(*string)) }
+var dereferenceFloat64 = func(v any) any { return *(v.(*float64)) }
+var dereferenceInt64 = func(v any) any { return *(v.(*int64)) }
+var dereferenceInt = func(v any) any { return *(v.(*int)) }
+var dereferenceBool = func(v any) any { return *(v.(*bool)) }
+
+func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
+	for i, testCase := range []struct {
+		testDescription string
+		sqlValue        string
+		sqlType         string
+		scanDest        any
+		expectedValue   any
+		dereference     func(any) any
+	}{
+		{"decimal to int64", "1", "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
+		{"decimal to int", "1", "DECIMAL(18,0)", new(int), 1, dereferenceInt},
+		{"decimal to float", "1", "DECIMAL(18,0)", new(float64), 1.0, dereferenceFloat64},
+		{"decimal to string", "1", "DECIMAL(18,0)", new(string), "1", dereferenceString},
+		{"decimal to float64", "2.2", "DECIMAL(18,2)", new(float64), 2.2, dereferenceFloat64},
+		{"decimal to string", "2.2", "DECIMAL(18,2)", new(string), "2.2", dereferenceString},
+		{"double to float64", "3.3", "DOUBLE PRECISION", new(float64), 3.3, dereferenceFloat64},
+		{"double to string", "3.3", "DOUBLE PRECISION", new(string), "3.3", dereferenceString},
+		{"varchar to string", "'text'", "VARCHAR(10)", new(string), "text", dereferenceString},
+		{"char to string", "'text'", "CHAR(10)", new(string), "text      ", dereferenceString},
+		{"date to string", "'2024-06-18'", "DATE", new(string), "2024-06-18", dereferenceString},
+		{"timestamp to string", "'2024-06-18 17:22:13.123456'", "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
+		{"timestamp with local time zone to string", "'2024-06-18 17:22:13.123456'", "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
+		{"geometry to string", "'point(1 2)'", "GEOMETRY", new(string), "POINT (1 2)", dereferenceString},
+		{"interval ytm to string", "'5-3'", "INTERVAL YEAR TO MONTH", new(string), "+05-03", dereferenceString},
+		{"interval dts to string", "'2 12:50:10.123'", "INTERVAL DAY TO SECOND", new(string), "+02 12:50:10.123", dereferenceString},
+		{"hashtype to string", "'550e8400-e29b-11d4-a716-446655440000'", "HASHTYPE", new(string), "550e8400e29b11d4a716446655440000", dereferenceString},
+		{"bool to bool", "true", "BOOLEAN", new(bool), true, dereferenceBool},
+		{"bool to string", "false", "BOOLEAN", new(string), "false", dereferenceString},
+	} {
+		database := suite.openConnection(suite.createDefaultConfig())
+		defer database.Close()
+		suite.Run(fmt.Sprintf("Cast Test %02d %s: %s", i, testCase.testDescription, testCase.sqlType), func() {
+			rows, err := database.Query(fmt.Sprintf("SELECT CAST(%s AS %s)", testCase.sqlValue, testCase.sqlType))
+			onError(err)
+			defer rows.Close()
+			suite.True(rows.Next(), "should have one row")
+			onError(rows.Scan(testCase.scanDest))
+			val := testCase.scanDest
+			suite.Equal(testCase.expectedValue, testCase.dereference(val))
+		})
+	}
+}
+
+func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
+	for i, testCase := range []struct {
+		sqlValue      any
+		sqlType       string
+		scanDest      any
+		expectedValue any
+		dereference   func(any) any
+	}{
+		{1, "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
+		{1.1, "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
+		{1, "DECIMAL(18,0)", new(int), 1, dereferenceInt},
+		{1, "DECIMAL(18,0)", new(float64), 1.0, dereferenceFloat64},
+		{2.2, "DECIMAL(18,2)", new(float64), 2.2, dereferenceFloat64},
+		{2, "DECIMAL(18,2)", new(float64), 2.0, dereferenceFloat64},
+		{3.3, "DOUBLE PRECISION", new(float64), 3.3, dereferenceFloat64},
+		{3, "DOUBLE PRECISION", new(float64), 3.0, dereferenceFloat64},
+		{"text", "VARCHAR(10)", new(string), "text", dereferenceString},
+		{"text", "CHAR(10)", new(string), "text      ", dereferenceString},
+		{"2024-06-18", "DATE", new(string), "2024-06-18", dereferenceString},
+		{time.Date(2024, time.June, 18, 0, 0, 0, 0, time.UTC), "DATE", new(string), "2024-06-18", dereferenceString},
+		{"2024-06-18 17:22:13.123456", "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
+		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
+		{"2024-06-18 17:22:13.123456", "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
+		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
+		{"point(1 2)", "GEOMETRY", new(string), "POINT (1 2)", dereferenceString},
+		{"5-3", "INTERVAL YEAR TO MONTH", new(string), "+05-03", dereferenceString},
+		{"2 12:50:10.123", "INTERVAL DAY TO SECOND", new(string), "+02 12:50:10.123", dereferenceString},
+		{"550e8400-e29b-11d4-a716-446655440000", "HASHTYPE", new(string), "550e8400e29b11d4a716446655440000", dereferenceString},
+		{true, "BOOLEAN", new(bool), true, dereferenceBool},
+	} {
+		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
+		schemaName := "DATATYPE_TEST"
+		_, err := database.Exec("CREATE SCHEMA " + schemaName)
+		onError(err)
+		defer suite.cleanup(database, schemaName)
+
+		suite.Run(fmt.Sprintf("%02d Column type %s accepts values of type %T", i, testCase.sqlType, testCase.sqlValue), func() {
+			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
+			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
+			onError(err)
+			stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
+			onError(err)
+			_, err = stmt.Exec(testCase.sqlValue)
+			onError(err)
+			rows, err := database.Query(fmt.Sprintf("select * from %s", tableName))
+			onError(err)
+			defer rows.Close()
+			suite.True(rows.Next(), "should have one row")
+			onError(rows.Scan(testCase.scanDest))
+			val := testCase.scanDest
+			suite.Equal(testCase.expectedValue, testCase.dereference(val))
+		})
+	}
+}
+
+func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
+	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
+	schemaName := "DATATYPE_TEST"
+	_, err := database.Exec("CREATE SCHEMA " + schemaName)
+	onError(err)
+	defer suite.cleanup(database, schemaName)
+
+	tableName := fmt.Sprintf("%s.TAB", schemaName)
+	_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col TIMESTAMP)", tableName))
+	onError(err)
+	stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
+	onError(err)
+	_, err = stmt.Exec(true)
+	suite.EqualError(err, "E-EGOD-30: cannot convert argument 'true' of type 'bool' to 'TIMESTAMP' type")
+}
+
+func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
+	for i, testCase := range []struct {
+		testDescription string
+		sqlValue        any
+		sqlType         string
+		scanDest        any
+		expectedError   string
+	}{
+		{"timestamp", time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(time.Time), `sql: Scan error on column index 0, name "COL": unsupported Scan, storing driver.Value type string into type *time.Time`},
+		{"timestamp with local time zone", time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(time.Time), `sql: Scan error on column index 0, name "COL": unsupported Scan, storing driver.Value type string into type *time.Time`},
+	} {
+		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
+		schemaName := "DATATYPE_TEST"
+		_, err := database.Exec("CREATE SCHEMA " + schemaName)
+		onError(err)
+		defer suite.cleanup(database, schemaName)
+
+		suite.Run(fmt.Sprintf("Scan fails %02d %s: %s", i, testCase.testDescription, testCase.sqlType), func() {
+			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
+			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
+			onError(err)
+			stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
+			onError(err)
+			_, err = stmt.Exec(testCase.sqlValue)
+			onError(err)
+			rows, err := database.Query(fmt.Sprintf("select * from %s", tableName))
+			onError(err)
+			defer rows.Close()
+			suite.True(rows.Next(), "should have one row")
+			err = rows.Scan(testCase.scanDest)
+			suite.EqualError(err, testCase.expectedError)
+		})
+	}
+}
+
+// https://github.com/exasol/exasol-driver-go/issues/108
+func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	schemaName := "TEST_SCHEMA_3"
+	_, err := database.Exec("CREATE SCHEMA " + schemaName)
+	onError(err)
+	_, err = database.Exec(fmt.Sprintf("create or replace table %s.dummy (a integer, b float)", schemaName))
+	onError(err)
+	defer suite.cleanup(database, schemaName)
+	stmt, err := database.Prepare(fmt.Sprintf("insert into %s.dummy values(?,?)", schemaName))
+	onError(err)
+	_, err = stmt.Exec(1, 2)
+	onError(err)
+	rows, err := database.Query(fmt.Sprintf("select a || ':' || b from %s.dummy", schemaName))
+	onError(err)
+	suite.assertSingleValueResult(rows, "1:2")
+}
+
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3_2"

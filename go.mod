@@ -4,8 +4,8 @@ go 1.21
 
 require (
 	github.com/exasol/error-reporting-go v0.2.0
-	github.com/exasol/exasol-test-setup-abstraction-server/go-client v0.3.6
-	github.com/gorilla/websocket v1.5.1
+	github.com/exasol/exasol-test-setup-abstraction-server/go-client v0.3.9
+	github.com/gorilla/websocket v1.5.3
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/sync v0.7.0

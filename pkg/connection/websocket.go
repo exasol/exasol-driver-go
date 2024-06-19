@@ -91,6 +91,7 @@ func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, er
 		logger.ErrorLogger.Print(errors.NewMarshallingError(request, err))
 		return nil, driver.ErrBadConn
 	}
+	logger.TraceLogger.Printf("Sending message: %s", message)
 
 	messageType := websocket.TextMessage
 	if c.Config.Compression {

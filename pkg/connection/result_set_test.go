@@ -160,3 +160,9 @@ func (suite *ResultSetTestSuite) TestNextPointerDoesNotMatch() {
 	queryResults := QueryResults{data: &data, totalRowPointer: 2}
 	suite.EqualError(queryResults.Next(nil), "EOF")
 }
+
+func (suite *ResultSetTestSuite) TestCloseIgnoresResultHandleZero() {
+	data := types.SqlQueryResponseResultSetData{NumRows: 1, ResultSetHandle: 0}
+	queryResults := QueryResults{data: &data, totalRowPointer: 2}
+	suite.NoError(queryResults.Close())
+}
