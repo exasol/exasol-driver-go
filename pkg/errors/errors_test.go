@@ -100,3 +100,7 @@ func (suite *ErrorsTestSuite) TestLogJsonDecodingError() {
 func (suite *ErrorsTestSuite) TestNewInvalidConnectionStringInvalidPort() {
 	suite.EqualError(NewInvalidConnectionStringInvalidPort("port"), "E-EGOD-23: invalid `port` value 'port', numeric port expected")
 }
+
+func (suite *ErrorsTestSuite) TestNewInvalidArgType() {
+	suite.EqualError(NewInvalidArgType("arg", "expected Type"), "E-EGOD-30: cannot convert argument 'arg' of type 'string' to 'expected Type' type")
+}

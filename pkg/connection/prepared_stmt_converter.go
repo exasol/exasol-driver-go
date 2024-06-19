@@ -12,45 +12,46 @@ import (
 
 func convertArg(arg driver.Value, colType types.SqlQueryColumnType) (interface{}, error) {
 	dataType := colType.Type
-	if dataType == "DOUBLE" {
-		if intArg, ok := arg.(int64); ok {
-			return jsonDoubleValue(float64(intArg)), nil
+	switch dataType {
+	case "DOUBLE":
+		switch arg := arg.(type) {
+		case int:
+			return jsonDoubleValue(float64(arg)), nil
+		case int32:
+			return jsonDoubleValue(float64(arg)), nil
+		case int64:
+			return jsonDoubleValue(float64(arg)), nil
+		case float32:
+			return jsonDoubleValue(float64(arg)), nil
+		case float64:
+			return jsonDoubleValue(arg), nil
+		default:
+			return nil, errors.NewInvalidArgType(arg, dataType)
 		}
-		if intArg, ok := arg.(int32); ok {
-			return jsonDoubleValue(float64(intArg)), nil
-		}
-		if intArg, ok := arg.(int); ok {
-			return jsonDoubleValue(float64(intArg)), nil
-		}
-		if floatArg, ok := arg.(float64); ok {
-			return jsonDoubleValue(floatArg), nil
-		}
-		if floatArg, ok := arg.(float32); ok {
-			return jsonDoubleValue(float64(floatArg)), nil
-		}
-		return nil, errors.NewInvalidArgType(arg, dataType)
-	}
-	if dataType == "TIMESTAMP" || dataType == "TIMESTAMP WITH LOCAL TIME ZONE" {
-		if timeArg, ok := arg.(time.Time); ok {
-			return jsonTimestampValue(timeArg), nil
-		}
-		if stringArg, ok := arg.(string); ok {
+	case "TIMESTAMP", "TIMESTAMP WITH LOCAL TIME ZONE":
+		switch arg := arg.(type) {
+		case time.Time:
+			return jsonTimestampValue(arg), nil
+		case string:
 			// We assume strings are already formatted correctly
-			return stringArg, nil
+			return arg, nil
+		default:
+			return nil, errors.NewInvalidArgType(arg, dataType)
 		}
-		return nil, errors.NewInvalidArgType(arg, dataType)
-	}
-	if dataType == "DATE" {
-		if timeArg, ok := arg.(time.Time); ok {
-			return jsonDateValue(timeArg), nil
-		}
-		if stringArg, ok := arg.(string); ok {
+	case "DATE":
+		switch arg := arg.(type) {
+		case time.Time:
+			return jsonDateValue(arg), nil
+		case string:
 			// We assume strings are already formatted correctly
-			return stringArg, nil
+			return arg, nil
+		default:
+			return nil, errors.NewInvalidArgType(arg, dataType)
 		}
-		return nil, errors.NewInvalidArgType(arg, dataType)
+	default:
+		// No need to convert other types
+		return arg, nil
 	}
-	return arg, nil
 }
 
 func jsonDoubleValue(value float64) json.Marshaler {
