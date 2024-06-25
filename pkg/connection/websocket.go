@@ -75,12 +75,17 @@ func (c *Connection) Send(ctx context.Context, request, response interface{}) er
 	go func() { channel <- receiver(response) }()
 	select {
 	case <-ctx.Done():
+		logger.TraceLogger.Printf("Received context done signal. Context error: %v", ctx.Err())
 		_, err := c.asyncSend(&types.Command{Command: "abortQuery"})
 		if err != nil {
+			logger.ErrorLogger.Printf("Could not abort query: %v", err)
 			return errors.NewErrCouldNotAbort(ctx.Err())
 		}
 		return ctx.Err()
 	case err := <-channel:
+		if err != nil {
+			logger.TraceLogger.Printf("Received error from channel: %v", err)
+		}
 		return err
 	}
 }
@@ -122,27 +127,31 @@ func (c *Connection) callback() func(response interface{}) error {
 	return func(response interface{}) error {
 		_, message, err := c.websocket.ReadMessage()
 		if err != nil {
-			logger.ErrorLogger.Print(errors.NewReceivingError(err))
-			return driver.ErrBadConn
+			wrappedError := errors.NewReceivingError(err)
+			logger.ErrorLogger.Print(wrappedError)
+			return wrappedError
 		}
 
 		result := &types.BaseResponse{}
 
 		var reader io.Reader
-		reader = bytes.NewReader(message)
 
 		if c.Config.Compression {
 			reader, err = zlib.NewReader(bytes.NewReader(message))
 			if err != nil {
-				logger.ErrorLogger.Print(errors.NewUncompressingError(err))
-				return driver.ErrBadConn
+				wrappedError := errors.NewUncompressingError(err)
+				logger.ErrorLogger.Print(wrappedError)
+				return wrappedError
 			}
+		} else {
+			reader = bytes.NewReader(message)
 		}
 
 		err = json.NewDecoder(reader).Decode(result)
 		if err != nil {
-			logger.ErrorLogger.Print(errors.NewJsonDecodingError(err, message))
-			return driver.ErrBadConn
+			wrappedError := errors.NewJsonDecodingError(err, message)
+			logger.ErrorLogger.Print(wrappedError)
+			return wrappedError
 		}
 
 		if result.Status != "ok" {
@@ -156,7 +165,7 @@ func (c *Connection) callback() func(response interface{}) error {
 		if response == nil {
 			return nil
 		}
-
+		logger.TraceLogger.Printf("Received response with status %q with %d bytes data", result.Status, len(result.ResponseData))
 		err = json.Unmarshal(result.ResponseData, response)
 		if err != nil {
 			return fmt.Errorf("failed to parse response data %q: %w", result.ResponseData, err)

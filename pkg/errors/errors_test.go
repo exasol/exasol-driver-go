@@ -2,6 +2,8 @@ package errors
 
 import (
 	"bytes"
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net/url"
 	"testing"
@@ -24,6 +26,10 @@ func (suite *ErrorsTestSuite) SetupTest() {
 
 func (suite *ErrorsTestSuite) TestErrInvalidConn() {
 	suite.EqualError(ErrInvalidConn, "E-EGOD-1: invalid connection")
+}
+
+func (suite *ErrorsTestSuite) TestErrInvalidConnUnwrapReturnsNil() {
+	suite.Nil(ErrInvalidConn.Unwrap())
 }
 
 func (suite *ErrorsTestSuite) TestErrClosed() {
@@ -89,12 +95,44 @@ func (suite *ErrorsTestSuite) TestLogRequestSendingError() {
 func (suite *ErrorsTestSuite) TestLogReceivingError() {
 	suite.EqualError(NewReceivingError(fmt.Errorf("error")), "W-EGOD-17: could not receive data: 'error'")
 }
+
+func (suite *ErrorsTestSuite) TestLogReceivingErrorIsBadConnection() {
+	err := NewReceivingError(fmt.Errorf("error"))
+	suite.True(errors.Is(err, driver.ErrBadConn))
+	suite.False(errors.Is(err, driver.ErrSkip))
+}
+
+func (suite *ErrorsTestSuite) TestLogReceivingErrorUnwrapBadConnection() {
+	err := NewReceivingError(fmt.Errorf("error"))
+	suite.Same(driver.ErrBadConn, errors.Unwrap(err))
+}
+
 func (suite *ErrorsTestSuite) TestLogUncompressingError() {
 	suite.EqualError(NewUncompressingError(fmt.Errorf("error")), "W-EGOD-18: could not decode compressed data: 'error'")
 }
 
+func (suite *ErrorsTestSuite) TestLogUncompressingErrorIsBadConnection() {
+	err := NewUncompressingError(fmt.Errorf("error"))
+	suite.True(errors.Is(err, driver.ErrBadConn))
+}
+
+func (suite *ErrorsTestSuite) TestLogUncompressingErrorUnwrapBadConnection() {
+	err := NewUncompressingError(fmt.Errorf("error"))
+	suite.Same(driver.ErrBadConn, errors.Unwrap(err))
+}
+
 func (suite *ErrorsTestSuite) TestLogJsonDecodingError() {
 	suite.EqualError(NewJsonDecodingError(fmt.Errorf("error"), []byte("data")), "W-EGOD-19: could not decode json data 'data': 'error'")
+}
+
+func (suite *ErrorsTestSuite) TestLogJsonDecodingErrorIsBadConnection() {
+	err := NewJsonDecodingError(fmt.Errorf("error"), []byte("data"))
+	suite.True(errors.Is(err, driver.ErrBadConn))
+}
+
+func (suite *ErrorsTestSuite) TestLogJsonDecodingErrorUnwrapBadConnection() {
+	err := NewJsonDecodingError(fmt.Errorf("error"), []byte("data"))
+	suite.Same(driver.ErrBadConn, errors.Unwrap(err))
 }
 
 func (suite *ErrorsTestSuite) TestNewInvalidConnectionStringInvalidPort() {

@@ -1,6 +1,8 @@
 package errors
 
 import (
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -47,7 +49,11 @@ func NewErrCouldNotAbort(rootCause error) DriverErr {
 }
 
 func NewDriverErr(error *exaerror.ExaError) DriverErr {
-	return DriverErr(error.String())
+	return NewDriverErrWithCause(error, nil)
+}
+
+func NewDriverErrWithCause(error *exaerror.ExaError, cause error) DriverErr {
+	return DriverErr{message: error.String(), cause: cause}
 }
 
 func NewPasswordEncryptionError(err error) DriverErr {
@@ -77,22 +83,22 @@ func NewRequestSendingError(err error) DriverErr {
 }
 
 func NewReceivingError(err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-17").
+	return NewDriverErrWithCause(exaerror.New("W-EGOD-17").
 		Message("could not receive data: {{error}}").
-		Parameter("error", err))
+		Parameter("error", err), driver.ErrBadConn)
 }
 
 func NewUncompressingError(err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-18").
+	return NewDriverErrWithCause(exaerror.New("W-EGOD-18").
 		Message("could not decode compressed data: {{error}}").
-		Parameter("error", err))
+		Parameter("error", err), driver.ErrBadConn)
 }
 
 func NewJsonDecodingError(err error, message []byte) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-19").
+	return NewDriverErrWithCause(exaerror.New("W-EGOD-19").
 		Message("could not decode json data {{data}}: {{error}}").
 		Parameter("data", string(message)).
-		Parameter("error", err))
+		Parameter("error", err), driver.ErrBadConn)
 }
 
 func NewInvalidHostRangeLimits(host string) DriverErr {
@@ -157,9 +163,20 @@ func NewInvalidArgType(value interface{}, expectedType string) DriverErr {
 }
 
 // DriverErr This type represents an error that can occur when working with a database connection.
-type DriverErr string
+type DriverErr struct {
+	message string
+	cause   error
+}
 
 // Error converts the error to a string.
 func (e DriverErr) Error() string {
-	return string(e)
+	return e.message
+}
+
+func (e DriverErr) Unwrap() error {
+	return e.cause
+}
+
+func (e DriverErr) Is(target error) bool {
+	return errors.Is(e.cause, target)
 }
