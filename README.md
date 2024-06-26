@@ -96,7 +96,7 @@ preparedStatement, err := exasol.Prepare("SELECT * FROM CUSTOMERS WHERE NAME = ?
 rows, err := preparedStatement.Query("Bob")
 ```
 
-## Transaction Commit and Rollback
+### Transaction Commit and Rollback
 
 To control the transaction state manually, you need to disable autocommit (enabled by default):
 
@@ -131,7 +131,7 @@ To rollback a transaction use `Rollback()`:
 err = transaction.Rollback()
 ```
 
-## Import Local CSV Files
+### Import Local CSV Files
 
 Use the sql driver to load data from one or more CSV files into your Exasol Database. These files must be local to the machine where you execute the `IMPORT` statement.
 
@@ -150,7 +150,7 @@ IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData
 
 See also the [usage notes](https://docs.exasol.com/db/latest/sql/import.htm#UsageNotes) about the `file_src` element for local files of the `IMPORT` statement.
 
-## Connection String
+### Connection String
 
 The golang Driver uses the following URL structure for Exasol:
 
@@ -158,7 +158,7 @@ The golang Driver uses the following URL structure for Exasol:
 
 Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exasol3` is not valid.
 
-### Supported Driver Properties
+#### Supported Driver Properties
 
 | Property                    | Value         | Default     | Description                                     |
 | :-------------------------- | :-----------: | :---------: | :---------------------------------------------- |
@@ -175,7 +175,7 @@ Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exaso
 | `schema`                    |  string       |             | Exasol schema name.                             |
 | `user`                      |  string       |             | Exasol username.                                |
 
-### Configuring TLS
+#### Configuring TLS
 
 We recommend to always enable TLS encryption. This is on by default, but you can enable it explicitly via driver property `encryption=1` or `config.Encryption(true)`. Please note that starting with version 8, Exasol does not support unencrypted connections anymore, so you can't use `encryption=0` or `config.Encryption(false)`.
 
@@ -192,6 +192,30 @@ There are two driver properties that control how TLS certificates are verified: 
 * With `validateservercertificate=0` (or `config.ValidateServerCertificate(false)`) the driver will ignore any TLS certificate errors.
 
     Use this if the server uses a self-signed certificate and you don't know the fingerprint. **This is not recommended.**
+
+### Configure Logging
+
+#### Error Logger
+
+By default the driver will log warnings and error messages to Std error. You can configure a custom error logger with
+
+```go
+logger.SetLogger(log.New(os.Stderr, "[exasol] ", log.LstdFlags|log.Lshortfile))
+```
+
+#### Trace Logger
+
+By default the driver does not log any trace or debug messages. To investigate problems you can configure a custom trace logger with
+
+```go
+logger.SetTraceLogger(log.New(os.Stderr, "[exasol-trace] ", log.LstdFlags|log.Lshortfile))
+```
+
+You can deactivate trace logging with
+
+```go
+logger.SetTraceLogger(nil)
+```
 
 ## Information for Users
 
