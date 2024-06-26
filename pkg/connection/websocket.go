@@ -135,17 +135,9 @@ func (c *Connection) callback() func(response interface{}) error {
 
 		result := &types.BaseResponse{}
 
-		var reader io.Reader
-
-		if c.Config.Compression {
-			reader, err = zlib.NewReader(bytes.NewReader(message))
-			if err != nil {
-				wrappedError := errors.NewUncompressingError(err)
-				logger.ErrorLogger.Print(wrappedError)
-				return wrappedError
-			}
-		} else {
-			reader = bytes.NewReader(message)
+		reader, err := c.createResponseReader(message)
+		if err != nil {
+			return err
 		}
 
 		err = json.NewDecoder(reader).Decode(result)
@@ -172,5 +164,19 @@ func (c *Connection) callback() func(response interface{}) error {
 			return fmt.Errorf("failed to parse response data %q: %w", result.ResponseData, err)
 		}
 		return nil
+	}
+}
+
+func (c *Connection) createResponseReader(message []byte) (io.Reader, error) {
+	if c.Config.Compression {
+		reader, err := zlib.NewReader(bytes.NewReader(message))
+		if err != nil {
+			wrappedError := errors.NewUncompressingError(err)
+			logger.ErrorLogger.Print(wrappedError)
+			return nil, wrappedError
+		}
+		return reader, nil
+	} else {
+		return bytes.NewReader(message), nil
 	}
 }

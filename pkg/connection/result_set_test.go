@@ -207,8 +207,8 @@ func (suite *ResultSetTestSuite) TestNextFetchesNextChunk() {
 	suite.NoError(queryResults.Next(dest))
 	suite.Equal([]driver.Value{"c1r1", "c2r1"}, dest)
 	suite.Equal(1, queryResults.rowPointer)
-	suite.Equal(2, queryResults.fetchedRows)
 	suite.Equal(1, queryResults.totalRowPointer)
+	suite.Equal(2, queryResults.fetchedRows)
 }
 
 func (suite *ResultSetTestSuite) TestNextReturnsCurrentData() {
@@ -224,20 +224,6 @@ func (suite *ResultSetTestSuite) TestNextReturnsCurrentData() {
 	dest := make([]driver.Value, 2)
 	suite.NoError(queryResults.Next(dest))
 	suite.Equal([]driver.Value{"c1r1", "c2r1"}, dest)
-}
-
-func (suite *ResultSetTestSuite) TestNextReturnsIncrementsCounters() {
-	queryResults := suite.createResultSet()
-	queryResults.con.Config.FetchSize = 2
-	queryResults.totalRowPointer = 0
-	queryResults.data.ResultSetHandle = 17
-	queryResults.data.NumRows = 2
-	queryResults.data.NumRowsInMessage = 1
-	queryResults.data.Data = [][]interface{}{{"c1r1", "c1r2"}, {"c2r1", "c2r2"}}
-	queryResults.fetchedRows = 1
-
-	dest := make([]driver.Value, 0)
-	suite.NoError(queryResults.Next(dest))
 	suite.Equal(1, queryResults.rowPointer)
 	suite.Equal(1, queryResults.totalRowPointer)
 	suite.Equal(1, queryResults.fetchedRows)
