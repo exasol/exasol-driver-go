@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 )
 
@@ -83,21 +84,10 @@ func (results *QueryResults) Next(dest []driver.Value) error {
 	}
 
 	if results.data.NumRowsInMessage < results.data.NumRows && results.totalRowPointer == results.fetchedRows {
-		result := &types.SqlQueryResponseResultSetData{}
-		err := results.con.Send(context.Background(), &types.FetchCommand{
-			Command:         types.Command{Command: "fetch"},
-			ResultSetHandle: results.data.ResultSetHandle,
-			StartPosition:   results.totalRowPointer,
-			NumBytes:        results.con.Config.FetchSize * 1024,
-		}, result)
+		err := results.fetchNextRowChunk()
 		if err != nil {
 			return err
 		}
-		results.rowPointer = 0
-		results.fetchedRows = results.fetchedRows + result.NumRows
-
-		// Overwrite old data, user needs to collect the whole data if needed
-		results.data.Data = result.Data
 	}
 
 	for i := range dest {
@@ -107,5 +97,25 @@ func (results *QueryResults) Next(dest []driver.Value) error {
 	results.rowPointer = results.rowPointer + 1
 	results.totalRowPointer = results.totalRowPointer + 1
 
+	return nil
+}
+
+func (results *QueryResults) fetchNextRowChunk() error {
+	chunk := &types.SqlQueryResponseResultSetData{}
+	err := results.con.Send(context.Background(), &types.FetchCommand{
+		Command:         types.Command{Command: "fetch"},
+		ResultSetHandle: results.data.ResultSetHandle,
+		StartPosition:   results.totalRowPointer,
+		NumBytes:        results.con.Config.FetchSize * 1024,
+	}, chunk)
+	if err != nil {
+		return err
+	}
+	results.rowPointer = 0
+	results.fetchedRows += chunk.NumRows
+	logger.TraceLogger.Printf("Fetched %d rows from result set %d with fetch size %d kB at start pos %d\n", chunk.NumRows, results.data.ResultSetHandle, results.con.Config.FetchSize, results.totalRowPointer)
+
+	// Overwrite old data, user needs to collect the whole data if needed
+	results.data.Data = chunk.Data
 	return nil
 }

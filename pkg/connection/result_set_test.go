@@ -1,10 +1,19 @@
 package connection
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
+	"errors"
+	"fmt"
+	"log"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/exasol/exasol-driver-go/internal/config"
+	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
+	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 
 	"github.com/stretchr/testify/suite"
@@ -12,10 +21,20 @@ import (
 
 type ResultSetTestSuite struct {
 	suite.Suite
+	websocketMock *wsconn.WebsocketConnectionMock
 }
 
 func TestResultSetSuite(t *testing.T) {
 	suite.Run(t, new(ResultSetTestSuite))
+}
+
+func (suite *ResultSetTestSuite) SetupTest() {
+	suite.websocketMock = wsconn.CreateWebsocketConnectionMock()
+	logger.SetTraceLogger(log.New(os.Stderr, "[TestResultSetSuite] ", log.LstdFlags|log.Lshortfile))
+}
+
+func (suite *ResultSetTestSuite) TearDownTest() {
+	logger.SetTraceLogger(nil)
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
@@ -149,6 +168,12 @@ func (suite *ResultSetTestSuite) TestColumns() {
 	suite.Equal([]string{"col_1", "col_2", "col_3"}, queryResults.Columns())
 }
 
+func (suite *ResultSetTestSuite) TestColumnsEmpty() {
+	data := types.SqlQueryResponseResultSetData{Columns: []types.SqlQueryColumn{}}
+	queryResults := QueryResults{data: &data}
+	suite.Empty(queryResults.Columns())
+}
+
 func (suite *ResultSetTestSuite) TestNextWithoutRows() {
 	data := types.SqlQueryResponseResultSetData{NumRows: 0}
 	queryResults := QueryResults{data: &data}
@@ -161,8 +186,115 @@ func (suite *ResultSetTestSuite) TestNextPointerDoesNotMatch() {
 	suite.EqualError(queryResults.Next(nil), "EOF")
 }
 
+func (suite *ResultSetTestSuite) TestNextFetchesNextChunk() {
+	queryResults := suite.createResultSet()
+	queryResults.con.Config.FetchSize = 2
+	queryResults.totalRowPointer = 0
+	queryResults.data.ResultSetHandle = 17
+	queryResults.data.NumRows = 2
+	queryResults.data.NumRowsInMessage = 1
+	queryResults.fetchedRows = 0
+
+	suite.websocketMock.SimulateOKResponse(&types.FetchCommand{
+		Command:         types.Command{Command: "fetch"},
+		ResultSetHandle: 17,
+		StartPosition:   0,
+		NumBytes:        2048,
+	}, types.SqlQueryResponseResultSetData{
+		ResultSetHandle: 17, NumRows: 2, NumRowsInMessage: 1, Columns: []types.SqlQueryColumn{{}, {}}, Data: [][]interface{}{{"c1r1", "c1r2"}, {"c2r1", "c2r2"}},
+	})
+	dest := make([]driver.Value, 2)
+	suite.NoError(queryResults.Next(dest))
+	suite.Equal([]driver.Value{"c1r1", "c2r1"}, dest)
+	suite.Equal(1, queryResults.rowPointer)
+	suite.Equal(1, queryResults.totalRowPointer)
+	suite.Equal(2, queryResults.fetchedRows)
+}
+
+func (suite *ResultSetTestSuite) TestNextReturnsCurrentData() {
+	queryResults := suite.createResultSet()
+	queryResults.con.Config.FetchSize = 2
+	queryResults.totalRowPointer = 0
+	queryResults.data.ResultSetHandle = 17
+	queryResults.data.NumRows = 2
+	queryResults.data.NumRowsInMessage = 1
+	queryResults.data.Data = [][]interface{}{{"c1r1", "c1r2"}, {"c2r1", "c2r2"}}
+	queryResults.fetchedRows = 1
+
+	dest := make([]driver.Value, 2)
+	suite.NoError(queryResults.Next(dest))
+	suite.Equal([]driver.Value{"c1r1", "c2r1"}, dest)
+	suite.Equal(1, queryResults.rowPointer)
+	suite.Equal(1, queryResults.totalRowPointer)
+	suite.Equal(1, queryResults.fetchedRows)
+}
+
+func (suite *ResultSetTestSuite) TestNextFetchFailsWithSqlError() {
+	queryResults := suite.createResultSet()
+	queryResults.con.Config.FetchSize = 2
+	queryResults.totalRowPointer = 0
+	queryResults.data.ResultSetHandle = 17
+	queryResults.data.NumRows = 2
+	queryResults.data.NumRowsInMessage = 1
+	queryResults.fetchedRows = 0
+
+	suite.websocketMock.SimulateErrorResponse(&types.FetchCommand{
+		Command:         types.Command{Command: "fetch"},
+		ResultSetHandle: 17,
+		StartPosition:   0,
+		NumBytes:        2048,
+	}, types.Exception{SQLCode: "sql-code", Text: "mock error"})
+
+	suite.EqualError(queryResults.Next(nil), "E-EGOD-11: execution failed with SQL error code 'sql-code' and message 'mock error'")
+}
+
+func (suite *ResultSetTestSuite) TestNextFetchFailsWithError() {
+	queryResults := suite.createResultSet()
+	queryResults.con.Config.FetchSize = 2
+	queryResults.totalRowPointer = 0
+	queryResults.data.ResultSetHandle = 17
+	queryResults.data.NumRows = 2
+	queryResults.data.NumRowsInMessage = 1
+	queryResults.fetchedRows = 0
+
+	suite.websocketMock.SimulateWriteFails(&types.FetchCommand{
+		Command:         types.Command{Command: "fetch"},
+		ResultSetHandle: 17,
+		StartPosition:   0,
+		NumBytes:        2048,
+	}, fmt.Errorf("mock error"))
+
+	err := queryResults.Next(nil)
+	suite.EqualError(err, "W-EGOD-16: could not send request: 'mock error'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
+}
+
 func (suite *ResultSetTestSuite) TestCloseIgnoresResultHandleZero() {
-	data := types.SqlQueryResponseResultSetData{NumRows: 1, ResultSetHandle: 0}
-	queryResults := QueryResults{data: &data, totalRowPointer: 2}
+	queryResults := suite.createResultSet()
+	queryResults.data.ResultSetHandle = 0
 	suite.NoError(queryResults.Close())
+}
+
+func (suite *ResultSetTestSuite) TestCloseSendsCloseResultSetCommand() {
+	queryResults := suite.createResultSet()
+	queryResults.data.ResultSetHandle = 17
+	suite.websocketMock.SimulateOKResponse(types.CloseResultSetCommand{
+		Command:          types.Command{Command: "closeResultSet"},
+		ResultSetHandles: []int{17},
+	}, nil)
+	suite.NoError(queryResults.Close())
+}
+
+func (suite *ResultSetTestSuite) createResultSet() QueryResults {
+	return QueryResults{
+		data: &types.SqlQueryResponseResultSetData{
+			ResultSetHandle: 1, NumRows: 2, NumRowsInMessage: 2, Columns: []types.SqlQueryColumn{{}, {}},
+		},
+		con: &Connection{
+			websocket: suite.websocketMock, Config: &config.Config{}, Ctx: context.Background(), IsClosed: false,
+		},
+		fetchedRows:     0,
+		totalRowPointer: 0,
+		rowPointer:      0,
+	}
 }

@@ -3,6 +3,7 @@ package connection
 import (
 	"context"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -57,7 +58,8 @@ func (suite *WebsocketTestSuite) TestSendWithCompressionFailsDuringUncompress() 
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = true
 	err := conn.Send(context.Background(), request, response)
-	suite.EqualError(err, driver.ErrBadConn.Error())
+	suite.EqualError(err, "W-EGOD-18: could not decode compressed data: 'zlib: invalid header'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
 }
 
 func (suite *WebsocketTestSuite) TestSendSuccessNoResponse() {
@@ -83,7 +85,8 @@ func (suite *WebsocketTestSuite) TestSendFailsAtWriteMessage() {
 	response := &types.PublicKeyResponse{}
 	suite.websocketMock.OnWriteAnyMessage(fmt.Errorf("mock error"))
 	err := suite.createOpenConnection().Send(context.Background(), request, response)
-	suite.EqualError(err, driver.ErrBadConn.Error())
+	suite.EqualError(err, "W-EGOD-16: could not send request: 'mock error'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
 }
 
 func (suite *WebsocketTestSuite) TestSendFailsAtReadMessage() {
@@ -93,7 +96,8 @@ func (suite *WebsocketTestSuite) TestSendFailsAtReadMessage() {
 	suite.websocketMock.OnReadTextMessage(nil, fmt.Errorf("mock error"))
 
 	err := suite.createOpenConnection().Send(context.Background(), request, response)
-	suite.EqualError(err, driver.ErrBadConn.Error())
+	suite.EqualError(err, "W-EGOD-17: could not receive data: 'mock error'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
 }
 
 func (suite *WebsocketTestSuite) TestSendFailsAtDecodingResponse() {
@@ -103,7 +107,8 @@ func (suite *WebsocketTestSuite) TestSendFailsAtDecodingResponse() {
 	suite.websocketMock.OnReadTextMessage([]byte("invalid json"), nil)
 
 	err := suite.createOpenConnection().Send(context.Background(), request, response)
-	suite.EqualError(err, driver.ErrBadConn.Error())
+	suite.EqualError(err, "W-EGOD-19: could not decode json data 'invalid json': 'invalid character 'i' looking for beginning of value'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
 }
 
 func (suite *WebsocketTestSuite) TestSendFailsAtNonOKStatusException() {
