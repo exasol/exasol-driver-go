@@ -35,11 +35,10 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.56.2
-          skip-pkg-cache: true # Caching already done by actions/cache
-          skip-build-cache: true
+          version: v1.59.1
+          skip-cache: true # Caching already done by actions/cache
 
       - name: Enable testcontainer reuse
         run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
