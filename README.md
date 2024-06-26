@@ -197,7 +197,7 @@ There are two driver properties that control how TLS certificates are verified: 
 
 #### Error Logger
 
-By default the driver will log warnings and error messages to Std error. You can configure a custom error logger with
+By default the driver will log warnings and error messages to stderr. You can configure a custom error logger with
 
 ```go
 logger.SetLogger(log.New(os.Stderr, "[exasol] ", log.LstdFlags|log.Lshortfile))

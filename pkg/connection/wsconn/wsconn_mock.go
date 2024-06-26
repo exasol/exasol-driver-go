@@ -108,16 +108,19 @@ func (mock *WebsocketConnectionMock) OnClose(returnedError error) {
 func (mock *WebsocketConnectionMock) WriteMessage(messageType int, data []byte) error {
 	LOG.Printf("Mock call: ws.WriteMessage(%d, `%s`)", messageType, string(data))
 	mockArgs := mock.Called(messageType, data)
-	LOG.Printf("Mock call: ws.WriteMessage(%d, `%s`) -> return %v", messageType, string(data), mockArgs.Error(0))
-	return mockArgs.Error(0)
+	err := mockArgs.Error(0)
+	LOG.Printf("Mock call: ws.WriteMessage(%d, `%s`) -> return %v", messageType, string(data), err)
+	return err
 }
 
 func (mock *WebsocketConnectionMock) ReadMessage() (messageType int, response []byte, err error) {
 	LOG.Printf("Mock call: ws.ReadMessage()")
 	mockArgs := mock.Called()
 	responseData := mockArgs.Get(1).([]byte)
-	LOG.Printf("Mock call: ws.ReadMessage() -> return (%d, %q, %v)", mockArgs.Int(0), string(responseData), mockArgs.Error(2))
-	return mockArgs.Int(0), responseData, mockArgs.Error(2)
+	messageType = mockArgs.Int(0)
+	err = mockArgs.Error(2)
+	LOG.Printf("Mock call: ws.ReadMessage() -> return (%d, %q, %v)", messageType, string(responseData), err)
+	return messageType, responseData, err
 }
 
 func (mock *WebsocketConnectionMock) Close() error {

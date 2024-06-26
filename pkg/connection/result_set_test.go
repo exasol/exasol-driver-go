@@ -208,7 +208,6 @@ func (suite *ResultSetTestSuite) TestNextFetchesNextChunk() {
 	suite.Equal([]driver.Value{"c1r1", "c2r1"}, dest)
 	suite.Equal(1, queryResults.rowPointer)
 	suite.Equal(2, queryResults.fetchedRows)
-	suite.Equal(1, queryResults.rowPointer)
 	suite.Equal(1, queryResults.totalRowPointer)
 }
 
@@ -241,7 +240,6 @@ func (suite *ResultSetTestSuite) TestNextReturnsIncrementsCounters() {
 	suite.NoError(queryResults.Next(dest))
 	suite.Equal(1, queryResults.rowPointer)
 	suite.Equal(1, queryResults.totalRowPointer)
-	suite.Equal(1, queryResults.rowPointer)
 	suite.Equal(1, queryResults.fetchedRows)
 }
 

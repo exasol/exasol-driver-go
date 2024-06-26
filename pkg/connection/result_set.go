@@ -101,21 +101,21 @@ func (results *QueryResults) Next(dest []driver.Value) error {
 }
 
 func (results *QueryResults) fetchNextRowChunk() error {
-	result := &types.SqlQueryResponseResultSetData{}
+	chunk := &types.SqlQueryResponseResultSetData{}
 	err := results.con.Send(context.Background(), &types.FetchCommand{
 		Command:         types.Command{Command: "fetch"},
 		ResultSetHandle: results.data.ResultSetHandle,
 		StartPosition:   results.totalRowPointer,
 		NumBytes:        results.con.Config.FetchSize * 1024,
-	}, result)
+	}, chunk)
 	if err != nil {
 		return err
 	}
 	results.rowPointer = 0
-	results.fetchedRows = results.fetchedRows + result.NumRows
-	logger.TraceLogger.Printf("Fetched %d rows from result set %d with fetch size %d kB at start pos %d\n", result.NumRows, results.data.ResultSetHandle, results.con.Config.FetchSize, results.totalRowPointer)
+	results.fetchedRows += chunk.NumRows
+	logger.TraceLogger.Printf("Fetched %d rows from result set %d with fetch size %d kB at start pos %d\n", chunk.NumRows, results.data.ResultSetHandle, results.con.Config.FetchSize, results.totalRowPointer)
 
 	// Overwrite old data, user needs to collect the whole data if needed
-	results.data.Data = result.Data
+	results.data.Data = chunk.Data
 	return nil
 }
