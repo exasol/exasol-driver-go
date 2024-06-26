@@ -133,18 +133,9 @@ func (c *Connection) callback() func(response interface{}) error {
 			return wrappedError
 		}
 
-		result := &types.BaseResponse{}
-
-		reader, err := c.createResponseReader(message)
+		result, err := c.parseResponse(message)
 		if err != nil {
 			return err
-		}
-
-		err = json.NewDecoder(reader).Decode(result)
-		if err != nil {
-			wrappedError := errors.NewJsonDecodingError(err, message)
-			logger.ErrorLogger.Print(wrappedError)
-			return wrappedError
 		}
 
 		if result.Status != "ok" {
@@ -156,6 +147,7 @@ func (c *Connection) callback() func(response interface{}) error {
 		}
 
 		if response == nil {
+			// No response expected
 			return nil
 		}
 		logger.TraceLogger.Printf("Received response with status %q with %d bytes data", result.Status, len(result.ResponseData))
@@ -165,6 +157,23 @@ func (c *Connection) callback() func(response interface{}) error {
 		}
 		return nil
 	}
+}
+
+func (c *Connection) parseResponse(message []byte) (*types.BaseResponse, error) {
+	result := &types.BaseResponse{}
+
+	reader, err := c.createResponseReader(message)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.NewDecoder(reader).Decode(result)
+	if err != nil {
+		wrappedError := errors.NewJsonDecodingError(err, message)
+		logger.ErrorLogger.Print(wrappedError)
+		return nil, wrappedError
+	}
+	return result, nil
 }
 
 func (c *Connection) createResponseReader(message []byte) (io.Reader, error) {
