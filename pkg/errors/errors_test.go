@@ -92,6 +92,17 @@ func (suite *ErrorsTestSuite) TestLogMarshallingError() {
 func (suite *ErrorsTestSuite) TestLogRequestSendingError() {
 	suite.EqualError(NewRequestSendingError(fmt.Errorf("error")), "W-EGOD-16: could not send request: 'error'")
 }
+
+func (suite *ErrorsTestSuite) TestLogRequestSendingErrorIsBadConnection() {
+	err := NewRequestSendingError(fmt.Errorf("error"))
+	suite.True(errors.Is(err, driver.ErrBadConn))
+}
+
+func (suite *ErrorsTestSuite) TestLogRequestSendingErrorUnwrapBadConnection() {
+	err := NewRequestSendingError(fmt.Errorf("error"))
+	suite.Same(driver.ErrBadConn, errors.Unwrap(err))
+}
+
 func (suite *ErrorsTestSuite) TestLogReceivingError() {
 	suite.EqualError(NewReceivingError(fmt.Errorf("error")), "W-EGOD-17: could not receive data: 'error'")
 }

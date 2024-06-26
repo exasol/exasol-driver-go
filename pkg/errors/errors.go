@@ -77,9 +77,9 @@ func NewMarshallingError(request interface{}, err error) DriverErr {
 }
 
 func NewRequestSendingError(err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-16").
+	return NewDriverErrWithCause(exaerror.New("W-EGOD-16").
 		Message("could not send request: {{error}}").
-		Parameter("error", err))
+		Parameter("error", err), driver.ErrBadConn)
 }
 
 func NewReceivingError(err error) DriverErr {

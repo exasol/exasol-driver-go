@@ -65,6 +65,10 @@ func JsonMarshall(payload interface{}) json.RawMessage {
 	return data
 }
 
+func (wsMock *WebsocketConnectionMock) SimulateWriteFails(request interface{}, err error) {
+	wsMock.OnWriteTextMessage(JsonMarshall(request), err)
+}
+
 func (wsMock *WebsocketConnectionMock) SimulateResponse(request interface{}, response interface{}) {
 	wsMock.OnWriteTextMessage(JsonMarshall(request), nil)
 	if response != nil {

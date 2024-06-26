@@ -85,7 +85,8 @@ func (suite *WebsocketTestSuite) TestSendFailsAtWriteMessage() {
 	response := &types.PublicKeyResponse{}
 	suite.websocketMock.OnWriteAnyMessage(fmt.Errorf("mock error"))
 	err := suite.createOpenConnection().Send(context.Background(), request, response)
-	suite.EqualError(err, driver.ErrBadConn.Error())
+	suite.EqualError(err, "W-EGOD-16: could not send request: 'mock error'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
 }
 
 func (suite *WebsocketTestSuite) TestSendFailsAtReadMessage() {

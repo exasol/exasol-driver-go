@@ -116,8 +116,9 @@ func (c *Connection) asyncSend(request interface{}) (func(interface{}) error, er
 	}
 	err = c.websocket.WriteMessage(messageType, message)
 	if err != nil {
-		logger.ErrorLogger.Print(errors.NewRequestSendingError(err))
-		return nil, driver.ErrBadConn
+		wrappedError := errors.NewRequestSendingError(err)
+		logger.ErrorLogger.Print(wrappedError)
+		return nil, wrappedError
 	}
 
 	return c.callback(), nil

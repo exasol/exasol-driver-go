@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -237,7 +239,7 @@ func (suite *ResultSetTestSuite) TestNextReturnsIncrementsCounters() {
 	suite.Equal(1, queryResults.totalRowPointer)
 }
 
-func (suite *ResultSetTestSuite) TestNextFetchFails() {
+func (suite *ResultSetTestSuite) TestNextFetchFailsWithSqlError() {
 	queryResults := suite.createResultSet()
 	queryResults.con.Config.FetchSize = 2
 	queryResults.totalRowPointer = 0
@@ -254,6 +256,27 @@ func (suite *ResultSetTestSuite) TestNextFetchFails() {
 	}, types.Exception{SQLCode: "sql-code", Text: "mock error"})
 
 	suite.EqualError(queryResults.Next(nil), "E-EGOD-11: execution failed with SQL error code 'sql-code' and message 'mock error'")
+}
+
+func (suite *ResultSetTestSuite) TestNextFetchFailsWithError() {
+	queryResults := suite.createResultSet()
+	queryResults.con.Config.FetchSize = 2
+	queryResults.totalRowPointer = 0
+	queryResults.data.ResultSetHandle = 17
+	queryResults.data.NumRows = 2
+	queryResults.data.NumRowsInMessage = 1
+	queryResults.fetchedRows = 0
+
+	suite.websocketMock.SimulateWriteFails(&types.FetchCommand{
+		Command:         types.Command{Command: "fetch"},
+		ResultSetHandle: 17,
+		StartPosition:   0,
+		NumBytes:        2048,
+	}, fmt.Errorf("mock error"))
+
+	err := queryResults.Next(nil)
+	suite.EqualError(err, "W-EGOD-16: could not send request: 'mock error'")
+	suite.True(errors.Is(err, driver.ErrBadConn))
 }
 
 func (suite *ResultSetTestSuite) TestCloseIgnoresResultHandleZero() {
