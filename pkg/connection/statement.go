@@ -11,14 +11,15 @@ import (
 )
 
 type Statement struct {
+	ctx             context.Context
 	connection      *Connection
 	statementHandle int
 	columns         []types.SqlQueryColumn
 	numInput        int
 }
 
-func NewStatement(connection *Connection, response *types.CreatePreparedStatementResponse) *Statement {
-	return &Statement{connection: connection, statementHandle: response.StatementHandle, columns: response.ParameterData.Columns, numInput: response.ParameterData.NumColumns}
+func NewStatement(ctx context.Context, connection *Connection, response *types.CreatePreparedStatementResponse) *Statement {
+	return &Statement{ctx: ctx, connection: connection, statementHandle: response.StatementHandle, columns: response.ParameterData.Columns, numInput: response.ParameterData.NumColumns}
 }
 
 func (s *Statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
@@ -30,15 +31,15 @@ func (s *Statement) QueryContext(ctx context.Context, args []driver.NamedValue) 
 	if err != nil {
 		return nil, err
 	}
-	return ToRow(result, s.connection)
+	return ToRow(ctx, result, s.connection)
 }
 
 func (s *Statement) Query(args []driver.Value) (driver.Rows, error) {
-	result, err := s.executePreparedStatement(context.Background(), args)
+	result, err := s.executePreparedStatement(s.ctx, args)
 	if err != nil {
 		return nil, err
 	}
-	return ToRow(result, s.connection)
+	return ToRow(s.ctx, result, s.connection)
 }
 
 func (s *Statement) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
@@ -54,7 +55,7 @@ func (s *Statement) ExecContext(ctx context.Context, args []driver.NamedValue) (
 }
 
 func (s *Statement) Exec(args []driver.Value) (driver.Result, error) {
-	result, err := s.executePreparedStatement(context.Background(), args)
+	result, err := s.executePreparedStatement(s.ctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (s *Statement) Close() error {
 	if s.connection.IsClosed {
 		return driver.ErrBadConn
 	}
-	return s.connection.Send(context.Background(), &types.ClosePreparedStatementCommand{
+	return s.connection.Send(s.ctx, &types.ClosePreparedStatementCommand{
 		Command:         types.Command{Command: "closePreparedStatement"},
 		StatementHandle: s.statementHandle,
 	}, nil)

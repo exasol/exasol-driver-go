@@ -47,11 +47,11 @@ func (c *Connection) ExecContext(ctx context.Context, query string, args []drive
 }
 
 func (c *Connection) Exec(query string, args []driver.Value) (driver.Result, error) {
-	return c.exec(context.Background(), query, args)
+	return c.exec(c.Ctx, query, args)
 }
 
 func (c *Connection) Query(query string, args []driver.Value) (driver.Rows, error) {
-	return c.query(context.Background(), query, args)
+	return c.query(c.Ctx, query, args)
 }
 
 func (c *Connection) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
@@ -64,7 +64,7 @@ func (c *Connection) PrepareContext(ctx context.Context, query string) (driver.S
 	if err != nil {
 		return nil, err
 	}
-	return c.createStatement(response), nil
+	return c.createStatement(ctx, response), nil
 }
 
 func (c *Connection) createPreparedStatement(ctx context.Context, query string) (*types.CreatePreparedStatementResponse, error) {
@@ -82,16 +82,16 @@ func (c *Connection) createPreparedStatement(ctx context.Context, query string) 
 	return response, nil
 }
 
-func (c *Connection) createStatement(result *types.CreatePreparedStatementResponse) *Statement {
-	return NewStatement(c, result)
+func (c *Connection) createStatement(ctx context.Context, result *types.CreatePreparedStatementResponse) *Statement {
+	return NewStatement(ctx, c, result)
 }
 
 func (c *Connection) Prepare(query string) (driver.Stmt, error) {
-	return c.PrepareContext(context.Background(), query)
+	return c.PrepareContext(c.Ctx, query)
 }
 
 func (c *Connection) Close() error {
-	return c.close(context.Background())
+	return c.close(c.Ctx)
 }
 
 func (c *Connection) Begin() (driver.Tx, error) {
@@ -125,7 +125,7 @@ func (c *Connection) query(ctx context.Context, query string, args []driver.Valu
 	if err != nil {
 		return nil, err
 	}
-	return ToRow(result, c)
+	return ToRow(ctx, result, c)
 }
 
 func (c *Connection) executeSimpleWithRows(ctx context.Context, query string) (driver.Rows, error) {
@@ -133,7 +133,7 @@ func (c *Connection) executeSimpleWithRows(ctx context.Context, query string) (d
 	if err != nil {
 		return nil, err
 	}
-	return ToRow(result, c)
+	return ToRow(ctx, result, c)
 }
 
 func (c *Connection) executePreparedStatement(ctx context.Context, s *types.CreatePreparedStatementResponse, args []driver.Value) (*types.SqlQueriesResponse, error) {

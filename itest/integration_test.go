@@ -43,12 +43,8 @@ func TestIntegrationSuite(t *testing.T) {
 
 func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = context.Background()
-	var err error
 	suite.exasol = integrationTesting.StartDbSetup(&suite.Suite)
 	connectionInfo := suite.exasol.ConnectionInfo
-	if err != nil {
-		suite.FailNowf("setup failed", "failed to get connection info: %v", err)
-	}
 	suite.port = connectionInfo.Port
 	suite.host = connectionInfo.Host
 }

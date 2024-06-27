@@ -15,6 +15,7 @@ import (
 
 type QueryResults struct {
 	sync.Mutex      // guards following
+	ctx             context.Context
 	data            *types.SqlQueryResponseResultSetData
 	con             *Connection
 	fetchedRows     int
@@ -69,7 +70,7 @@ func (results *QueryResults) Close() error {
 	if results.data.ResultSetHandle == 0 {
 		return nil
 	}
-	return results.con.Send(context.Background(), &types.CloseResultSetCommand{
+	return results.con.Send(results.ctx, &types.CloseResultSetCommand{
 		Command:          types.Command{Command: "closeResultSet"},
 		ResultSetHandles: []int{results.data.ResultSetHandle},
 	}, nil)
@@ -129,7 +130,7 @@ func isIntegerValue(value float64) bool {
 
 func (results *QueryResults) fetchNextRowChunk() error {
 	chunk := &types.SqlQueryResponseResultSetData{}
-	err := results.con.Send(context.Background(), &types.FetchCommand{
+	err := results.con.Send(results.ctx, &types.FetchCommand{
 		Command:         types.Command{Command: "fetch"},
 		ResultSetHandle: results.data.ResultSetHandle,
 		StartPosition:   results.totalRowPointer,

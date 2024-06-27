@@ -314,6 +314,7 @@ func (suite *ResultSetTestSuite) TestConvertValue() {
 
 func (suite *ResultSetTestSuite) createResultSet() QueryResults {
 	return QueryResults{
+		ctx: context.Background(),
 		data: &types.SqlQueryResponseResultSetData{
 			ResultSetHandle: 1, NumRows: 2, NumRowsInMessage: 2, Columns: []types.SqlQueryColumn{{}, {}},
 		},
