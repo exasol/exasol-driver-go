@@ -90,14 +90,29 @@ func (results *QueryResults) Next(dest []driver.Value) error {
 		}
 	}
 
-	for i := range dest {
-		dest[i] = results.data.Data[i][results.rowPointer]
+	for columnIndex := range dest {
+		dest[columnIndex] = results.getColumnValue(columnIndex)
 	}
 
 	results.rowPointer = results.rowPointer + 1
 	results.totalRowPointer = results.totalRowPointer + 1
 
 	return nil
+}
+
+func (results *QueryResults) getColumnValue(columnIndex int) driver.Value {
+	value := results.data.Data[columnIndex][results.rowPointer]
+	columnType := results.data.Columns[columnIndex].DataType
+	return convertValue(value, columnType)
+}
+
+func convertValue(value any, columnType types.SqlQueryColumnType) driver.Value {
+	if columnType.Type == "DECIMAL" && columnType.Scale != nil && *columnType.Scale == 0 {
+		if floatValue, ok := value.(float64); ok {
+			return int64(floatValue)
+		}
+	}
+	return value
 }
 
 func (results *QueryResults) fetchNextRowChunk() error {

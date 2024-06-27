@@ -18,7 +18,6 @@ import (
 	"github.com/exasol/exasol-driver-go"
 	"github.com/exasol/exasol-driver-go/pkg/dsn"
 	"github.com/exasol/exasol-driver-go/pkg/integrationTesting"
-	"github.com/exasol/exasol-driver-go/pkg/logger"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
@@ -195,9 +194,10 @@ func (suite *IntegrationTestSuite) TestFetch() {
 	suite.Equal(10000, len(result))
 }
 
+// https://github.com/exasol/exasol-driver-go/issues/113
 func (suite *IntegrationTestSuite) TestFetchLargeInteger() {
-	logger.EnableTraceLogger()
 	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
 	number := 100000000
 	rows, err := database.Query(fmt.Sprintf("SELECT %d", number))
 	suite.NoError(err)
@@ -206,7 +206,7 @@ func (suite *IntegrationTestSuite) TestFetchLargeInteger() {
 	err = rows.Scan(&result)
 	suite.NoError(err)
 	defer rows.Close()
-	suite.Equal(number, result)
+	suite.Equal(int64(number), result)
 }
 
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
@@ -259,6 +259,8 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 	}{
 		// DECIMAL
 		{"decimal to int64", "1", "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
+		{"large decimal to int64", "100000000", "DECIMAL(18,0)", new(int64), int64(100000000), dereferenceInt64},
+		{"large negative decimal to int64", "-100000000", "DECIMAL(18,0)", new(int64), int64(-100000000), dereferenceInt64},
 		{"decimal to int", "1", "DECIMAL(18,0)", new(int), 1, dereferenceInt},
 		{"decimal to float", "1", "DECIMAL(18,0)", new(float64), 1.0, dereferenceFloat64},
 		{"decimal to string", "1", "DECIMAL(18,0)", new(string), "1", dereferenceString},
@@ -336,6 +338,10 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 		int64TestCase(-1, "DECIMAL(18,0)", -1),
 		int64TestCase(1.1, "DECIMAL(18,0)", 1),
 		int64TestCase(-1.1, "DECIMAL(18,0)", -1),
+		int64TestCase(100000000, "DECIMAL(18,0)", 100000000),
+		int64TestCase(-100000000, "DECIMAL(18,0)", -100000000),
+		int64TestCase(100000000, "DECIMAL(18,2)", 100000000),
+		int64TestCase(-100000000, "DECIMAL(18,2)", -100000000),
 		int64TestCase(math.MaxInt64, "DECIMAL(36,0)", math.MaxInt64),
 		int64TestCase(math.MinInt64, "DECIMAL(36,0)", math.MinInt64),
 
@@ -350,6 +356,8 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 		float64TestCase(-1, "DECIMAL(18,0)", -1),
 		float64TestCase(1.123, "DECIMAL(18,3)", 1.123),
 		float64TestCase(-1.123, "DECIMAL(18,3)", -1.123),
+		float64TestCase(100000000.12, "DECIMAL(18,2)", 100000000.12),
+		float64TestCase(-100000000.12, "DECIMAL(18,2)", -100000000.12),
 
 		float32TestCase(1, "DECIMAL(18,0)", 1),
 		float32TestCase(-1, "DECIMAL(18,0)", -1),
@@ -582,9 +590,9 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B"},
 		[][]interface{}{
-			{float64(11), "test1"},
-			{float64(12), "test2"},
-			{float64(13), "test3"},
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
 		},
 	)
 }
@@ -636,7 +644,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	suite.NoError(err, "count query should work")
 	suite.assertTableResult(rows, []string{"COUNT(*)"},
 		[][]interface{}{
-			{float64(20000)},
+			{int64(20000)},
 		},
 	)
 
@@ -645,9 +653,9 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B", "C", "D", "E", "F", "G"},
 		[][]interface{}{
-			{float64(0), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
-			{float64(1), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
-			{float64(2), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{int64(0), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{int64(1), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{int64(2), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
 		},
 	)
 }
@@ -709,12 +717,12 @@ func (suite *IntegrationTestSuite) TestMultiImportStatement() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B"},
 		[][]interface{}{
-			{float64(11), "test1"},
-			{float64(12), "test2"},
-			{float64(13), "test3"},
-			{float64(21), "test4"},
-			{float64(22), "test5"},
-			{float64(23), "test6"},
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
+			{int64(21), "test4"},
+			{int64(22), "test5"},
+			{int64(23), "test6"},
 		},
 	)
 }
@@ -744,7 +752,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int, b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data_cr.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'CR'`, schemaName, tableName))
 	suite.NoError(err, "import should be successful")
@@ -755,9 +763,9 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B"},
 		[][]interface{}{
-			{float64(11), "test1"},
-			{float64(12), "test2"},
-			{float64(13), "test3"},
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
 		},
 	)
 }
