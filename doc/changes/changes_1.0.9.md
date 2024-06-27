@@ -10,6 +10,9 @@ This release fixes an issue when calling `rows.Scan(&result)` with an int value.
 sql: Scan error on column index 0, name "100000000": converting driver.Value type float64 ("1e+08") to a int64: invalid syntax
 ```
 
+The release also now returns the correct error from `rows.Err()`. Before, this only returned `driver.ErrBadConn`.
+
 ## Bugfixes
 
 * #113: Fixed `Scan()` with large integer numbers
+* #111: Return correct error from `rows.Err()`
