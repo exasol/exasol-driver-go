@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.9, released 2024-06-??
+# Exasol Driver go 1.0.9, released 2024-06-27
 
 Code name: Fix reading int values
 
