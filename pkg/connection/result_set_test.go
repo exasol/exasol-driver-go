@@ -6,14 +6,11 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
-	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 
 	"github.com/stretchr/testify/suite"
@@ -30,11 +27,9 @@ func TestResultSetSuite(t *testing.T) {
 
 func (suite *ResultSetTestSuite) SetupTest() {
 	suite.websocketMock = wsconn.CreateWebsocketConnectionMock()
-	logger.SetTraceLogger(log.New(os.Stderr, "[TestResultSetSuite] ", log.LstdFlags|log.Lshortfile))
 }
 
 func (suite *ResultSetTestSuite) TearDownTest() {
-	logger.SetTraceLogger(nil)
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
