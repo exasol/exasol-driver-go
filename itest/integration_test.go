@@ -338,6 +338,8 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 		int64TestCase(-1, "DECIMAL(18,0)", -1),
 		int64TestCase(1.1, "DECIMAL(18,0)", 1),
 		int64TestCase(-1.1, "DECIMAL(18,0)", -1),
+		int64TestCase(1.1, "DECIMAL(18,2)", 1),
+		int64TestCase(-1.1, "DECIMAL(18,2)", -1),
 		int64TestCase(100000000, "DECIMAL(18,0)", 100000000),
 		int64TestCase(-100000000, "DECIMAL(18,0)", -100000000),
 		int64TestCase(100000000, "DECIMAL(18,2)", 100000000),
@@ -435,14 +437,14 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
 
 func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 	for i, testCase := range []struct {
-		testDescription string
-		sqlValue        any
-		sqlType         string
-		scanDest        any
-		expectedError   string
+		sqlValue      any
+		sqlType       string
+		scanDest      any
+		expectedError string
 	}{
-		{"timestamp", time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(time.Time), `sql: Scan error on column index 0, name "COL": unsupported Scan, storing driver.Value type string into type *time.Time`},
-		{"timestamp with local time zone", time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(time.Time), `sql: Scan error on column index 0, name "COL": unsupported Scan, storing driver.Value type string into type *time.Time`},
+		{1.1, "DECIMAL(4,2)", new(int64), `converting driver.Value type string ("1.1") to a int64: invalid syntax`},
+		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(time.Time), `unsupported Scan, storing driver.Value type string into type *time.Time`},
+		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(time.Time), `unsupported Scan, storing driver.Value type string into type *time.Time`},
 	} {
 		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 		schemaName := "DATATYPE_TEST"
@@ -450,7 +452,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 		onError(err)
 		defer suite.cleanup(database, schemaName)
 
-		suite.Run(fmt.Sprintf("Scan fails %02d %s: %s", i, testCase.testDescription, testCase.sqlType), func() {
+		suite.Run(fmt.Sprintf("Scan fails %02d %s", i, testCase.sqlType), func() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
 			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
 			onError(err)
@@ -463,7 +465,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 			defer rows.Close()
 			suite.True(rows.Next(), "should have one row")
 			err = rows.Scan(testCase.scanDest)
-			suite.EqualError(err, testCase.expectedError)
+			suite.EqualError(err, `sql: Scan error on column index 0, name "COL": `+testCase.expectedError)
 		})
 	}
 }
