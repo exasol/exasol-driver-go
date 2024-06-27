@@ -63,6 +63,10 @@ type jsonDoubleValueStruct struct {
 	value float64
 }
 
+// MarshalJSON ensures that the double value is always formatted with a decimal point
+// even if it's an integer. This is necessary because Exasol expects a decimal point
+// for double values.
+// See https://github.com/exasol/exasol-driver-go/issues/108 for details.
 func (j *jsonDoubleValueStruct) MarshalJSON() ([]byte, error) {
 	r, err := json.Marshal(j.value)
 	if err != nil {

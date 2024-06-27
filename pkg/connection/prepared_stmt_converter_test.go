@@ -109,7 +109,6 @@ func TestConvertArgs(t *testing.T) {
 				t.Errorf("Error converting arg: %v", err)
 				return
 			}
-
 			actualJson, err := json.Marshal(converted)
 			if err != nil {
 				t.Errorf("Error marshalling converted arg '%v' of type %T: %v", converted, converted, err)
