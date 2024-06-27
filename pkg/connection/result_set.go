@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"io"
+	"math"
 	"reflect"
 	"sync"
 
@@ -111,7 +112,7 @@ func (results *QueryResults) getColumnValue(columnIndex int) driver.Value {
 // See https://github.com/exasol/exasol-driver-go/issues/113 for details.
 func convertValue(value any, columnType types.SqlQueryColumnType) driver.Value {
 	if isIntegerColumn(columnType) {
-		if floatValue, ok := value.(float64); ok {
+		if floatValue, ok := value.(float64); ok && isIntegerValue(floatValue) {
 			return int64(floatValue)
 		}
 	}
@@ -120,6 +121,10 @@ func convertValue(value any, columnType types.SqlQueryColumnType) driver.Value {
 
 func isIntegerColumn(columnType types.SqlQueryColumnType) bool {
 	return columnType.Type == "DECIMAL" && columnType.Scale != nil && *columnType.Scale == 0
+}
+
+func isIntegerValue(value float64) bool {
+	return value == math.Trunc(value)
 }
 
 func (results *QueryResults) fetchNextRowChunk() error {

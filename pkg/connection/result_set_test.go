@@ -290,8 +290,10 @@ func (suite *ResultSetTestSuite) TestConvertValue() {
 		columnType    types.SqlQueryColumnType
 		expectedValue driver.Value
 	}{
-		{float64(1.1), decimalTypeZeroScale, int64(1)}, // Only this combination will convert the value
-		{1.1, decimalTypeZeroScale, int64(1)},
+		{float64(1), decimalTypeZeroScale, int64(1)},                     // Only this combination will convert the value
+		{float64(-1), decimalTypeZeroScale, int64(-1)},                   // Only this combination will convert the value
+		{float64(10000000000), decimalTypeZeroScale, int64(10000000000)}, // Only this combination will convert the value
+		{1.1, decimalTypeZeroScale, float64(1.1)},
 		{float32(1.1), decimalTypeZeroScale, float32(1.1)},
 		{"string", decimalTypeZeroScale, "string"},
 		{true, decimalTypeZeroScale, true},
