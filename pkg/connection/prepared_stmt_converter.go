@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/exasol/exasol-driver-go/pkg/errors"
@@ -62,8 +63,20 @@ type jsonDoubleValueStruct struct {
 	value float64
 }
 
+// MarshalJSON ensures that the double value is always formatted with a decimal point
+// even if it's an integer. This is necessary because Exasol expects a decimal point
+// for double values.
+// See https://github.com/exasol/exasol-driver-go/issues/108 for details.
 func (j *jsonDoubleValueStruct) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("%f", j.value)), nil
+	r, err := json.Marshal(j.value)
+	if err != nil {
+		return nil, err
+	}
+	formatted := string(r)
+	if !strings.Contains(formatted, ".") && !strings.Contains(strings.ToLower(formatted), "e") {
+		return []byte(formatted + ".0"), nil
+	}
+	return r, nil
 }
 
 func jsonTimestampValue(value time.Time) json.Marshaler {

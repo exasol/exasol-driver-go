@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"os/user"
 	"regexp"
@@ -193,6 +194,21 @@ func (suite *IntegrationTestSuite) TestFetch() {
 	suite.Equal(10000, len(result))
 }
 
+// https://github.com/exasol/exasol-driver-go/issues/113
+func (suite *IntegrationTestSuite) TestFetchLargeInteger() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
+	number := 100000000
+	rows, err := database.Query(fmt.Sprintf("SELECT %d", number))
+	suite.NoError(err)
+	suite.True(rows.Next())
+	var result int64
+	err = rows.Scan(&result)
+	suite.NoError(err)
+	defer rows.Close()
+	suite.Equal(int64(number), result)
+}
+
 func (suite *IntegrationTestSuite) TestExecuteWithError() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	defer database.Close()
@@ -225,7 +241,9 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 }
 
 var dereferenceString = func(v any) any { return *(v.(*string)) }
+var dereferenceFloat32 = func(v any) any { return *(v.(*float32)) }
 var dereferenceFloat64 = func(v any) any { return *(v.(*float64)) }
+var dereferenceInt32 = func(v any) any { return *(v.(*int32)) }
 var dereferenceInt64 = func(v any) any { return *(v.(*int64)) }
 var dereferenceInt = func(v any) any { return *(v.(*int)) }
 var dereferenceBool = func(v any) any { return *(v.(*bool)) }
@@ -239,14 +257,27 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 		expectedValue   any
 		dereference     func(any) any
 	}{
+		// DECIMAL
 		{"decimal to int64", "1", "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
+		{"large decimal to int64", "100000000", "DECIMAL(18,0)", new(int64), int64(100000000), dereferenceInt64},
+		{"large negative decimal to int64", "-100000000", "DECIMAL(18,0)", new(int64), int64(-100000000), dereferenceInt64},
 		{"decimal to int", "1", "DECIMAL(18,0)", new(int), 1, dereferenceInt},
 		{"decimal to float", "1", "DECIMAL(18,0)", new(float64), 1.0, dereferenceFloat64},
 		{"decimal to string", "1", "DECIMAL(18,0)", new(string), "1", dereferenceString},
+		{"max int64", fmt.Sprintf("%d", math.MaxInt64), "DECIMAL(36,0)", new(int64), int64(math.MaxInt64), dereferenceInt64},
+		{"min int64", fmt.Sprintf("%d", math.MinInt64), "DECIMAL(36,0)", new(int64), int64(math.MinInt64), dereferenceInt64},
 		{"decimal to float64", "2.2", "DECIMAL(18,2)", new(float64), 2.2, dereferenceFloat64},
 		{"decimal to string", "2.2", "DECIMAL(18,2)", new(string), "2.2", dereferenceString},
+
 		{"double to float64", "3.3", "DOUBLE PRECISION", new(float64), 3.3, dereferenceFloat64},
+		{"double to float64", "-3.3", "DOUBLE PRECISION", new(float64), -3.3, dereferenceFloat64},
+		{"double to float64", "1.7976e+308", "DOUBLE PRECISION", new(float64), 1.7975999999999999e+308, dereferenceFloat64},
+		{"double to float64", "-1.7976e+308", "DOUBLE PRECISION", new(float64), -1.7975999999999999e+308, dereferenceFloat64},
+		{"double to float64", fmt.Sprintf("%g", math.SmallestNonzeroFloat64), "DOUBLE PRECISION", new(float64), math.SmallestNonzeroFloat64, dereferenceFloat64},
+		{"double to float32", fmt.Sprintf("%g", math.MaxFloat32), "DOUBLE PRECISION", new(float32), float32(3.4028235e+38), dereferenceFloat32},
+		{"double to float32", fmt.Sprintf("%g", math.SmallestNonzeroFloat32), "DOUBLE PRECISION", new(float32), float32(1e-45), dereferenceFloat32},
 		{"double to string", "3.3", "DOUBLE PRECISION", new(string), "3.3", dereferenceString},
+
 		{"varchar to string", "'text'", "VARCHAR(10)", new(string), "text", dereferenceString},
 		{"char to string", "'text'", "CHAR(10)", new(string), "text      ", dereferenceString},
 		{"date to string", "'2024-06-18'", "DATE", new(string), "2024-06-18", dereferenceString},
@@ -274,34 +305,90 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
-	for i, testCase := range []struct {
+	type TestCase struct {
 		sqlValue      any
 		sqlType       string
 		scanDest      any
 		expectedValue any
 		dereference   func(any) any
-	}{
-		{1, "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
-		{1.1, "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
-		{1, "DECIMAL(18,0)", new(int), 1, dereferenceInt},
-		{1, "DECIMAL(18,0)", new(float64), 1.0, dereferenceFloat64},
-		{2.2, "DECIMAL(18,2)", new(float64), 2.2, dereferenceFloat64},
-		{2, "DECIMAL(18,2)", new(float64), 2.0, dereferenceFloat64},
-		{3.3, "DOUBLE PRECISION", new(float64), 3.3, dereferenceFloat64},
-		{3, "DOUBLE PRECISION", new(float64), 3.0, dereferenceFloat64},
-		{"text", "VARCHAR(10)", new(string), "text", dereferenceString},
-		{"text", "CHAR(10)", new(string), "text      ", dereferenceString},
-		{"2024-06-18", "DATE", new(string), "2024-06-18", dereferenceString},
-		{time.Date(2024, time.June, 18, 0, 0, 0, 0, time.UTC), "DATE", new(string), "2024-06-18", dereferenceString},
-		{"2024-06-18 17:22:13.123456", "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
-		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
-		{"2024-06-18 17:22:13.123456", "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
-		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
-		{"point(1 2)", "GEOMETRY", new(string), "POINT (1 2)", dereferenceString},
-		{"5-3", "INTERVAL YEAR TO MONTH", new(string), "+05-03", dereferenceString},
-		{"2 12:50:10.123", "INTERVAL DAY TO SECOND", new(string), "+02 12:50:10.123", dereferenceString},
-		{"550e8400-e29b-11d4-a716-446655440000", "HASHTYPE", new(string), "550e8400e29b11d4a716446655440000", dereferenceString},
-		{true, "BOOLEAN", new(bool), true, dereferenceBool},
+	}
+	int64TestCase := func(sqlValue any, sqlType string, expectedValue int64) TestCase {
+		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(int64), expectedValue: expectedValue, dereference: dereferenceInt64}
+	}
+	int32TestCase := func(sqlValue any, sqlType string, expectedValue int32) TestCase {
+		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(int32), expectedValue: expectedValue, dereference: dereferenceInt32}
+	}
+	float64TestCase := func(sqlValue any, sqlType string, expectedValue float64) TestCase {
+		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(float64), expectedValue: expectedValue, dereference: dereferenceFloat64}
+	}
+	float32TestCase := func(sqlValue any, sqlType string, expectedValue float32) TestCase {
+		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(float32), expectedValue: expectedValue, dereference: dereferenceFloat32}
+	}
+	stringTestCase := func(sqlValue any, sqlType string, expectedValue string) TestCase {
+		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(string), expectedValue: expectedValue, dereference: dereferenceString}
+	}
+	boolTestCase := func(sqlValue any, sqlType string, expectedValue bool) TestCase {
+		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(bool), expectedValue: expectedValue, dereference: dereferenceBool}
+	}
+
+	for i, testCase := range []TestCase{
+		// DECIMAL
+		int64TestCase(1, "DECIMAL(18,0)", 1),
+		int64TestCase(-1, "DECIMAL(18,0)", -1),
+		int64TestCase(1.1, "DECIMAL(18,0)", 1),
+		int64TestCase(-1.1, "DECIMAL(18,0)", -1),
+		int64TestCase(100000000, "DECIMAL(18,0)", 100000000),
+		int64TestCase(-100000000, "DECIMAL(18,0)", -100000000),
+		int64TestCase(100000000, "DECIMAL(18,2)", 100000000),
+		int64TestCase(-100000000, "DECIMAL(18,2)", -100000000),
+		int64TestCase(math.MaxInt64, "DECIMAL(36,0)", math.MaxInt64),
+		int64TestCase(math.MinInt64, "DECIMAL(36,0)", math.MinInt64),
+
+		int32TestCase(1, "DECIMAL(18,0)", 1),
+		int32TestCase(-1, "DECIMAL(18,0)", -1),
+		int32TestCase(1.1, "DECIMAL(18,0)", 1),
+		int32TestCase(-1.1, "DECIMAL(18,0)", -1),
+		int32TestCase(math.MaxInt32, "DECIMAL(36,0)", math.MaxInt32),
+		int32TestCase(math.MinInt32, "DECIMAL(36,0)", math.MinInt32),
+
+		float64TestCase(1, "DECIMAL(18,0)", 1),
+		float64TestCase(-1, "DECIMAL(18,0)", -1),
+		float64TestCase(1.123, "DECIMAL(18,3)", 1.123),
+		float64TestCase(-1.123, "DECIMAL(18,3)", -1.123),
+		float64TestCase(100000000.12, "DECIMAL(18,2)", 100000000.12),
+		float64TestCase(-100000000.12, "DECIMAL(18,2)", -100000000.12),
+
+		float32TestCase(1, "DECIMAL(18,0)", 1),
+		float32TestCase(-1, "DECIMAL(18,0)", -1),
+		float32TestCase(1.123, "DECIMAL(18,3)", 1.123),
+		float32TestCase(-1.123, "DECIMAL(18,3)", -1.123),
+
+		// DOUBLE
+		float64TestCase(3.3, "DOUBLE PRECISION", 3.3),
+		float64TestCase(-3.3, "DOUBLE PRECISION", -3.3),
+		float64TestCase(3, "DOUBLE PRECISION", 3.0),
+		float64TestCase(-3, "DOUBLE PRECISION", -3.0),
+
+		float32TestCase(math.MaxFloat32, "DOUBLE PRECISION", math.MaxFloat32),
+		float32TestCase(math.SmallestNonzeroFloat32, "DOUBLE PRECISION", math.SmallestNonzeroFloat32),
+		float64TestCase(1.7976e+308, "DOUBLE PRECISION", 1.7975999999999999e+308), // math.MaxFloat64 causes error "data exception - numeric value out of range"
+		float64TestCase(math.SmallestNonzeroFloat64, "DOUBLE PRECISION", math.SmallestNonzeroFloat64),
+
+		// VARCHAR
+		stringTestCase("text", "VARCHAR(10)", "text"),
+		stringTestCase("text", "CHAR(10)", "text      "),
+		stringTestCase("2024-06-18", "DATE", "2024-06-18"),
+		stringTestCase(time.Date(2024, time.June, 18, 0, 0, 0, 0, time.UTC), "DATE", "2024-06-18"),
+		stringTestCase("2024-06-18 17:22:13.123456", "TIMESTAMP", "2024-06-18 17:22:13.123000"),
+		stringTestCase(time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", "2024-06-18 17:22:13.123000"),
+		stringTestCase("2024-06-18 17:22:13.123456", "TIMESTAMP WITH LOCAL TIME ZONE", "2024-06-18 17:22:13.123000"),
+		stringTestCase(time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", "2024-06-18 17:22:13.123000"),
+		stringTestCase("point(1 2)", "GEOMETRY", "POINT (1 2)"),
+		stringTestCase("5-3", "INTERVAL YEAR TO MONTH", "+05-03"),
+		stringTestCase("2 12:50:10.123", "INTERVAL DAY TO SECOND", "+02 12:50:10.123"),
+		stringTestCase("550e8400-e29b-11d4-a716-446655440000", "HASHTYPE", "550e8400e29b11d4a716446655440000"),
+		boolTestCase(true, "BOOLEAN", true),
+		boolTestCase(false, "BOOLEAN", false),
 	} {
 		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 		schemaName := "DATATYPE_TEST"
@@ -320,8 +407,9 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 			rows, err := database.Query(fmt.Sprintf("select * from %s", tableName))
 			onError(err)
 			defer rows.Close()
-			suite.True(rows.Next(), "should have one row")
+			suite.True(rows.Next(), "should have at least one row")
 			onError(rows.Scan(testCase.scanDest))
+			suite.False(rows.Next(), "should have at most one row")
 			val := testCase.scanDest
 			suite.Equal(testCase.expectedValue, testCase.dereference(val))
 		})
@@ -346,14 +434,14 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
 
 func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 	for i, testCase := range []struct {
-		testDescription string
-		sqlValue        any
-		sqlType         string
-		scanDest        any
-		expectedError   string
+		sqlValue      any
+		sqlType       string
+		scanDest      any
+		expectedError string
 	}{
-		{"timestamp", time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(time.Time), `sql: Scan error on column index 0, name "COL": unsupported Scan, storing driver.Value type string into type *time.Time`},
-		{"timestamp with local time zone", time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(time.Time), `sql: Scan error on column index 0, name "COL": unsupported Scan, storing driver.Value type string into type *time.Time`},
+		{1.1, "DECIMAL(4,2)", new(int64), `converting driver.Value type string ("1.1") to a int64: invalid syntax`},
+		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(time.Time), `unsupported Scan, storing driver.Value type string into type *time.Time`},
+		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(time.Time), `unsupported Scan, storing driver.Value type string into type *time.Time`},
 	} {
 		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 		schemaName := "DATATYPE_TEST"
@@ -361,7 +449,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 		onError(err)
 		defer suite.cleanup(database, schemaName)
 
-		suite.Run(fmt.Sprintf("Scan fails %02d %s: %s", i, testCase.testDescription, testCase.sqlType), func() {
+		suite.Run(fmt.Sprintf("Scan fails %02d %s", i, testCase.sqlType), func() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
 			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
 			onError(err)
@@ -374,7 +462,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 			defer rows.Close()
 			suite.True(rows.Next(), "should have one row")
 			err = rows.Scan(testCase.scanDest)
-			suite.EqualError(err, testCase.expectedError)
+			suite.EqualError(err, `sql: Scan error on column index 0, name "COL": `+testCase.expectedError)
 		})
 	}
 }
@@ -501,9 +589,9 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B"},
 		[][]interface{}{
-			{float64(11), "test1"},
-			{float64(12), "test2"},
-			{float64(13), "test3"},
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
 		},
 	)
 }
@@ -555,7 +643,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	suite.NoError(err, "count query should work")
 	suite.assertTableResult(rows, []string{"COUNT(*)"},
 		[][]interface{}{
-			{float64(20000)},
+			{int64(20000)},
 		},
 	)
 
@@ -564,9 +652,9 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B", "C", "D", "E", "F", "G"},
 		[][]interface{}{
-			{float64(0), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
-			{float64(1), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
-			{float64(2), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{int64(0), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{int64(1), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
+			{int64(2), exampleData, exampleData, exampleData, exampleData, exampleData, exampleData},
 		},
 	)
 }
@@ -628,12 +716,12 @@ func (suite *IntegrationTestSuite) TestMultiImportStatement() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B"},
 		[][]interface{}{
-			{float64(11), "test1"},
-			{float64(12), "test2"},
-			{float64(13), "test3"},
-			{float64(21), "test4"},
-			{float64(22), "test5"},
-			{float64(23), "test6"},
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
+			{int64(21), "test4"},
+			{int64(22), "test5"},
+			{int64(23), "test6"},
 		},
 	)
 }
@@ -663,7 +751,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int, b VARCHAR(20))", schemaName, tableName))
 
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data_cr.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'CR'`, schemaName, tableName))
 	suite.NoError(err, "import should be successful")
@@ -674,9 +762,9 @@ func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	suite.assertTableResult(rows,
 		[]string{"A", "B"},
 		[][]interface{}{
-			{float64(11), "test1"},
-			{float64(12), "test2"},
-			{float64(13), "test3"},
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
 		},
 	)
 }

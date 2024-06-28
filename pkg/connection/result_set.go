@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"io"
+	"math"
 	"reflect"
 	"sync"
 
@@ -90,14 +91,40 @@ func (results *QueryResults) Next(dest []driver.Value) error {
 		}
 	}
 
-	for i := range dest {
-		dest[i] = results.data.Data[i][results.rowPointer]
+	for columnIndex := range dest {
+		dest[columnIndex] = results.getColumnValue(columnIndex)
 	}
 
 	results.rowPointer = results.rowPointer + 1
 	results.totalRowPointer = results.totalRowPointer + 1
 
 	return nil
+}
+
+func (results *QueryResults) getColumnValue(columnIndex int) driver.Value {
+	value := results.data.Data[columnIndex][results.rowPointer]
+	columnType := results.data.Columns[columnIndex].DataType
+	return convertValue(value, columnType)
+}
+
+// Result set data contains  values as float64 even for whole numbers. This causes an error when calling "Scan()" with an integer value.
+// As a workaround we convert the float64 to int for DECIMAL columns with scale 0.
+// See https://github.com/exasol/exasol-driver-go/issues/113 for details.
+func convertValue(value any, columnType types.SqlQueryColumnType) driver.Value {
+	if isIntegerColumn(columnType) {
+		if floatValue, ok := value.(float64); ok && isIntegerValue(floatValue) {
+			return int64(floatValue)
+		}
+	}
+	return value
+}
+
+func isIntegerColumn(columnType types.SqlQueryColumnType) bool {
+	return columnType.Type == "DECIMAL" && columnType.Scale != nil && *columnType.Scale == 0
+}
+
+func isIntegerValue(value float64) bool {
+	return value == math.Trunc(value)
 }
 
 func (results *QueryResults) fetchNextRowChunk() error {

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -23,11 +24,19 @@ func TestConvertArgs(t *testing.T) {
 	}{
 		{arg: "text", exasolType: "VARCHAR", expectedJson: `"text"`},
 		{arg: 123, exasolType: "VARCHAR", expectedJson: `123`},
+		{arg: -123, exasolType: "VARCHAR", expectedJson: `-123`},
+		{arg: math.MaxInt64, exasolType: "VARCHAR", expectedJson: `9223372036854775807`},
+		{arg: math.MinInt64, exasolType: "VARCHAR", expectedJson: `-9223372036854775808`},
+		{arg: math.MaxFloat64, exasolType: "VARCHAR", expectedJson: `1.7976931348623157e+308`},
+		{arg: math.SmallestNonzeroFloat64, exasolType: "VARCHAR", expectedJson: `5e-324`},
 		{arg: 123.456, exasolType: "VARCHAR", expectedJson: `123.456`},
+		{arg: -123.456, exasolType: "VARCHAR", expectedJson: `-123.456`},
 		{arg: "text", exasolType: "CHAR", expectedJson: `"text"`},
+
 		// BOOLEAN
 		{arg: true, exasolType: "BOOLEAN", expectedJson: `true`},
 		{arg: false, exasolType: "BOOLEAN", expectedJson: `false`},
+
 		// DECIMAL
 		{arg: 17, exasolType: "DECIMAL", expectedJson: `17`},
 		{arg: 123.456, exasolType: "DECIMAL", expectedJson: `123.456`},
@@ -38,17 +47,35 @@ func TestConvertArgs(t *testing.T) {
 		{arg: float64(123), exasolType: "DECIMAL", expectedJson: `123`},
 		{arg: float32(123.456), exasolType: "DECIMAL", expectedJson: `123.456`},
 		{arg: float64(123.456), exasolType: "DECIMAL", expectedJson: `123.456`},
+		{arg: math.MaxInt64, exasolType: "DECIMAL", expectedJson: `9223372036854775807`},
+		{arg: math.MinInt64, exasolType: "DECIMAL", expectedJson: `-9223372036854775808`},
+		{arg: math.MaxFloat64, exasolType: "DECIMAL", expectedJson: `1.7976931348623157e+308`},
+		{arg: math.SmallestNonzeroFloat64, exasolType: "DECIMAL", expectedJson: `5e-324`},
 		{arg: "invalid", exasolType: "DECIMAL", expectedJson: `"invalid"`}, // No special handling for invalid values
+
 		// DOUBLE
-		{arg: 123.456, exasolType: "DOUBLE", expectedJson: `123.456000`},
-		{arg: 123, exasolType: "DOUBLE", expectedJson: `123.000000`},
-		{arg: int(123), exasolType: "DOUBLE", expectedJson: `123.000000`},
-		{arg: int32(123), exasolType: "DOUBLE", expectedJson: `123.000000`},
-		{arg: int64(123), exasolType: "DOUBLE", expectedJson: `123.000000`},
-		{arg: float32(123), exasolType: "DOUBLE", expectedJson: `123.000000`},
-		{arg: float64(123), exasolType: "DOUBLE", expectedJson: `123.000000`},
-		{arg: float32(123.456), exasolType: "DOUBLE", expectedJson: `123.456001`}, // Float32 rounding error is OK
-		{arg: float64(123.456), exasolType: "DOUBLE", expectedJson: `123.456000`},
+		{arg: 123, exasolType: "DOUBLE", expectedJson: `123.0`},
+		{arg: -123, exasolType: "DOUBLE", expectedJson: `-123.0`},
+		{arg: math.MinInt64, exasolType: "DOUBLE", expectedJson: `-9223372036854776000.0`}, // rounding error acceptable
+		{arg: math.MaxInt64, exasolType: "DOUBLE", expectedJson: `9223372036854776000.0`},  // rounding error acceptable
+		{arg: math.MaxFloat64, exasolType: "DOUBLE", expectedJson: `1.7976931348623157e+308`},
+		{arg: math.SmallestNonzeroFloat64, exasolType: "DOUBLE", expectedJson: `5e-324`}, // rounding error acceptable
+		{arg: 123.456, exasolType: "DOUBLE", expectedJson: `123.456`},
+		{arg: -123.456, exasolType: "DOUBLE", expectedJson: `-123.456`},
+		{arg: int(123), exasolType: "DOUBLE", expectedJson: `123.0`},
+		{arg: int(-123), exasolType: "DOUBLE", expectedJson: `-123.0`},
+		{arg: int32(123), exasolType: "DOUBLE", expectedJson: `123.0`},
+		{arg: int32(-123), exasolType: "DOUBLE", expectedJson: `-123.0`},
+		{arg: int64(123), exasolType: "DOUBLE", expectedJson: `123.0`},
+		{arg: int64(-123), exasolType: "DOUBLE", expectedJson: `-123.0`},
+		{arg: float32(123), exasolType: "DOUBLE", expectedJson: `123.0`},
+		{arg: float32(-123), exasolType: "DOUBLE", expectedJson: `-123.0`},
+		{arg: float64(123), exasolType: "DOUBLE", expectedJson: `123.0`},
+		{arg: float64(-123), exasolType: "DOUBLE", expectedJson: `-123.0`},
+		{arg: float32(123.456), exasolType: "DOUBLE", expectedJson: `123.45600128173828`},   // Float32 rounding error is OK
+		{arg: float32(-123.456), exasolType: "DOUBLE", expectedJson: `-123.45600128173828`}, // Float32 rounding error is OK
+		{arg: float64(123.456), exasolType: "DOUBLE", expectedJson: `123.456`},
+		{arg: float64(-123.456), exasolType: "DOUBLE", expectedJson: `-123.456`},
 		{arg: "invalid", exasolType: "DOUBLE", expectedError: "E-EGOD-30: cannot convert argument 'invalid' of type 'string' to 'DOUBLE' type"},
 		// TIMESTAMP
 		{arg: "some string", exasolType: "TIMESTAMP", expectedJson: `"some string"`}, // We assume strings are already formatted
@@ -84,7 +111,7 @@ func TestConvertArgs(t *testing.T) {
 			}
 			actualJson, err := json.Marshal(converted)
 			if err != nil {
-				t.Errorf("Error marshalling converted arg: %v", err)
+				t.Errorf("Error marshalling converted arg '%v' of type %T: %v", converted, converted, err)
 				return
 			}
 			if string(actualJson) != testCase.expectedJson {

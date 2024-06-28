@@ -6,14 +6,11 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
-	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/exasol/exasol-driver-go/pkg/types"
 
 	"github.com/stretchr/testify/suite"
@@ -30,11 +27,6 @@ func TestResultSetSuite(t *testing.T) {
 
 func (suite *ResultSetTestSuite) SetupTest() {
 	suite.websocketMock = wsconn.CreateWebsocketConnectionMock()
-	logger.SetTraceLogger(log.New(os.Stderr, "[TestResultSetSuite] ", log.LstdFlags|log.Lshortfile))
-}
-
-func (suite *ResultSetTestSuite) TearDownTest() {
-	logger.SetTraceLogger(nil)
 }
 
 func (suite *ResultSetTestSuite) TestColumnTypeDatabaseTypeName() {
@@ -283,6 +275,41 @@ func (suite *ResultSetTestSuite) TestCloseSendsCloseResultSetCommand() {
 		ResultSetHandles: []int{17},
 	}, nil)
 	suite.NoError(queryResults.Close())
+}
+
+func (suite *ResultSetTestSuite) TestConvertValue() {
+	createType := func(dataType string, scale int64) types.SqlQueryColumnType {
+		return types.SqlQueryColumnType{Type: dataType, Scale: &scale}
+	}
+	createTypeWithoutScale := func(dataType string) types.SqlQueryColumnType {
+		return types.SqlQueryColumnType{Type: dataType, Scale: nil}
+	}
+	decimalTypeZeroScale := createType("DECIMAL", 0)
+	for i, testCase := range []struct {
+		value         any
+		columnType    types.SqlQueryColumnType
+		expectedValue driver.Value
+	}{
+		{float64(1), decimalTypeZeroScale, int64(1)},                     // Only this combination will convert the value
+		{float64(-1), decimalTypeZeroScale, int64(-1)},                   // Only this combination will convert the value
+		{float64(10000000000), decimalTypeZeroScale, int64(10000000000)}, // Only this combination will convert the value
+		{1.1, decimalTypeZeroScale, float64(1.1)},
+		{float32(1.1), decimalTypeZeroScale, float32(1.1)},
+		{"string", decimalTypeZeroScale, "string"},
+		{true, decimalTypeZeroScale, true},
+		{1, decimalTypeZeroScale, 1},
+		{int32(1), decimalTypeZeroScale, int32(1)},
+		{int64(1), decimalTypeZeroScale, int64(1)},
+		{float64(1.1), createType("DECIMAL", -1), float64(1.1)},
+		{float64(1.1), createType("DECIMAL", 1), float64(1.1)},
+		{float64(1.1), createType("OTHER", 0), float64(1.1)},
+		{float64(1.1), createTypeWithoutScale("DECIMAL"), float64(1.1)},
+	} {
+		suite.Run(fmt.Sprintf("TestConvertValue %d value %v type %v", i, testCase.value, testCase.columnType), func() {
+			result := convertValue(testCase.value, testCase.columnType)
+			suite.Equal(testCase.expectedValue, result)
+		})
+	}
 }
 
 func (suite *ResultSetTestSuite) createResultSet() QueryResults {
