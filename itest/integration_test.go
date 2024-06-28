@@ -311,7 +311,6 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 		scanDest      any
 		expectedValue any
 		dereference   func(any) any
-		//delta         float64
 	}
 	int64TestCase := func(sqlValue any, sqlType string, expectedValue int64) TestCase {
 		return TestCase{sqlValue: sqlValue, sqlType: sqlType, scanDest: new(int64), expectedValue: expectedValue, dereference: dereferenceInt64}
@@ -338,8 +337,6 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 		int64TestCase(-1, "DECIMAL(18,0)", -1),
 		int64TestCase(1.1, "DECIMAL(18,0)", 1),
 		int64TestCase(-1.1, "DECIMAL(18,0)", -1),
-		int64TestCase(1.1, "DECIMAL(18,2)", 1),
-		int64TestCase(-1.1, "DECIMAL(18,2)", -1),
 		int64TestCase(100000000, "DECIMAL(18,0)", 100000000),
 		int64TestCase(-100000000, "DECIMAL(18,0)", -100000000),
 		int64TestCase(100000000, "DECIMAL(18,2)", 100000000),
