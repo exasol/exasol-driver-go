@@ -16,6 +16,7 @@ import (
 type WebsocketTestSuite struct {
 	suite.Suite
 	websocketMock *wsconn.WebsocketConnectionMock
+	ctx           context.Context
 }
 
 func TestWebsocketSuite(t *testing.T) {
@@ -24,6 +25,7 @@ func TestWebsocketSuite(t *testing.T) {
 
 func (suite *WebsocketTestSuite) SetupTest() {
 	suite.websocketMock = wsconn.CreateWebsocketConnectionMock()
+	suite.ctx = context.Background()
 }
 
 func (suite *WebsocketTestSuite) TestSendSuccess() {
@@ -31,7 +33,7 @@ func (suite *WebsocketTestSuite) TestSendSuccess() {
 	response := &types.PublicKeyResponse{}
 	suite.websocketMock.SimulateOKResponse(request, types.PublicKeyResponse{PublicKeyPem: "pem"})
 
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.NoError(err)
 	suite.Equal("pem", response.PublicKeyPem)
 }
@@ -44,7 +46,7 @@ func (suite *WebsocketTestSuite) TestSendSuccessWithCompression() {
 
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = true
-	err := conn.Send(context.Background(), request, response)
+	err := conn.Send(suite.ctx, request, response)
 	suite.NoError(err)
 	suite.Equal("pem", response.PublicKeyPem)
 }
@@ -57,7 +59,7 @@ func (suite *WebsocketTestSuite) TestSendWithCompressionFailsDuringUncompress() 
 
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = true
-	err := conn.Send(context.Background(), request, response)
+	err := conn.Send(suite.ctx, request, response)
 	suite.EqualError(err, "W-EGOD-18: could not decode compressed data: 'zlib: invalid header'")
 	suite.True(errors.Is(err, driver.ErrBadConn))
 }
@@ -66,7 +68,7 @@ func (suite *WebsocketTestSuite) TestSendSuccessNoResponse() {
 	request := types.LoginCommand{Command: types.Command{Command: "login"}}
 	suite.websocketMock.SimulateOKResponse(request, types.PublicKeyResponse{PublicKeyPem: "pem"})
 
-	err := suite.createOpenConnection().Send(context.Background(), request, nil)
+	err := suite.createOpenConnection().Send(suite.ctx, request, nil)
 	suite.NoError(err)
 }
 
@@ -76,7 +78,7 @@ func (suite *WebsocketTestSuite) TestSendFailsNotConnected() {
 
 	conn := suite.createOpenConnection()
 	conn.websocket = nil
-	err := conn.Send(context.Background(), request, response)
+	err := conn.Send(suite.ctx, request, response)
 	suite.EqualError(err, `E-EGOD-29: could not send request '{"command":"login","protocolVersion":0,"attributes":{}}': not connected to server`)
 }
 
@@ -84,7 +86,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtWriteMessage() {
 	request := types.LoginCommand{Command: types.Command{Command: "login"}}
 	response := &types.PublicKeyResponse{}
 	suite.websocketMock.OnWriteAnyMessage(fmt.Errorf("mock error"))
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.EqualError(err, "W-EGOD-16: could not send request: 'mock error'")
 	suite.True(errors.Is(err, driver.ErrBadConn))
 }
@@ -95,7 +97,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtReadMessage() {
 	suite.websocketMock.OnWriteAnyMessage(nil)
 	suite.websocketMock.OnReadTextMessage(nil, fmt.Errorf("mock error"))
 
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.EqualError(err, "W-EGOD-17: could not receive data: 'mock error'")
 	suite.True(errors.Is(err, driver.ErrBadConn))
 }
@@ -106,7 +108,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtDecodingResponse() {
 	suite.websocketMock.OnWriteAnyMessage(nil)
 	suite.websocketMock.OnReadTextMessage([]byte("invalid json"), nil)
 
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.EqualError(err, "W-EGOD-19: could not decode json data 'invalid json': 'invalid character 'i' looking for beginning of value'")
 	suite.True(errors.Is(err, driver.ErrBadConn))
 }
@@ -116,7 +118,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtNonOKStatusException() {
 	response := &types.PublicKeyResponse{}
 	suite.websocketMock.SimulateErrorResponse(request, mockException)
 
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
 }
 
@@ -126,7 +128,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtNonOKStatusMissingException() {
 	suite.websocketMock.OnWriteTextMessage(wsconn.JsonMarshall(request), nil)
 	suite.websocketMock.OnReadTextMessage([]byte(`{"status": "notok"}`), nil)
 
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.EqualError(err, `result status is not 'ok': "notok", expected exception in response &{notok [] <nil>}`)
 }
 
@@ -136,7 +138,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtParsingResponseData() {
 	suite.websocketMock.OnWriteTextMessage(wsconn.JsonMarshall(request), nil)
 	suite.websocketMock.OnReadTextMessage([]byte(`{"status": "ok", "responseData": "invalid"}`), nil)
 
-	err := suite.createOpenConnection().Send(context.Background(), request, response)
+	err := suite.createOpenConnection().Send(suite.ctx, request, response)
 	suite.EqualError(err, `failed to parse response data "\"invalid\"": json: cannot unmarshal string into Go value of type types.PublicKeyResponse`)
 }
 
@@ -170,7 +172,7 @@ func (suite *WebsocketTestSuite) TestCreateURL() {
 func (suite *WebsocketTestSuite) createOpenConnection() *Connection {
 	conn := &Connection{
 		Config:    &config.Config{Host: "invalid", Port: 12345, User: "user", Password: "password", ApiVersion: 42},
-		Ctx:       context.Background(),
+		Ctx:       suite.ctx,
 		IsClosed:  false,
 		websocket: suite.websocketMock,
 	}

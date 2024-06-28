@@ -313,13 +313,14 @@ func (suite *ResultSetTestSuite) TestConvertValue() {
 }
 
 func (suite *ResultSetTestSuite) createResultSet() QueryResults {
+	ctx := context.Background()
 	return QueryResults{
-		ctx: context.Background(),
+		ctx: ctx,
 		data: &types.SqlQueryResponseResultSetData{
 			ResultSetHandle: 1, NumRows: 2, NumRowsInMessage: 2, Columns: []types.SqlQueryColumn{{}, {}},
 		},
 		con: &Connection{
-			websocket: suite.websocketMock, Config: &config.Config{}, Ctx: context.Background(), IsClosed: false,
+			websocket: suite.websocketMock, Config: &config.Config{}, Ctx: ctx, IsClosed: false,
 		},
 		fetchedRows:     0,
 		totalRowPointer: 0,

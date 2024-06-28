@@ -15,6 +15,7 @@ import (
 type WebsocketITestSuite struct {
 	suite.Suite
 	exasol *integrationTesting.DbTestSetup
+	ctx    context.Context
 }
 
 func TestIntegrationWebsocketSuite(t *testing.T) {
@@ -29,21 +30,25 @@ func (suite *WebsocketITestSuite) TearDownSuite() {
 	suite.exasol.StopDb()
 }
 
+func (suite *WebsocketITestSuite) SetupTest() {
+	suite.ctx = context.Background()
+}
+
 func (suite *WebsocketITestSuite) TestCreateConnectionSuccess() {
-	conn, err := wsconn.CreateConnection(context.Background(), true, "", suite.exasol.GetUrl())
+	conn, err := wsconn.CreateConnection(suite.ctx, true, "", suite.exasol.GetUrl())
 	suite.NoError(err)
 	suite.NotNil(conn)
 	conn.Close()
 }
 
 func (suite *WebsocketITestSuite) TestCreateConnectionFailed() {
-	conn, err := wsconn.CreateConnection(context.Background(), true, "", url.URL{Scheme: "wss", Host: "invalid:12345"})
+	conn, err := wsconn.CreateConnection(suite.ctx, true, "", url.URL{Scheme: "wss", Host: "invalid:12345"})
 	suite.ErrorContains(err, `failed to connect to URL "wss://invalid:12345": dial tcp`)
 	suite.Nil(conn)
 }
 
 func (suite *WebsocketITestSuite) TestCreateConnectionInvalidCertificate() {
-	conn, err := wsconn.CreateConnection(context.Background(), false, "invalid", suite.exasol.GetUrl())
+	conn, err := wsconn.CreateConnection(suite.ctx, false, "invalid", suite.exasol.GetUrl())
 	suite.ErrorContains(err, fmt.Sprintf(`failed to connect to URL "wss://%s:%d": tls: failed to verify certificate`, suite.exasol.ConnectionInfo.Host, suite.exasol.ConnectionInfo.Port))
 	suite.Nil(conn)
 }
@@ -64,7 +69,7 @@ func (suite *WebsocketITestSuite) TestRead() {
 }
 
 func (suite *WebsocketITestSuite) createConnection() wsconn.WebsocketConnection {
-	conn, err := wsconn.CreateConnection(context.Background(), true, "", suite.exasol.GetUrl())
+	conn, err := wsconn.CreateConnection(suite.ctx, true, "", suite.exasol.GetUrl())
 	if err != nil {
 		suite.FailNowf("connection failed: %v", err.Error())
 	}

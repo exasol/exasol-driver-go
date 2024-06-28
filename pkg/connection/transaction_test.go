@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"context"
 	"database/sql/driver"
 	"testing"
 
@@ -16,23 +17,30 @@ func TestTransactionSuite(t *testing.T) {
 }
 
 func (suite *TransactionTestSuite) TestCommitWithEmptyConnection() {
-	transaction := Transaction{nil}
+	transaction := suite.createTransaction()
+	transaction.connection = nil
 	suite.EqualError(transaction.Commit(), "E-EGOD-1: invalid connection")
 }
 
 func (suite *TransactionTestSuite) TestRollbackWithEmptyConnection() {
-	transaction := Transaction{nil}
+	transaction := suite.createTransaction()
+	transaction.connection = nil
 	suite.EqualError(transaction.Rollback(), "E-EGOD-1: invalid connection")
 }
 
 func (suite *TransactionTestSuite) TestCommitWithClosedConnection() {
-	connection := Connection{IsClosed: true}
-	transaction := Transaction{connection: &connection}
+	transaction := suite.createTransaction()
+	transaction.connection.IsClosed = true
 	suite.EqualError(transaction.Commit(), driver.ErrBadConn.Error())
 }
 
 func (suite *TransactionTestSuite) TestRollbackWithClosedConnection() {
-	connection := Connection{IsClosed: true}
-	transaction := Transaction{connection: &connection}
+	transaction := suite.createTransaction()
+	transaction.connection.IsClosed = true
 	suite.EqualError(transaction.Rollback(), driver.ErrBadConn.Error())
+}
+
+func (suite *TransactionTestSuite) createTransaction() Transaction {
+	connection := Connection{IsClosed: true}
+	return Transaction{ctx: context.Background(), connection: &connection}
 }

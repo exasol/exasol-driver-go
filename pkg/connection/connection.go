@@ -86,6 +86,12 @@ func (c *Connection) createStatement(ctx context.Context, result *types.CreatePr
 	return NewStatement(ctx, c, result)
 }
 
+func (c *Connection) Ping(ctx context.Context) error {
+	fmt.Printf("Ping\n")
+	// FIXME
+	return nil
+}
+
 func (c *Connection) Prepare(query string) (driver.Stmt, error) {
 	return c.PrepareContext(c.Ctx, query)
 }
@@ -102,7 +108,7 @@ func (c *Connection) Begin() (driver.Tx, error) {
 	if c.Config.Autocommit {
 		return nil, errors.ErrAutocommitEnabled
 	}
-	return NewTransaction(c), nil
+	return NewTransaction(c.Ctx, c), nil
 }
 
 func (c *Connection) query(ctx context.Context, query string, args []driver.Value) (driver.Rows, error) {

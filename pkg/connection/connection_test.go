@@ -22,6 +22,7 @@ func mockExceptionError(exception types.Exception) string {
 type ConnectionTestSuite struct {
 	suite.Suite
 	websocketMock *wsconn.WebsocketConnectionMock
+	ctx           context.Context
 }
 
 func TestConnectionSuite(t *testing.T) {
@@ -30,12 +31,13 @@ func TestConnectionSuite(t *testing.T) {
 
 func (suite *ConnectionTestSuite) SetupTest() {
 	suite.websocketMock = wsconn.CreateWebsocketConnectionMock()
+	suite.ctx = context.Background()
 }
 
 func (suite *ConnectionTestSuite) TestConnectFails() {
 	conn := &Connection{
 		Config:   &config.Config{Host: "invalid", Port: 12345},
-		Ctx:      context.Background(),
+		Ctx:      suite.ctx,
 		IsClosed: true,
 	}
 	err := conn.Connect()
@@ -43,7 +45,7 @@ func (suite *ConnectionTestSuite) TestConnectFails() {
 }
 
 func (suite *ConnectionTestSuite) TestQueryContextNamedParametersNotSupported() {
-	rows, err := suite.createOpenConnection().QueryContext(context.Background(), "query", []driver.NamedValue{{Name: "arg", Ordinal: 1, Value: "value"}})
+	rows, err := suite.createOpenConnection().QueryContext(suite.ctx, "query", []driver.NamedValue{{Name: "arg", Ordinal: 1, Value: "value"}})
 	suite.EqualError(err, "E-EGOD-7: named parameters not supported")
 	suite.Nil(rows)
 }
@@ -66,7 +68,7 @@ func (suite *ConnectionTestSuite) TestQueryContext() {
 		types.SqlQueryResponseResultSet{ResultType: "resultType", ResultSet: types.SqlQueryResponseResultSetData{}})
 	suite.websocketMock.SimulateOKResponse(types.ClosePreparedStatementCommand{Command: types.Command{Command: "closePreparedStatement"}, StatementHandle: 0, Attributes: types.Attributes{}}, nil)
 
-	rows, err := suite.createOpenConnection().QueryContext(context.Background(), "query", []driver.NamedValue{{Ordinal: 1, Value: "value"}})
+	rows, err := suite.createOpenConnection().QueryContext(suite.ctx, "query", []driver.NamedValue{{Ordinal: 1, Value: "value"}})
 	suite.NoError(err)
 	suite.Equal([]string{}, rows.Columns())
 }
@@ -95,7 +97,7 @@ func (suite *ConnectionTestSuite) TestQuery() {
 }
 
 func (suite *ConnectionTestSuite) TestExecContextNamedParametersNotSupported() {
-	rows, err := suite.createOpenConnection().ExecContext(context.Background(), "query", []driver.NamedValue{{Name: "arg", Ordinal: 1, Value: "value"}})
+	rows, err := suite.createOpenConnection().ExecContext(suite.ctx, "query", []driver.NamedValue{{Name: "arg", Ordinal: 1, Value: "value"}})
 	suite.EqualError(err, "E-EGOD-7: named parameters not supported")
 	suite.Nil(rows)
 }
@@ -118,7 +120,7 @@ func (suite *ConnectionTestSuite) TestExecContext() {
 		types.SqlQueryResponseRowCount{ResultType: "resultType", RowCount: 42})
 	suite.websocketMock.SimulateOKResponse(types.ClosePreparedStatementCommand{Command: types.Command{Command: "closePreparedStatement"}, StatementHandle: 0, Attributes: types.Attributes{}}, nil)
 
-	rows, err := suite.createOpenConnection().ExecContext(context.Background(), "query", []driver.NamedValue{{Ordinal: 1, Value: "value"}})
+	rows, err := suite.createOpenConnection().ExecContext(suite.ctx, "query", []driver.NamedValue{{Ordinal: 1, Value: "value"}})
 	suite.NoError(err)
 	rowsAffected, err := rows.RowsAffected()
 	suite.NoError(err)
@@ -153,7 +155,7 @@ func (suite *ConnectionTestSuite) TestExec() {
 func (suite *ConnectionTestSuite) TestPrepareContextFailsClosed() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = true
-	stmt, err := conn.PrepareContext(context.Background(), "query")
+	stmt, err := conn.PrepareContext(suite.ctx, "query")
 	suite.EqualError(err, driver.ErrBadConn.Error())
 	suite.Nil(stmt)
 }
@@ -166,7 +168,7 @@ func (suite *ConnectionTestSuite) TestPrepareContextPreparedStatementFails() {
 			Attributes: types.Attributes{},
 		},
 		mockException)
-	stmt, err := suite.createOpenConnection().PrepareContext(context.Background(), "query")
+	stmt, err := suite.createOpenConnection().PrepareContext(suite.ctx, "query")
 	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(stmt)
 }
@@ -180,7 +182,7 @@ func (suite *ConnectionTestSuite) TestPrepareContextSuccess() {
 		},
 		types.CreatePreparedStatementResponse{
 			ParameterData: types.ParameterData{Columns: []types.SqlQueryColumn{{Name: "col", DataType: types.SqlQueryColumnType{Type: "type"}}}}})
-	stmt, err := suite.createOpenConnection().PrepareContext(context.Background(), "query")
+	stmt, err := suite.createOpenConnection().PrepareContext(suite.ctx, "query")
 	suite.NoError(err)
 	suite.NotNil(stmt)
 }
@@ -248,7 +250,7 @@ func (suite *ConnectionTestSuite) TestBeginFailsWithAutocommitEnabled() {
 func (suite *ConnectionTestSuite) TestQueryFailsConnectionClosed() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = true
-	rows, err := conn.query(context.Background(), "query", nil)
+	rows, err := conn.query(suite.ctx, "query", nil)
 	suite.EqualError(err, driver.ErrBadConn.Error())
 	suite.Nil(rows)
 }
@@ -257,7 +259,7 @@ func (suite *ConnectionTestSuite) TestQueryNoArgs() {
 	suite.websocketMock.SimulateSQLQueriesResponse(
 		types.SqlCommand{Command: types.Command{Command: "execute"}, SQLText: "query", Attributes: types.Attributes{}},
 		types.SqlQueryResponseResultSet{ResultType: "resultType", ResultSet: types.SqlQueryResponseResultSetData{}})
-	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{})
+	rows, err := suite.createOpenConnection().query(suite.ctx, "query", []driver.Value{})
 	suite.NoError(err)
 	suite.NotNil(rows)
 }
@@ -266,7 +268,7 @@ func (suite *ConnectionTestSuite) TestQueryNoArgsFails() {
 	suite.websocketMock.SimulateErrorResponse(
 		types.SqlCommand{Command: types.Command{Command: "execute"}, SQLText: "query", Attributes: types.Attributes{}},
 		mockException)
-	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{})
+	rows, err := suite.createOpenConnection().query(suite.ctx, "query", []driver.Value{})
 	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(rows)
 }
@@ -289,7 +291,7 @@ func (suite *ConnectionTestSuite) TestQueryWithArgs() {
 		types.SqlQueryResponseResultSet{ResultType: "resultType", ResultSet: types.SqlQueryResponseResultSetData{}})
 	suite.websocketMock.SimulateOKResponse(types.ClosePreparedStatementCommand{Command: types.Command{Command: "closePreparedStatement"}, StatementHandle: 0, Attributes: types.Attributes{}}, nil)
 
-	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{"value"})
+	rows, err := suite.createOpenConnection().query(suite.ctx, "query", []driver.Value{"value"})
 	suite.NoError(err)
 	suite.NotNil(rows)
 }
@@ -303,7 +305,7 @@ func (suite *ConnectionTestSuite) TestQueryWithArgsFailsInPrepare() {
 		},
 		mockException)
 
-	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{"value"})
+	rows, err := suite.createOpenConnection().query(suite.ctx, "query", []driver.Value{"value"})
 	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(rows)
 }
@@ -325,7 +327,7 @@ func (suite *ConnectionTestSuite) TestQueryWithArgsFailsInExecute() {
 		},
 		mockException)
 
-	rows, err := suite.createOpenConnection().query(context.Background(), "query", []driver.Value{"value"})
+	rows, err := suite.createOpenConnection().query(suite.ctx, "query", []driver.Value{"value"})
 	suite.EqualError(err, mockExceptionError(mockException))
 	suite.Nil(rows)
 }
@@ -334,7 +336,7 @@ func (suite *ConnectionTestSuite) TestPasswordLoginFailsInitialRequest() {
 	suite.websocketMock.SimulateErrorResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
 		mockException)
 	conn := suite.createOpenConnection()
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.EqualError(err, mockExceptionError(mockException))
 }
 
@@ -342,7 +344,7 @@ func (suite *ConnectionTestSuite) TestPasswordLoginFailsEncryptingPasswordReques
 	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
 		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: ""})
 	conn := suite.createOpenConnection()
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.EqualError(err, driver.ErrBadConn.Error())
 }
 
@@ -352,7 +354,7 @@ func (suite *ConnectionTestSuite) TestPasswordLoginSuccess() {
 	conn.IsClosed = true
 
 	suite.True(conn.IsClosed)
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.False(conn.IsClosed)
 	suite.NoError(err)
 }
@@ -364,7 +366,7 @@ func (suite *ConnectionTestSuite) TestAccessTokenLoginSuccess() {
 	conn.Config.AccessToken = "accessToken"
 
 	suite.True(conn.IsClosed)
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.False(conn.IsClosed)
 	suite.NoError(err)
 }
@@ -376,7 +378,7 @@ func (suite *ConnectionTestSuite) TestAccessTokenLoginPrepareFails() {
 	conn.Config.AccessToken = "accessToken"
 
 	suite.True(conn.IsClosed)
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.True(conn.IsClosed)
 	suite.EqualError(err, "access token login failed: E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
 }
@@ -388,7 +390,7 @@ func (suite *ConnectionTestSuite) TestRefreshTokenLoginSuccess() {
 	conn.Config.RefreshToken = "refreshToken"
 
 	suite.True(conn.IsClosed)
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.False(conn.IsClosed)
 	suite.NoError(err)
 }
@@ -400,7 +402,7 @@ func (suite *ConnectionTestSuite) TestRefreshTokenLoginPrepareFails() {
 	conn.Config.RefreshToken = "refreshToken"
 
 	suite.True(conn.IsClosed)
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.True(conn.IsClosed)
 	suite.EqualError(err, "refresh token login failed: E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
 }
@@ -410,7 +412,7 @@ func (suite *ConnectionTestSuite) TestLoginRestoresCompressionToTrue() {
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = true
 
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.True(conn.Config.Compression)
 	suite.NoError(err)
 }
@@ -419,7 +421,7 @@ func (suite *ConnectionTestSuite) TestLoginRestoresCompressionToFalse() {
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = false
 
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.False(conn.Config.Compression)
 	suite.NoError(err)
 }
@@ -429,7 +431,7 @@ func (suite *ConnectionTestSuite) TestLoginFails() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = false
 
-	err := conn.Login(context.Background())
+	err := conn.Login(suite.ctx)
 	suite.True(conn.IsClosed)
 	suite.EqualError(err, "failed to login: E-EGOD-11: execution failed with SQL error code 'mock sql code' and message 'mock error'")
 }
@@ -439,7 +441,7 @@ func (suite *ConnectionTestSuite) TestLoginFailureRestoresCompressionToTrue() {
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = true
 
-	conn.Login(context.Background())
+	conn.Login(suite.ctx)
 	suite.True(conn.Config.Compression)
 }
 
@@ -448,7 +450,7 @@ func (suite *ConnectionTestSuite) TestLoginFailureRestoresCompressionToFalse() {
 	conn := suite.createOpenConnection()
 	conn.Config.Compression = false
 
-	conn.Login(context.Background())
+	conn.Login(suite.ctx)
 	suite.False(conn.Config.Compression)
 }
 
@@ -494,7 +496,7 @@ uYIhswioGpmyPXr/wqz1NFkt5wMzm6sU3lFfCjD5SxU6arQ1zVY3AgMBAAE=
 func (suite *ConnectionTestSuite) createOpenConnection() *Connection {
 	conn := &Connection{
 		Config:    &config.Config{Host: "invalid", Port: 12345, User: "user", Password: "password", ApiVersion: 42},
-		Ctx:       context.Background(),
+		Ctx:       suite.ctx,
 		IsClosed:  false,
 		websocket: suite.websocketMock,
 	}
