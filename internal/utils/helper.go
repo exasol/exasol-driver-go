@@ -76,7 +76,7 @@ func GetRowSeparator(query string) string {
 const FILE_PLACEHOLDER = "FilePlaceholder"
 
 var fileQueryRegex = regexp.MustCompile(`(?i)` + `FILE` + WHITESPACE +
-	QUOTE + namedGroup(FILE_PLACEHOLDER, `[a-zA-Z0-9:<> \\\/._-]+`) + QUOTE + ` ?`)
+	QUOTE + namedGroup(FILE_PLACEHOLDER, `[a-zA-Z0-9:<> \\/._\-~]+`) + QUOTE + ` ?`)
 
 func GetFilePaths(query string) ([]string, error) {
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
