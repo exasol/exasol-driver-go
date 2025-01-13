@@ -122,6 +122,7 @@ func TestGetFilePaths(t *testing.T) {
 		{name: "Windows paths", paths: []string{"C:\\Documents\\Newsletters\\Summer2018.csv", "\\Program Files\\Custom Utilities\\StringFinder.csv"}},
 		{name: "Unix paths", paths: []string{"/Users/User/Documents/Data/test.csv"}},
 		{name: "With dash", paths: []string{"/Users/User/Documents/Data/test-1.csv"}},
+		{name: "With tilde", paths: []string{"C:\\Users\\User~1.U\\AppData\\Local\\Temp\\1479825193.csv", "~/Documents/Data/test.csv"}},
 	}
 
 	for _, quote := range quotes {
