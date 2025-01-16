@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.11, released 2025-01-15
+# Exasol Driver go 1.0.11, released 2025-01-16
 
 Code name: Fix import file name parsing
 
