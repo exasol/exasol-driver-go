@@ -1,13 +1,15 @@
 # Exasol Driver go 1.0.12, released 2025-02-10
 
-Code name: Update to go 1.22
+Code name: Update to go 1.22 and improved error handling
 
 ## Summary
 
 This release updates to go 1.22 and updates version used in CI pipeline to fix vulnerabilities in the go standard library:
- - [GO-2024-3107](https://pkg.go.dev/vuln/GO-2024-3107)
- - [GO-2024-3105](https://pkg.go.dev/vuln/GO-2024-3105)
- - [GO-2024-3106](https://pkg.go.dev/vuln/GO-2024-3106)
+ - GO-2024-3107
+ - GO-2024-3105
+ - GO-2024-3106
+
+It also improves the detection of errors during login.
 
 ## Security
 
