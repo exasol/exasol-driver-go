@@ -249,6 +249,9 @@ var dereferenceInt = func(v any) any { return *(v.(*int)) }
 var dereferenceBool = func(v any) any { return *(v.(*bool)) }
 
 func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
+
 	for i, testCase := range []struct {
 		testDescription string
 		sqlValue        string
@@ -290,8 +293,6 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 		{"bool to bool", "true", "BOOLEAN", new(bool), true, dereferenceBool},
 		{"bool to string", "false", "BOOLEAN", new(string), "false", dereferenceString},
 	} {
-		database := suite.openConnection(suite.createDefaultConfig())
-		defer database.Close()
 		suite.Run(fmt.Sprintf("Cast Test %02d %s: %s", i, testCase.testDescription, testCase.sqlType), func() {
 			rows, err := database.Query(fmt.Sprintf("SELECT CAST(%s AS %s)", testCase.sqlValue, testCase.sqlType))
 			onError(err)
@@ -305,6 +306,12 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
+	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
+	schemaName := "DATATYPE_TEST"
+	_, err := database.Exec("CREATE SCHEMA " + schemaName)
+	onError(err)
+	defer suite.cleanup(database, schemaName)
+
 	type TestCase struct {
 		sqlValue      any
 		sqlType       string
@@ -390,12 +397,6 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 		boolTestCase(true, "BOOLEAN", true),
 		boolTestCase(false, "BOOLEAN", false),
 	} {
-		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
-		schemaName := "DATATYPE_TEST"
-		_, err := database.Exec("CREATE SCHEMA " + schemaName)
-		onError(err)
-		defer suite.cleanup(database, schemaName)
-
 		suite.Run(fmt.Sprintf("%02d Column type %s accepts values of type %T", i, testCase.sqlType, testCase.sqlValue), func() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
 			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
@@ -433,6 +434,12 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
 }
 
 func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
+	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
+	schemaName := "DATATYPE_TEST"
+	_, err := database.Exec("CREATE SCHEMA " + schemaName)
+	onError(err)
+	defer suite.cleanup(database, schemaName)
+
 	for i, testCase := range []struct {
 		sqlValue      any
 		sqlType       string
@@ -443,12 +450,6 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP", new(time.Time), `unsupported Scan, storing driver.Value type string into type *time.Time`},
 		{time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC), "TIMESTAMP WITH LOCAL TIME ZONE", new(time.Time), `unsupported Scan, storing driver.Value type string into type *time.Time`},
 	} {
-		database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
-		schemaName := "DATATYPE_TEST"
-		_, err := database.Exec("CREATE SCHEMA " + schemaName)
-		onError(err)
-		defer suite.cleanup(database, schemaName)
-
 		suite.Run(fmt.Sprintf("Scan fails %02d %s", i, testCase.sqlType), func() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
 			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
