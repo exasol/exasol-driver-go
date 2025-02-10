@@ -8,11 +8,11 @@ jobs:
   matrix-build:
     strategy:
       matrix:
-        go: ["1.21.12", "1.22.5"]
-        db: ["7.1.26", "8.27.0"]
+        go: ["1.22.12", "1.23.6"]
+        db: ["7.1.30", "8.32.0"]
     env:
-      DEFAULT_GO: "1.21.12"
-      DEFAULT_DB: "8.27.0"
+      DEFAULT_GO: "1.22.12"
+      DEFAULT_DB: "8.32.0"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
