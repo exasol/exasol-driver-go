@@ -375,11 +375,7 @@ func (c *Connection) prepareLoginViaPassword(ctx context.Context) (string, error
 	var modulus big.Int
 	modulus.SetBytes(pubKeyMod)
 
-	pubKeyExp, err := strconv.ParseUint(loginResponse.PublicKeyExponent, 16, 32)
-	if err != nil {
-		return "", fmt.Errorf("invalid publicKeyExponent in login response: %w", err)
-	}
-
+	pubKeyExp, _ := strconv.ParseUint(loginResponse.PublicKeyExponent, 16, 32)
 	if pubKeyExp > math.MaxInt {
 		return "", fmt.Errorf("invalid publicKeyExponent in login response: %d", pubKeyExp)
 	}
