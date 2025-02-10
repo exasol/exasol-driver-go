@@ -375,9 +375,9 @@ func (c *Connection) prepareLoginViaPassword(ctx context.Context) (string, error
 	var modulus big.Int
 	modulus.SetBytes(pubKeyMod)
 
-	pubKeyExp, _ := strconv.ParseUint(loginResponse.PublicKeyExponent, 16, 32)
-	if pubKeyExp > math.MaxInt {
-		return "", fmt.Errorf("invalid publicKeyExponent in login response: %d", pubKeyExp)
+	pubKeyExp, err := strconv.ParseUint(loginResponse.PublicKeyExponent, 16, 32)
+	if err != nil || pubKeyExp > math.MaxInt32 {
+		return "", fmt.Errorf("invalid publicKeyExponent in login response: %q", loginResponse.PublicKeyExponent)
 	}
 
 	pubKey := rsa.PublicKey{

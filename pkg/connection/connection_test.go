@@ -340,10 +340,34 @@ func (suite *ConnectionTestSuite) TestPasswordLoginFailsInitialRequest() {
 
 func (suite *ConnectionTestSuite) TestPasswordLoginFailsEncryptingPasswordRequest() {
 	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
-		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: ""})
+		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: "FF"})
 	conn := suite.createOpenConnection()
 	err := conn.Login(context.Background())
 	suite.EqualError(err, driver.ErrBadConn.Error())
+}
+
+func (suite *ConnectionTestSuite) TestPasswordLoginFailsWithInvalidModulus() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "ZZZ", PublicKeyExponent: ""})
+	conn := suite.createOpenConnection()
+	err := conn.Login(context.Background())
+	suite.EqualError(err, "invalid publicKeyModulus in login response: encoding/hex: invalid byte: U+005A 'Z'")
+}
+
+func (suite *ConnectionTestSuite) TestPasswordLoginFailsWithInvalidExponent() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: "1FFFFFFFF"})
+	conn := suite.createOpenConnection()
+	err := conn.Login(context.Background())
+	suite.EqualError(err, `invalid publicKeyExponent in login response: "1FFFFFFFF"`)
+}
+
+func (suite *ConnectionTestSuite) TestPasswordLoginFailsWithOutOfBoundsInt() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{PublicKeyPem: "", PublicKeyModulus: "", PublicKeyExponent: "FFFFFFFF"})
+	conn := suite.createOpenConnection()
+	err := conn.Login(context.Background())
+	suite.EqualError(err, `invalid publicKeyExponent in login response: "FFFFFFFF"`)
 }
 
 func (suite *ConnectionTestSuite) TestPasswordLoginSuccess() {
