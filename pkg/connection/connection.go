@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 	"os/user"
 	"runtime"
@@ -366,11 +367,18 @@ func (c *Connection) prepareLoginViaPassword(ctx context.Context) (string, error
 		return "", err
 	}
 
-	pubKeyMod, _ := hex.DecodeString(loginResponse.PublicKeyModulus)
+	pubKeyMod, err := hex.DecodeString(loginResponse.PublicKeyModulus)
+	if err != nil {
+		return "", fmt.Errorf("invalid publicKeyModulus in login response: %w", err)
+	}
+
 	var modulus big.Int
 	modulus.SetBytes(pubKeyMod)
 
-	pubKeyExp, _ := strconv.ParseUint(loginResponse.PublicKeyExponent, 16, 32)
+	pubKeyExp, err := strconv.ParseUint(loginResponse.PublicKeyExponent, 16, 32)
+	if err != nil || pubKeyExp > math.MaxInt32 {
+		return "", fmt.Errorf("invalid publicKeyExponent in login response: %q", loginResponse.PublicKeyExponent)
+	}
 
 	pubKey := rsa.PublicKey{
 		N: &modulus,
