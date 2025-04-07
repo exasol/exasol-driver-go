@@ -240,6 +240,19 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	suite.assertSingleValueResult(rows, "15")
 }
 
+func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	schemaName := "TEST_SCHEMA_3"
+	_, _ = database.Exec("CREATE SCHEMA " + schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
+	preparedStatement, _ := database.Prepare("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (25)")
+	_, _ = preparedStatement.Exec()
+	preparedStatement, _ = database.Prepare("SELECT x FROM " + schemaName + ".TEST_TABLE WHERE x = 25")
+	rows, _ := preparedStatement.Query()
+	suite.assertSingleValueResult(rows, "25")
+}
+
 var dereferenceString = func(v any) any { return *(v.(*string)) }
 var dereferenceFloat32 = func(v any) any { return *(v.(*float32)) }
 var dereferenceFloat64 = func(v any) any { return *(v.(*float64)) }
