@@ -44,7 +44,7 @@ type FetchCommand struct {
 type ExecutePreparedStatementCommand struct {
 	Command
 	StatementHandle int              `json:"statementHandle"`
-	NumColumns      int              `json:"numColumns,omitempty"`
+	NumColumns      int              `json:"numColumns"`
 	NumRows         int              `json:"numRows"`
 	Columns         []SqlQueryColumn `json:"columns,omitempty"`
 	Data            [][]interface{}  `json:"data"`
