@@ -77,8 +77,18 @@ func (s *Statement) NumInput() int {
 
 func (s *Statement) executePreparedStatement(ctx context.Context, args []driver.Value) (*types.SqlQueriesResponse, error) {
 	columns := s.columns
-	if len(args)%len(columns) != 0 {
-		return nil, errors.ErrInvalidValuesCount
+
+	var numRows int
+	if len(columns) == 0 {
+		if len(args) > 0 {
+			return nil, errors.ErrInvalidValuesCount
+		}
+		numRows = 0
+	} else {
+		if len(args)%len(columns) != 0 {
+			return nil, errors.ErrInvalidValuesCount
+		}
+		numRows = len(args) / len(columns)
 	}
 
 	data := make([][]interface{}, len(columns))
@@ -100,7 +110,7 @@ func (s *Statement) executePreparedStatement(ctx context.Context, args []driver.
 		StatementHandle: s.statementHandle,
 		Columns:         columns,
 		NumColumns:      len(columns),
-		NumRows:         len(data[0]),
+		NumRows:         numRows,
 		Data:            data,
 		Attributes: types.Attributes{
 			ResultSetMaxRows: s.connection.Config.ResultSetMaxRows,
