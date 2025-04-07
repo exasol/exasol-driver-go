@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.13, released 2025-??-??
+# Exasol Driver go 1.0.13, released 2025-04-07
 
 Code name: PreparedStatements without placeholders
 
