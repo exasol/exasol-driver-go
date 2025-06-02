@@ -6,6 +6,8 @@ Code name: Fix vulnerability GO-2025-3563 in net/http/internal@go1.22.12
 
 This release fixes vulnerability GO-2025-3563 in `net/http/internal@go1.22.12` and updates dependencies.
 
+**Note:** Starting with this release, exasol-driver-go requires Go versions 1.23.9, 1.24.3 or later.
+
 ## Security
 
 * #135: Fixed vulnerability GO-2025-3563 in `net/http/internal@go1.22.12`
