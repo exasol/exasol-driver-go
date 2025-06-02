@@ -82,13 +82,7 @@ func (suite *IntegrationTestSuite) TestConnectionParameters() {
 	errorMsgWrongFingerprint := fmt.Sprintf("E-EGOD-10: the server's certificate fingerprint '%s' does not match the expected fingerprint '%s'", actualFingerprint, wrongFingerprint)
 	const errorMsgAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed.'"
 	const errorMsgTokenAuthFailed = "E-EGOD-11: execution failed with SQL error code '08004' and message 'Connection exception - authentication failed'"
-
-	var errorMsgCertWrongHost string
-	if suite.host == "localhost" {
-		errorMsgCertWrongHost = "x509: certificate is not valid for any names, but wanted to match localhost"
-	} else {
-		errorMsgCertWrongHost = "x509: “*.exacluster.local” certificate is not standards compliant"
-	}
+	const errorMsgCertWrongHost = "tls: failed to verify certificate: x509:"
 
 	var errorMsgEncryptionOff string
 	if suite.exasol.IsExasolVersion8() {

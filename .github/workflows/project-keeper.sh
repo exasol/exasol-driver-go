@@ -8,7 +8,7 @@ set -o nounset
 set -o pipefail
 
 readonly pk_mode="${1-verify}";
-readonly version="4.3.3"
+readonly version="5.1.0"
 
 readonly pk_jar="$HOME/.m2/repository/com/exasol/project-keeper-cli/$version/project-keeper-cli-$version.jar"
 

@@ -8,16 +8,16 @@ jobs:
   matrix-build:
     strategy:
       matrix:
-        go: ["1.22.12", "1.23.6"]
-        db: ["7.1.30", "8.32.0"]
+        go: ["1.23.9", "1.24.3"]
+        db: ["7.1.30", "8.34.0"]
     env:
-      DEFAULT_GO: "1.22.12"
-      DEFAULT_DB: "8.32.0"
+      DEFAULT_GO: "1.24.3"
+      DEFAULT_DB: "8.34.0"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         shell: "bash"
@@ -35,9 +35,9 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.63.4
+          version: v2.1.6
           skip-cache: true # Caching already done by actions/cache
 
       - name: Enable testcontainer reuse
