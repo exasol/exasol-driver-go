@@ -7,3 +7,4 @@ testData/data_cr.csv -text
 dependencies.md                             linguist-generated=true
 doc/changes/changelog.md                    linguist-generated=true
 go.sum                                      linguist-generated=true
+SECURITY.md                                 linguist-generated=true
