@@ -9,15 +9,15 @@ jobs:
     strategy:
       matrix:
         go: ["1.22.12", "1.23.6"]
-        db: ["7.1.30", "8.32.0"]
+        db: ["7.1.30", "8.34.0"]
     env:
       DEFAULT_GO: "1.22.12"
-      DEFAULT_DB: "8.32.0"
+      DEFAULT_DB: "8.34.0"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         shell: "bash"
