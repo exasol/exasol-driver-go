@@ -99,7 +99,6 @@ func (p *Proxy) SendFile(ctx context.Context, file *os.File, rowSeparator string
 
 	for {
 		if ctx.Err() != nil {
-			p.Close()
 			return ctx.Err()
 		}
 
