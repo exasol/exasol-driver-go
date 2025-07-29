@@ -604,6 +604,32 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	)
 }
 
+func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20), c int)", schemaName, tableName))
+
+	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
+	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
+}
+
+func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE 'wrong.csv'`, schemaName, tableName))
+	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-5105: Following error occured while reading data from external connection")
+}
+
 func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
