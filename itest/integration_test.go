@@ -624,7 +624,7 @@ func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int)", schemaName, tableName))
 
 	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE 'wrong.csv'`, schemaName, tableName))
 	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-5105: Following error occured while reading data from external connection")
