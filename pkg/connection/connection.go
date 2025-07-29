@@ -197,7 +197,10 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 		}
 
 		query = importStatement.GetUpdatedQuery()
+		// The upload it's not part of the errgroup to avoid that an error in the upload prevents the statement from
+		// finishing and returning the error from the database.
 		go func() {
+			// Close right after the upload to ensure that the IMPORT statement can proceed in case of  error
 			defer importStatement.Close()
 			uploadErr := importStatement.UploadFiles(errctx)
 			if uploadErr != nil {
