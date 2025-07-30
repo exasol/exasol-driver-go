@@ -196,9 +196,17 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 			return nil, err
 		}
 
-		defer importStatement.Close()
 		query = importStatement.GetUpdatedQuery()
-		errs.Go(func() error { return importStatement.UploadFiles(errctx) })
+		// The upload is not part of the errgroup to avoid that an error in the upload prevents the statement from
+		// finishing and returning the error from the database.
+		go func() {
+			// Close right after the upload to ensure that the IMPORT statement can proceed in case of an error
+			defer importStatement.Close()
+			uploadErr := importStatement.UploadFiles(errctx)
+			if uploadErr != nil {
+				logger.ErrorLogger.Printf("Error uploading files: %v", uploadErr)
+			}
+		}()
 	}
 	// No values provided, simple execute is enough
 	if len(args) == 0 {

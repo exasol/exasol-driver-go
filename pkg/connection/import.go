@@ -22,6 +22,7 @@ func NewImportStatement(query string, host string, port int) (*ImportStatement, 
 	}
 	err = p.StartProxy()
 	if err != nil {
+		p.Close()
 		return nil, err
 	}
 	return &ImportStatement{query: query, host: host, port: port, proxy: p}, nil
