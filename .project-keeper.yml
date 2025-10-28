@@ -3,5 +3,5 @@ sources:
     path: go.mod
 version: 1.0.15
 excludes:
-  # Releases are done with Release Droid because PK does not yet support release process for Go projects.
+  # Releases are done with Release Droid because PK does not yet support the release process for Go projects.
   - "E-PK-CORE-26: 'release_config.yml' exists but must not exist. Reason: Release-droid configuration is replaced by release.yml"
