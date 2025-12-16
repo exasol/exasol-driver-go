@@ -6,12 +6,19 @@ Code name: IMPORT error handling
 
 This release fixes the error handling for failing IMPORT commands.
 
-We also updated the SonarQube GitHub Action to version 6 to fix CVE-2025-59844, a command injection vulnerability in SonarQube GitHub Action prior to v6.0.0. 
+We also updated the SonarQube GitHub Action to version 7 to fix CVE-2025-59844, a command injection vulnerability in SonarQube GitHub Action prior to v6.0.0.
+
+This release is now tested using the latest versions of Go 1.25 and 1.24.
 
 ## Bugfixes
 
 * #138: IMPORT error handling
+
+## Security
+
 * CVE-2025-59844: Update SonarQube GitHub Action to version 6
+* #142: Fixed vulnerability check
+
 ## Dependency Updates
 
 ### Compile Dependency Updates
