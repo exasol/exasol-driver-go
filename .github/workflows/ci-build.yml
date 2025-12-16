@@ -8,22 +8,27 @@ jobs:
   matrix-build:
     strategy:
       matrix:
-        go: ["1.23.12", "1.24.9"]
-        db: ["7.1.30", "8.34.0"]
+        go: ["1.25.5"]
+        db: ["2025.1.8", "8.29.13", "7.1.30"]
+        include:
+          - go: "1.24.11"
+            db: "2025.1.8"
     env:
-      DEFAULT_GO: "1.24.9"
-      DEFAULT_DB: "8.34.0"
+      DEFAULT_GO: "1.25.5"
+      DEFAULT_DB: "2025.1.8"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
     name: Build with go version ${{ matrix.go }} and db ${{ matrix.db }}
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     defaults:
       run:
         shell: "bash"
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -33,12 +38,6 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache: true
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.1.6
-          skip-cache: true # Caching already done by actions/cache
 
       - name: Enable testcontainer reuse
         run: echo 'testcontainers.reuse.enable=true' > "$HOME/.testcontainers.properties"
@@ -59,9 +58,15 @@ jobs:
 
       - name: SonarQube Scan
         if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol' && env.SONAR_TOKEN != null
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.7.2
+          skip-cache: true # Caching already done by actions/cache
 
       - name: Run vulnerability check
         if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB
@@ -73,5 +78,7 @@ jobs:
   build:
     needs: matrix-build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - run: echo "Build successful"

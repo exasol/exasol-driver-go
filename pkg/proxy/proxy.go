@@ -27,7 +27,7 @@ var magicWords = []interface{}{uint32(0x02212102), uint32(1), uint32(1)}
 func NewProxy(hosts []string, port int) (*Proxy, error) {
 	var wrappedErr error
 	for _, host := range hosts {
-		uri := fmt.Sprintf("%s:%d", host, port)
+		uri := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 		con, err := net.Dial("tcp", uri)
 		if err == nil {
 			p := &Proxy{

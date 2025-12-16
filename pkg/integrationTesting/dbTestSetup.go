@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const defaultExasolDbVersion = "8.34.0"
+const defaultExasolDbVersion = "2025.1.8"
 
 type DbTestSetup struct {
 	suite          *suite.Suite
@@ -61,27 +61,27 @@ func (setup *DbTestSetup) IsExasolVersion8() bool {
 	if err != nil {
 		setup.suite.FailNow("error getting exasol version: " + err.Error())
 	}
-	return version == "8"
+	return version >= 8
 }
 
-func (setup *DbTestSetup) getExasolMajorVersion() (string, error) {
+func (setup *DbTestSetup) getExasolMajorVersion() (int, error) {
 	db := setup.createConnection()
 	defer db.Close()
 	result, err := db.Query("SELECT PARAM_VALUE FROM SYS.EXA_METADATA WHERE PARAM_NAME='databaseMajorVersion'")
 	if err != nil {
-		return "", fmt.Errorf("querying exasol version failed: %w", err)
+		return -1, fmt.Errorf("querying exasol version failed: %w", err)
 	}
 	defer result.Close()
 	if !result.Next() {
 		if result.Err() != nil {
-			return "", fmt.Errorf("failed to iterate exasol version: %w", result.Err())
+			return -1, fmt.Errorf("failed to iterate exasol version: %w", result.Err())
 		}
-		return "", fmt.Errorf("no result found for exasol version query")
+		return -1, fmt.Errorf("no result found for exasol version query")
 	}
-	var majorVersion string
+	var majorVersion int
 	err = result.Scan(&majorVersion)
 	if err != nil {
-		return "", fmt.Errorf("failed to read exasol version result: %w", err)
+		return -1, fmt.Errorf("failed to read exasol version result: %w", err)
 	}
 	return majorVersion, nil
 }

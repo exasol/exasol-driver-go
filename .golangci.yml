@@ -1,12 +1,11 @@
+# https://golangci-lint.run/docs/configuration/file
 version: "2"
 run:
   tests: true
 linters:
-  enable:
-    - gosec
-    - whitespace
+  default: standard
   exclusions:
-    generated: lax
+    generated: strict
     presets:
       - comments
       - common-false-positives
@@ -20,17 +19,7 @@ linters:
           - gocyclo
           - gosec
         path: _test\.go
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   enable:
     - gofmt
     - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
