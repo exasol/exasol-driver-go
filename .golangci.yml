@@ -5,7 +5,7 @@ run:
 linters:
   default: standard
   exclusions:
-    generated: lax
+    generated: strict
     presets:
       - comments
       - common-false-positives
