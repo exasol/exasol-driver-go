@@ -3,7 +3,8 @@ name: Project Keeper Verify
 on:
   push:
     branches: [
-      main
+      main,
+      release/*
     ]
     
   pull_request:
@@ -25,13 +26,13 @@ jobs:
     steps:
       - id: checkout
         name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with: {
           fetch-depth: 0
         }
       - id: setup-java
         name: Set up JDKs
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -40,7 +41,7 @@ jobs:
             .github/workflows/project-keeper.sh
       - id: setup-go
         name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24'
           cache-dependency-path: |

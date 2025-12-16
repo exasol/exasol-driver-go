@@ -23,7 +23,7 @@ jobs:
     steps:
       - {
         id: checkout,
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       }
       - id: configure-broken-links-checker
         name: Configure broken links checker
@@ -36,7 +36,7 @@ jobs:
           '{"pattern": "^https?://projects.eclipse.org"}' \
           ']}' > ./target/broken_links_checker.json
       - id: run-broken-links-checker
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        uses: tcort/github-action-markdown-link-check@v1
         with: {
           use-quiet-mode: yes,
           use-verbose-mode: yes,
