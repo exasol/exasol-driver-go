@@ -8,8 +8,11 @@ jobs:
   matrix-build:
     strategy:
       matrix:
-        go: ["1.25.5", "1.24.11"]
+        go: ["1.25.5"]
         db: ["2025.1.8", "8.29.13", "7.1.30"]
+        include:
+          - go: "1.24.11"
+            db: "2025.1.8"
     env:
       DEFAULT_GO: "1.25.5"
       DEFAULT_DB: "2025.1.8"
