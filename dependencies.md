@@ -15,13 +15,11 @@
 
 | Dependency         | License           |
 | ------------------ | ----------------- |
-| go.uber.org/goleak | [MIT][5]          |
-| golang.org/x/sync  | [BSD-3-Clause][6] |
+| go.uber.org/goleak | [MIT][4]          |
+| golang.org/x/sync  | [BSD-3-Clause][4] |
 
-[0]: https://github.com/exasol/error-reporting-go/blob/v0.2.0/LICENSE
-[1]: https://github.com/exasol/exasol-test-setup-abstraction-server/blob/go-client/v1.0.0/go-client/LICENSE
-[2]: https://github.com/gorilla/websocket/blob/v1.5.3/LICENSE
-[3]: https://github.com/stretchr/testify/blob/v1.11.1/LICENSE
-[4]: https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE
-[5]: https://github.com/uber-go/goleak/blob/HEAD/LICENSE
-[6]: https://cs.opensource.google/go/x/sync/+/v0.19.0:LICENSE
+[0]: https://github.com/exasol/error-reporting-go/blob/master/LICENSE
+[1]: https://github.com/exasol/exasol-test-setup-abstraction-server/blob/master/go-client/LICENSE
+[2]: https://github.com/gorilla/websocket/blob/master/LICENSE
+[3]: https://github.com/stretchr/testify/blob/master/LICENSE
+[4]: Unknown
