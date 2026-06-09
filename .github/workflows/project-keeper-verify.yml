@@ -19,6 +19,9 @@ on:
 jobs:
   project-keeper-verify:
     runs-on: ubuntu-latest
+    permissions: {
+      contents: read
+    }
     concurrency: {
       group: '${{ github.workflow }}-${{ github.ref }}',
       cancel-in-progress: true
@@ -28,7 +31,8 @@ jobs:
         name: Checkout the repository
         uses: actions/checkout@v6
         with: {
-          fetch-depth: 0
+          fetch-depth: 0,
+          persist-credentials: false
         }
       - id: setup-java
         name: Set up JDKs
@@ -43,7 +47,7 @@ jobs:
         name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '1.26'
           cache-dependency-path: |
             **/go.sum
             .github/workflows/project-keeper-verify.yml
@@ -53,7 +57,7 @@ jobs:
         uses: actions/setup-node@v6
         if: ${{ false }}
         with: {
-          node-version: '22',
+          node-version: '24',
           cache: npm,
           cache-dependency-path: '**/package-lock.json'
         }
