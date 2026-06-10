@@ -39,3 +39,4 @@ pom.xml.versionsBackup
 *.md.html
 *.flattened-pom.xml
 __debug_bin*
+/.serena/
