@@ -135,48 +135,48 @@ func (c *DSNConfigBuilder) String() string {
 // ToDSN converts the configuration to a DSN (data source name) that can be used for connecting to an Exasol database.
 func (c *DSNConfig) ToDSN() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("exa:%s:%d;", c.Host, c.Port))
+	fmt.Fprintf(&sb, "exa:%s:%d;", c.Host, c.Port)
 
 	if c.AccessToken != "" {
-		sb.WriteString(fmt.Sprintf("accesstoken=%s;", escapeDsnParamValue(c.AccessToken)))
+		fmt.Fprintf(&sb, "accesstoken=%s;", escapeDsnParamValue(c.AccessToken))
 	} else if c.RefreshToken != "" {
-		sb.WriteString(fmt.Sprintf("refreshtoken=%s;", escapeDsnParamValue(c.RefreshToken)))
+		fmt.Fprintf(&sb, "refreshtoken=%s;", escapeDsnParamValue(c.RefreshToken))
 	} else {
-		sb.WriteString(fmt.Sprintf("user=%s;password=%s;", escapeDsnParamValue(c.User), escapeDsnParamValue(c.Password)))
+		fmt.Fprintf(&sb, "user=%s;password=%s;", escapeDsnParamValue(c.User), escapeDsnParamValue(c.Password))
 	}
 
 	if c.Autocommit != nil {
-		sb.WriteString(fmt.Sprintf("autocommit=%d;", utils.BoolToInt(*c.Autocommit)))
+		fmt.Fprintf(&sb, "autocommit=%d;", utils.BoolToInt(*c.Autocommit))
 	}
 	if c.Compression != nil {
-		sb.WriteString(fmt.Sprintf("compression=%d;", utils.BoolToInt(*c.Compression)))
+		fmt.Fprintf(&sb, "compression=%d;", utils.BoolToInt(*c.Compression))
 	}
 	if c.Encryption != nil {
-		sb.WriteString(fmt.Sprintf("encryption=%d;", utils.BoolToInt(*c.Encryption)))
+		fmt.Fprintf(&sb, "encryption=%d;", utils.BoolToInt(*c.Encryption))
 	}
 	if c.ValidateServerCertificate != nil {
-		sb.WriteString(fmt.Sprintf("validateservercertificate=%d;", utils.BoolToInt(*c.ValidateServerCertificate)))
+		fmt.Fprintf(&sb, "validateservercertificate=%d;", utils.BoolToInt(*c.ValidateServerCertificate))
 	}
 	if c.CertificateFingerprint != "" {
-		sb.WriteString(fmt.Sprintf("certificatefingerprint=%s;", escapeDsnParamValue(c.CertificateFingerprint)))
+		fmt.Fprintf(&sb, "certificatefingerprint=%s;", escapeDsnParamValue(c.CertificateFingerprint))
 	}
 	if c.FetchSize != 0 {
-		sb.WriteString(fmt.Sprintf("fetchsize=%d;", c.FetchSize))
+		fmt.Fprintf(&sb, "fetchsize=%d;", c.FetchSize)
 	}
 	if c.QueryTimeout != 0 {
-		sb.WriteString(fmt.Sprintf("querytimeout=%d;", c.QueryTimeout))
+		fmt.Fprintf(&sb, "querytimeout=%d;", c.QueryTimeout)
 	}
 	if c.ClientName != "" {
-		sb.WriteString(fmt.Sprintf("clientname=%s;", escapeDsnParamValue(c.ClientName)))
+		fmt.Fprintf(&sb, "clientname=%s;", escapeDsnParamValue(c.ClientName))
 	}
 	if c.ClientVersion != "" {
-		sb.WriteString(fmt.Sprintf("clientversion=%s;", escapeDsnParamValue(c.ClientVersion)))
+		fmt.Fprintf(&sb, "clientversion=%s;", escapeDsnParamValue(c.ClientVersion))
 	}
 	if c.Schema != "" {
-		sb.WriteString(fmt.Sprintf("schema=%s;", escapeDsnParamValue(c.Schema)))
+		fmt.Fprintf(&sb, "schema=%s;", escapeDsnParamValue(c.Schema))
 	}
 	if c.UrlPath != "" {
-		sb.WriteString(fmt.Sprintf("urlpath=%s;", escapeDsnParamValue(c.UrlPath)))
+		fmt.Fprintf(&sb, "urlpath=%s;", escapeDsnParamValue(c.UrlPath))
 	}
 
 	return strings.TrimRight(sb.String(), ";")
