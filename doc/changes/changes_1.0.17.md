@@ -16,6 +16,8 @@ This release fixes the following 9 vulnerabilities in Go dependencies:
 * [GO-2026-4865](https://pkg.go.dev/vuln/GO-2026-4865) in `stdlib@go1.25.7`
 * [GO-2026-4603](https://pkg.go.dev/vuln/GO-2026-4603) in `stdlib@go1.25.7`
 
+**Notes:** Starting with this release, upgrade the Go version used for building and testing from 1.25.7 and 1.24.13 to 1.26.4 and 1.25.11. We also test the driver against Exasol versions 2025.1.10, 2026.1.0 and 7.1.30.
+
 ## Security
 
 * #148: Fixed vulnerabilities in Go dependencies
