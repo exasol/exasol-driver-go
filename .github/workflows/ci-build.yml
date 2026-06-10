@@ -8,14 +8,14 @@ jobs:
   matrix-build:
     strategy:
       matrix:
-        go: ["1.25.7"]
-        db: ["2025.1.8", "8.29.13", "7.1.30"]
+        go: ["1.26.4"]
+        db: ["2025.1.10", "2026.1.0", "7.1.30"]
         include:
-          - go: "1.24.13"
-            db: "2025.1.8"
+          - go: "1.25.11"
+            db: "2026.1.0"
     env:
-      DEFAULT_GO: "1.25.7"
-      DEFAULT_DB: "2025.1.8"
+      DEFAULT_GO: "1.26.4"
+      DEFAULT_DB: "2026.1.0"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true
@@ -31,6 +31,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
         id: go
@@ -58,14 +59,14 @@ jobs:
 
       - name: SonarQube Scan
         if: matrix.go == env.DEFAULT_GO && matrix.db == env.DEFAULT_DB && github.repository_owner == 'exasol' && env.SONAR_TOKEN != null
-        uses: SonarSource/sonarqube-scan-action@v7
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
-          version: v2.7.2
+          version: v2.12.2
           skip-cache: true # Caching already done by actions/cache
 
       - name: Run vulnerability check
@@ -77,7 +78,7 @@ jobs:
 
   build:
     needs: matrix-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:
