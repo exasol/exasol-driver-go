@@ -35,6 +35,11 @@ func main() {
 ROW SEPARATOR = 'LF'`)
 	onError(err)
 	log.Println(result.RowsAffected())
+
+	result, err = database.Exec(`IMPORT INTO my_schema.CUSTOMERS FROM LOCAL PARQUET FILE '../testData/data.parquet'`)
+	onError(err)
+	log.Println(result.RowsAffected())
+
 	rows, err := database.Query("SELECT * FROM my_schema.CUSTOMERS")
 	onError(err)
 	defer rows.Close()

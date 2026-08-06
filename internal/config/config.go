@@ -21,4 +21,5 @@ type Config struct {
 	ValidateServerCertificate bool
 	CertificateFingerprint    string
 	UrlPath                   string
+	LocalImportEncryption     bool
 }

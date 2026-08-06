@@ -172,21 +172,21 @@ func (suite *DsnTestSuite) TestConfigParseDsnCustomValues() {
 }
 
 func (suite *DsnTestSuite) TestToDsnWithUserPassword() {
-	const value = "exa:localhost:1234;user=sys;password=exasol;autocommit=0;compression=1;encryption=0;validateservercertificate=0;certificatefingerprint=fingerprint;fetchsize=13;querytimeout=42;clientname=clientName;clientversion=clientVersion;schema=schema"
+	const value = "exa:localhost:1234;user=sys;password=exasol;autocommit=0;compression=1;encryption=0;validateservercertificate=0;certificatefingerprint=fingerprint;fetchsize=13;querytimeout=42;clientname=clientName;clientversion=clientVersion;schema=schema;localimportencryption=0"
 	dsn, err := ParseDSN(value)
 	suite.NoError(err)
 	suite.Equal(value, dsn.ToDSN())
 }
 
 func (suite *DsnTestSuite) TestToDsnWithAccessToken() {
-	const value = "exa:localhost:1234;accesstoken=token;autocommit=1;compression=0;encryption=1;validateservercertificate=1;fetchsize=2000;clientname=Go client"
+	const value = "exa:localhost:1234;accesstoken=token;autocommit=1;compression=0;encryption=1;validateservercertificate=1;fetchsize=2000;clientname=Go client;localimportencryption=0"
 	dsn, err := ParseDSN(value)
 	suite.NoError(err)
 	suite.Equal(value, dsn.ToDSN())
 }
 
 func (suite *DsnTestSuite) TestToDsnWithRefreshToken() {
-	const value = "exa:localhost:1234;refreshtoken=token;autocommit=1;compression=0;encryption=1;validateservercertificate=1;fetchsize=2000;clientname=Go client"
+	const value = "exa:localhost:1234;refreshtoken=token;autocommit=1;compression=0;encryption=1;validateservercertificate=1;fetchsize=2000;clientname=Go client;localimportencryption=0"
 	dsn, err := ParseDSN(value)
 	suite.NoError(err)
 	suite.Equal(value, dsn.ToDSN())
@@ -234,6 +234,19 @@ func (suite *DsnTestSuite) TestParseValidDsnWithEscapedRefreshToken() {
 	suite.Equal(true, *dsn.Autocommit)
 	suite.Equal(true, *dsn.Encryption)
 	suite.Equal(false, *dsn.Compression)
+}
+
+func (suite *DsnTestSuite) TestLocalImportEncryptionDefaultsToDisabled() {
+	dsn, err := ParseDSN("exa:localhost:1234")
+	suite.NoError(err)
+	suite.Equal(false, *dsn.LocalImportEncryption)
+}
+
+func (suite *DsnTestSuite) TestLocalImportEncryptionRoundTrip() {
+	dsn, err := ParseDSN("exa:localhost:1234;user=sys;password=exasol;localimportencryption=1")
+	suite.NoError(err)
+	suite.Equal(true, *dsn.LocalImportEncryption)
+	suite.Contains(dsn.ToDSN(), "localimportencryption=1")
 }
 
 func (suite *DsnTestSuite) TestParseValidDsnWithUrlPath() {
