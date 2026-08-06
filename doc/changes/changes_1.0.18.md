@@ -12,9 +12,15 @@ Native local Parquet import requires Exasol 2025.1.11 or later. Against an older
 
 This release also adds the `localimportencryption` driver property. When enabled, the driver encrypts the proxy connection. This connection carries the local import file (CSV or Parquet). The driver uses a throwaway, self-signed TLS key for this connection, and pins the key with a `PUBLIC KEY` clause on the rewritten statement. The property is off by default. It does not change the behavior of an existing connection string.
 
-This release does not add a Parquet-parsing dependency. `go.mod` and `dependencies.md` are unchanged.
+This release does not add a Parquet-parsing dependency. `dependencies.md` is unchanged.
 
 ## Features
 
 * Added native import of local Parquet files
 * Added the `localimportencryption` driver property to encrypt the local-import proxy connection
+
+## Dependency Updates
+
+### Other Dependency Updates
+
+* Updated `toolchain:go1.26.4` to `go1.26.5`
