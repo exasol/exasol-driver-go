@@ -31,7 +31,7 @@ func main() {
 	_, err = database.Exec("CREATE OR REPLACE TABLE my_schema.CUSTOMERS (ref_id int , b VARCHAR(20)) ")
 	onError(err)
 
-	result, err := database.Exec(`IMPORT INTO my_schema.CUSTOMERS FROM LOCAL CSV FILE './data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8'
+	result, err := database.Exec(`IMPORT INTO my_schema.CUSTOMERS FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8'
 ROW SEPARATOR = 'LF'`)
 	onError(err)
 	log.Println(result.RowsAffected())
