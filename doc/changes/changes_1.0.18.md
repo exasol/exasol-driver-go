@@ -23,4 +23,4 @@ This release does not add a Parquet-parsing dependency. `dependencies.md` is unc
 
 ### Other Dependency Updates
 
-* Updated `toolchain:go1.26.4` to `go1.26.5` 
+* Updated `toolchain:go1.26.4` to `go1.26.5`
