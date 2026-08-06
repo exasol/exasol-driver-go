@@ -2,7 +2,7 @@ module github.com/exasol/exasol-driver-go
 
 go 1.25.0
 
-toolchain go1.26.4
+toolchain go1.26.5
 
 require (
 	github.com/exasol/error-reporting-go v0.2.0
