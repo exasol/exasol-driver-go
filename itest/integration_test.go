@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/exasol/exasol-driver-go"
+	"github.com/exasol/exasol-driver-go/pkg/connection"
 	"github.com/exasol/exasol-driver-go/pkg/dsn"
 	"github.com/exasol/exasol-driver-go/pkg/integrationTesting"
 
@@ -25,6 +26,13 @@ import (
 
 	"github.com/stretchr/testify/suite"
 )
+
+// importDeadline bounds how long an IMPORT statement run through
+// execImportWithinDeadline may take. Parquet's pull-based transport and both
+// formats' encrypted-channel handshake can deadlock rather than error when the
+// driver and server disagree about who acts first, so a call still running
+// after this deadline is stuck waiting on a peer that will never answer.
+const importDeadline = 30 * time.Second
 
 type IntegrationTestSuite struct {
 	suite.Suite
@@ -591,6 +599,332 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
 	suite.NoError(err, "import should be successful")
 	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(3), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
+		},
+	)
+}
+
+func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+
+	if suite.exasol.SupportsNativeParquetImport() {
+		suite.NoError(err, "import should be successful")
+		affectedRows, _ := result.RowsAffected()
+		suite.Equal(int64(3), affectedRows)
+
+		rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+		suite.assertTableResult(rows,
+			[]string{"A", "B"},
+			[][]interface{}{
+				{int64(11), "test1"},
+				{int64(12), "test2"},
+				{int64(13), "test3"},
+			},
+		)
+	} else {
+		suite.ErrorContains(err, "E-EGOD-31")
+	}
+}
+
+func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20), c int)", schemaName, tableName))
+
+	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+
+	if suite.exasol.SupportsNativeParquetImport() {
+		suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
+	} else {
+		suite.ErrorContains(err, "E-EGOD-31")
+	}
+}
+
+func (suite *IntegrationTestSuite) TestParquetImportNotExistentFile() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int)", schemaName, tableName))
+
+	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE 'wrong.parquet'`, schemaName, tableName))
+
+	if suite.exasol.SupportsNativeParquetImport() {
+		suite.ErrorContains(err, "E-EGOD-28")
+	} else {
+		suite.ErrorContains(err, "E-EGOD-31")
+	}
+}
+
+func (suite *IntegrationTestSuite) TestParquetImportStatementInString() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "table2"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (text VARCHAR(200))", schemaName, tableName))
+
+	result, err := database.ExecContext(ctx, `insert into table2 values ('import into {{dest.schema}}.{{dest.table}} ) from local parquet file ''{{file.path}}'' ');`)
+	suite.NoError(err, "insert should be successful")
+	affectedRows, _ := result.RowsAffected()
+	suite.Equal(int64(1), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"TEXT"},
+		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) from local parquet file '{{file.path}}' "}},
+	)
+}
+
+func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet' FILE '../testData/data.parquet'`, schemaName, tableName))
+	suite.ErrorContains(err, "E-EGOD-32")
+}
+
+// execImportWithinDeadline runs statement through database.ExecContext on a
+// goroutine and returns its affected-row count and error once it completes.
+// Both Parquet's pull-based transport and the encrypted-channel handshake can
+// deadlock instead of erroring when the driver and server disagree about who
+// acts first, so a call still running after importDeadline elapses is stuck
+// waiting on a peer that will never answer; this fails the test naming the
+// statement rather than letting the job hang.
+func (suite *IntegrationTestSuite) execImportWithinDeadline(database *sql.DB, statement string) (int64, error) {
+	type importOutcome struct {
+		affectedRows int64
+		err          error
+	}
+	imported := make(chan importOutcome, 1)
+	go func() {
+		result, err := database.ExecContext(context.Background(), statement)
+		outcome := importOutcome{err: err}
+		if err == nil {
+			outcome.affectedRows, _ = result.RowsAffected()
+		}
+		imported <- outcome
+	}()
+
+	select {
+	case outcome := <-imported:
+		return outcome.affectedRows, outcome.err
+	case <-time.After(importDeadline):
+		suite.FailNowf("import did not return", "statement %q did not finish within %s", statement, importDeadline)
+		return 0, nil
+	}
+}
+
+// See https://github.com/exasol/exasol-driver-go/issues/79
+//
+// A Parquet import waits for the server to ask for the file, so a statement the
+// server rejects before asking anything leaves that wait with nothing to end it
+// but the driver taking the connection away. Naming a table that does not exist
+// gets the statement rejected while the file server is still parked on its very
+// first request. The suite's goleak check reports the goroutine left behind if
+// the driver fails to close the connection, and the deadline here turns the
+// deadlock that would cause into a test failure rather than a job that hangs.
+func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_LEAK_PARQUET"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+	defer suite.cleanup(database, schemaName)
+
+	_, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.MISSING_TABLE FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName))
+	suite.Error(err, "import into a missing table should be failing")
+}
+
+// TestParquetImportServerVersionGate checks the E-EGOD-31 gate itself, distinct
+// from TestSimpleParquetImportStatement's happy-path coverage: on a server below
+// the threshold it asserts the full message names both the required version and
+// the version the server actually reported, and on a supporting server it
+// asserts a valid import raises no E-EGOD-31 error at all.
+func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_8"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+
+	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+
+	if suite.exasol.SupportsNativeParquetImport() {
+		suite.NoError(err, "a supporting server should not raise the version gate error")
+	} else {
+		suite.ErrorContains(err, "E-EGOD-31")
+		suite.ErrorContains(err, "2025.1.11")
+		suite.ErrorContains(err, suite.exasol.DbVersion)
+	}
+}
+
+// TestServerVersionCapturedAtLogin asserts the driver captures a non-empty
+// release version at login and that it matches the version the server this
+// suite started actually reports, not just some placeholder value. database/sql
+// hides the underlying driver.Conn behind *sql.DB, so this reaches it through
+// the standard library's own escape hatch, *sql.Conn.Raw, rather than any
+// driver-specific accessor.
+func (suite *IntegrationTestSuite) TestServerVersionCapturedAtLogin() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
+	ctx := context.Background()
+
+	sqlConn, err := database.Conn(ctx)
+	suite.NoError(err)
+	defer sqlConn.Close()
+
+	var serverVersion string
+	err = sqlConn.Raw(func(driverConn interface{}) error {
+		exasolConn, ok := driverConn.(*connection.Connection)
+		if !ok {
+			return fmt.Errorf("expected *connection.Connection, got %T", driverConn)
+		}
+		serverVersion = exasolConn.ServerVersion
+		return nil
+	})
+	suite.NoError(err)
+
+	suite.NotEmpty(serverVersion, "the driver should capture a non-empty release version at login")
+	suite.Equal(suite.exasol.DbVersion, serverVersion, "the captured version should match the server this suite started")
+}
+
+// TestParquetImportWithEncryptedProxy is the only place where the encrypted
+// proxy connection meets a real server. The unit tests around it prove that Go's
+// TLS primitives work against each other over an in-memory pipe; none of them
+// can show which side of the real conversation opens the handshake, because
+// both the client and the server role wrap the connection and return without
+// touching the wire. Only a live server settles that the driver answers the
+// handshake as the TLS server.
+//
+// Asserting first that the connection really carries the option is what keeps a
+// green result meaningful. Rows landing over a connection that was silently
+// never encrypted look exactly like rows landing over an encrypted one, so
+// without that assertion the test could pass while proving nothing at all.
+//
+// The import runs under a deadline because the failure this test guards against
+// does not surface as an error. A handshake started before the server has read
+// the pinned key, or answered in the wrong role, leaves both sides waiting for
+// the other with no timeout of their own, so an unbounded call would hang the
+// job rather than report the defect.
+func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
+	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_ENCRYPTED_PARQUET"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+	suite.assertImportsAreEncrypted(database)
+
+	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+
+	if !suite.exasol.SupportsNativeParquetImport() {
+		suite.ErrorContains(err, "E-EGOD-31")
+		return
+	}
+	suite.NoError(err, "import over an encrypted proxy connection should be successful")
+	suite.Equal(int64(3), affectedRows)
+
+	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
+		},
+	)
+}
+
+// assertImportsAreEncrypted fails unless the connection that will run the import
+// carries the local-import encryption option, so a test of the encrypted channel
+// cannot quietly pass over a plaintext one. The option travels from the builder
+// through a connection string and back out of the parser before it reaches the
+// driver, and only the connection at the far end of that trip decides whether an
+// import is encrypted.
+func (suite *IntegrationTestSuite) assertImportsAreEncrypted(database *sql.DB) {
+	sqlConn, err := database.Conn(suite.ctx)
+	suite.NoError(err)
+	defer sqlConn.Close()
+
+	suite.NoError(sqlConn.Raw(func(driverConn interface{}) error {
+		exasolConn, ok := driverConn.(*connection.Connection)
+		if !ok {
+			return fmt.Errorf("expected *connection.Connection, got %T", driverConn)
+		}
+		if !exasolConn.Config.LocalImportEncryption {
+			return fmt.Errorf("the connection reports local-import encryption as disabled, so the import would never reach the encrypted channel this test covers")
+		}
+		return nil
+	}))
+}
+
+// TestCsvImportWithEncryptedProxy proves the encrypted proxy channel is
+// format-agnostic. TestParquetImportWithEncryptedProxy already proved the
+// driver answers Exasol's TLS handshake correctly for Parquet's pull-based
+// transport, where the serve loop blocks on a read waiting for a request.
+// The CSV push transport blocks on a different operation instead: the TLS
+// handshake happens inside the write that sends the file's headers, before
+// any request is read. A driver that only handled the pull side correctly
+// could still hang or fail here, so this repeats the same live-server proof
+// for the write path.
+//
+// CSV import carries no server-version gate of its own, unlike Parquet, but the
+// PUBLIC KEY clause that pins the encrypted connection is itself a server
+// capability, so the rows can only be asserted where the server can parse it.
+// Exasol 7.1.30 answers "syntax error, unexpected IDENTIFIER_PART_, expecting
+// FILE_" at that clause. The gate is therefore on SupportsPublicKeyPinning and
+// not on SupportsNativeParquetImport: 2025.1.10 parses the clause while being
+// below the Parquet threshold, so the two questions have different answers on
+// the very leg that separates them. Decision-log § [16] records the evidence and
+// the driver-side gap it leaves open.
+func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
+	if !suite.exasol.SupportsPublicKeyPinning() {
+		suite.T().Skipf("Exasol %s cannot parse the PUBLIC KEY clause that pins an encrypted local import", suite.exasol.DbVersion)
+	}
+
+	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
+	ctx := context.Background()
+	schemaName := "TEST_SCHEMA_ENCRYPTED_CSV"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
+	suite.assertImportsAreEncrypted(database)
+
+	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
+
+	suite.NoError(err, "import over an encrypted proxy connection should be successful")
 	suite.Equal(int64(3), affectedRows)
 
 	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s.%s", schemaName, tableName))

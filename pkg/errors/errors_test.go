@@ -153,3 +153,11 @@ func (suite *ErrorsTestSuite) TestNewInvalidConnectionStringInvalidPort() {
 func (suite *ErrorsTestSuite) TestNewInvalidArgType() {
 	suite.EqualError(NewInvalidArgType("arg", "expected Type"), "E-EGOD-30: cannot convert argument 'arg' of type 'string' to 'expected Type' type")
 }
+
+func (suite *ErrorsTestSuite) TestNewParquetImportNotSupported() {
+	suite.EqualError(NewParquetImportNotSupported("7.1.30"), "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '7.1.30'")
+}
+
+func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
+	suite.EqualError(NewParquetImportMultipleFiles(2), "E-EGOD-32: local Parquet import supports exactly one file, but the statement named '2' files")
+}

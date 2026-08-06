@@ -36,19 +36,40 @@ func BoolToPtr(b bool) *bool {
 }
 
 const WHITESPACE = `\s+`
+const IMPORT_FORMAT_PLACEHOLDER = "ImportFormatPlaceholder"
 
-var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE + `CSV.*$`)
+// ImportFormat is the file format named by a local IMPORT statement's FROM LOCAL clause.
+type ImportFormat int
 
-func IsImportQuery(query string) bool {
-	return localImportRegex.MatchString(query)
-}
-
-const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"
-const QUOTE = `["']`
+const (
+	ImportFormatNone ImportFormat = iota
+	ImportFormatCSV
+	ImportFormatParquet
+)
 
 func namedGroup(name, regexp string) string {
 	return fmt.Sprintf("(?P<%s>%s)", name, regexp)
 }
+
+var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE +
+	namedGroup(IMPORT_FORMAT_PLACEHOLDER, "CSV|PARQUET") + `.*$`)
+
+// GetImportFormat reports which file format, if any, a local IMPORT statement names in its
+// FROM LOCAL clause. It is the single place that decides this, so the statement rewrite, the
+// output filename, and the transport selection all read this one value instead of re-deriving it.
+func GetImportFormat(query string) ImportFormat {
+	matches := localImportRegex.FindStringSubmatch(query)
+	if matches == nil {
+		return ImportFormatNone
+	}
+	if strings.EqualFold(matches[localImportRegex.SubexpIndex(IMPORT_FORMAT_PLACEHOLDER)], "PARQUET") {
+		return ImportFormatParquet
+	}
+	return ImportFormatCSV
+}
+
+const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"
+const QUOTE = `["']`
 
 var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)` +
 	`ROW` + WHITESPACE + `SEPARATOR` + WHITESPACE + `=` + WHITESPACE +
@@ -102,22 +123,58 @@ func OpenFile(path string) (*os.File, error) {
 	return file, nil
 }
 
-func UpdateImportQuery(query string, host string, port int) string {
-	if !IsImportQuery(query) {
+// ProxyTarget carries where the local-import proxy connection listens and, when set, the
+// pinned public-key fingerprint of a TLS-wrapped connection. The fingerprint's presence is the
+// single decision that selects both the URL scheme and whether a PUBLIC KEY clause is emitted,
+// so CSV and Parquet imports can never disagree about whether the connection they are both
+// pointed at is encrypted.
+type ProxyTarget struct {
+	Host        string
+	Port        int
+	Fingerprint string
+}
+
+func (t ProxyTarget) scheme() string {
+	if t.Fingerprint == "" {
+		return "http"
+	}
+	return "https"
+}
+
+func (t ProxyTarget) publicKeyClause() string {
+	if t.Fingerprint == "" {
+		return ""
+	}
+	return fmt.Sprintf(" PUBLIC KEY '%s'", t.Fingerprint)
+}
+
+func UpdateImportQuery(query string, target ProxyTarget) string {
+	format := GetImportFormat(query)
+	if format == ImportFormatNone {
 		return query
 	}
+
+	fileName := "data.csv"
+	formatKeyword := "CSV"
+	urlSuffix := ""
+	if format == ImportFormatParquet {
+		fileName = "data.parquet"
+		formatKeyword = "PARQUET"
+		urlSuffix = ";MaxConcurrentReads=1"
+	}
+
 	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
 	for i, matches := range r {
 		if i == 0 {
-			query = strings.Replace(query, matches[0], "FILE 'data.csv' ", 1)
+			query = strings.Replace(query, matches[0], fmt.Sprintf("FILE '%s' ", fileName), 1)
 		} else {
 			query = strings.Replace(query, matches[0], "", 1)
 		}
 	}
 
-	proxyURL := fmt.Sprintf("http://%s:%d", host, port)
-	updatedImport := fmt.Sprintf("CSV AT '%s'", proxyURL)
-	var importQueryRegex = regexp.MustCompile(`(?i)(LOCAL CSV)`)
+	proxyURL := fmt.Sprintf("%s://%s:%d%s", target.scheme(), target.Host, target.Port, urlSuffix)
+	updatedImport := fmt.Sprintf("%s AT '%s'%s", formatKeyword, proxyURL, target.publicKeyClause())
+	importQueryRegex := regexp.MustCompile(`(?i)(LOCAL` + WHITESPACE + formatKeyword + `)`)
 
 	return string(importQueryRegex.ReplaceAll([]byte(query), []byte(updatedImport)))
 }

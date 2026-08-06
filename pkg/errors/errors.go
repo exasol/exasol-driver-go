@@ -162,6 +162,19 @@ func NewInvalidArgType(value interface{}, expectedType string) DriverErr {
 		Parameter(("expected type"), expectedType))
 }
 
+func NewParquetImportNotSupported(releaseVersion string) DriverErr {
+	return NewDriverErr(exaerror.New("E-EGOD-31").
+		Message("local Parquet import requires Exasol version {{required version}} or later, but the server reported version {{reported version}}").
+		Parameter("required version", "2025.1.11").
+		Parameter("reported version", releaseVersion))
+}
+
+func NewParquetImportMultipleFiles(fileCount int) DriverErr {
+	return NewDriverErr(exaerror.New("E-EGOD-32").
+		Message("local Parquet import supports exactly one file, but the statement named {{file count}} files").
+		Parameter("file count", fileCount))
+}
+
 // DriverErr This type represents an error that can occur when working with a database connection.
 type DriverErr struct {
 	message string
