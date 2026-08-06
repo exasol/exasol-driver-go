@@ -4,13 +4,15 @@ Code name: Import local Parquet files
 
 ## Summary
 
-This release adds support for importing local Parquet files with `IMPORT INTO <table> FROM LOCAL PARQUET FILE '<path>'`, alongside the existing local CSV import. A statement may name exactly one Parquet file. The driver serves the file to Exasol over HTTP range requests instead of streaming it, and reads the whole file into memory for the duration of the statement.
+This release adds support for local Parquet import, with `IMPORT INTO <table> FROM LOCAL PARQUET FILE '<path>'`. This works alongside the existing local CSV import. A statement can name exactly one Parquet file.
 
-Native local Parquet import requires Exasol 2025.1.11 or later. Against an older server the statement fails immediately with `E-EGOD-31`, naming both the required and the reported server version, before the driver opens any connection.
+The driver sends the file to Exasol over HTTP range requests. It does not stream the file. The driver reads the whole file into memory for the duration of the statement.
 
-This release also adds the `localimportencryption` driver property. When enabled, the driver encrypts the proxy connection that carries a local import file (CSV or Parquet) with a throwaway, self-signed TLS key pinned via a `PUBLIC KEY` clause on the rewritten statement. It is off by default and does not change the behavior of an existing connection string.
+Native local Parquet import requires Exasol 2025.1.11 or later. Against an older server, the driver does not open a connection. The statement fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 
-No Parquet-parsing dependency was added; `go.mod` and `dependencies.md` are unchanged.
+This release also adds the `localimportencryption` driver property. When enabled, the driver encrypts the proxy connection. This connection carries the local import file (CSV or Parquet). The driver uses a throwaway, self-signed TLS key for this connection, and pins the key with a `PUBLIC KEY` clause on the rewritten statement. The property is off by default. It does not change the behavior of an existing connection string.
+
+This release does not add a Parquet-parsing dependency. `go.mod` and `dependencies.md` are unchanged.
 
 ## Features
 

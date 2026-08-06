@@ -136,8 +136,8 @@ err = transaction.Rollback()
 Use the sql driver to load data from one or more CSV files into your Exasol Database. These files must be local to the machine where you execute the `IMPORT` statement.
 
 **Limitations:**
-* Only CSV and Parquet files are supported, FBV is not supported.
-* The `SECURE` option is not supported at the moment.
+* The driver supports only CSV and Parquet files. It does not support FBV.
+* The driver does not support the `SECURE` option.
 
 ```go
 result, err := exasol.Exec(`
@@ -162,9 +162,9 @@ IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE './testData/data.parquet'
 
 **Limitations:**
 * A statement can name exactly one Parquet file. A CSV import can still name several files.
-* Requires Exasol 2025.1.11 or later. Against an older server the statement fails immediately with `E-EGOD-31`, naming the required and the reported server version.
+* The statement requires Exasol 2025.1.11 or later. Against an older server, the import fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 * The driver reads the whole file into memory for the duration of the statement.
-* The proxy connection that carries the file is unencrypted by default. Enable encryption with the `localimportencryption` driver property.
+* By default, the proxy connection that carries the file is not encrypted. You can encrypt it with the `localimportencryption` driver property.
 
 ### Connection String
 
