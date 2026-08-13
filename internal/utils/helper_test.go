@@ -11,6 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	withOptionsTestCase     = "with options"
+	csvLocalImportQuery     = "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'"
+	parquetLocalImportQuery = "IMPORT into table FROM LOCAL PARQUET file '/path/to/filename.parquet'"
+	loopbackHost            = "127.0.0.1"
+	testFingerprint         = "sha256//abc123"
+)
+
 func TestNamedValuesToValues(t *testing.T) {
 	namedValues := []driver.NamedValue{{Name: ""}, {Name: ""}}
 	values, err := NamedValuesToValues(namedValues)
@@ -31,7 +39,7 @@ func TestGetImportFormatCsv(t *testing.T) {
 		query          string
 		expectedResult ImportFormat
 	}{
-		{name: "with options", query: "IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n", expectedResult: ImportFormatCSV},
+		{name: withOptionsTestCase, query: "IMPORT into <targettable> from local CSV file '/path/to/filename.csv' <optional options>;\n", expectedResult: ImportFormatCSV},
 		{name: "upper case", query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
 		{name: "with brackets", query: "IMPORT(something) INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
 		{name: "lower case", query: "import into schema.table from local csv file '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
@@ -53,7 +61,7 @@ func TestGetImportFormatParquet(t *testing.T) {
 		query          string
 		expectedResult ImportFormat
 	}{
-		{name: "with options", query: "IMPORT into <targettable> from local PARQUET file '/path/to/filename.parquet' <optional options>;\n", expectedResult: ImportFormatParquet},
+		{name: withOptionsTestCase, query: "IMPORT into <targettable> from local PARQUET file '/path/to/filename.parquet' <optional options>;\n", expectedResult: ImportFormatParquet},
 		{name: "upper case", query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL PARQUET FILE '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
 		{name: "with brackets", query: "IMPORT(something) INTO SCHEMA.TABLE FROM LOCAL PARQUET FILE '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
 		{name: "lower case", query: "import into schema.table from local parquet file '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
@@ -113,12 +121,12 @@ func TestUpdateImportQuery(t *testing.T) {
 			query:    "insert into tab1 values ('IMPORT into table FROM LOCAL CSV file ''/path/to/filename.csv'';')",
 			expected: "insert into tab1 values ('IMPORT into table FROM LOCAL CSV file ''/path/to/filename.csv'';')"},
 		{name: "single file",
-			query:    "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'",
+			query:    csvLocalImportQuery,
 			expected: "IMPORT into table FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv' "},
 		{name: "multi",
 			query:    "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' file '/path/to/filename2.csv'",
 			expected: "IMPORT into table FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv' "},
-		{name: "with options",
+		{name: withOptionsTestCase,
 			query:    "IMPORT INTO table_1 FROM LOCAL CSV USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.csv' FILE 'tab1_part2.csv' COLUMN SEPARATOR = ';' SKIP = 5;",
 			expected: "IMPORT INTO table_1 FROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv' COLUMN SEPARATOR = ';' SKIP = 5;"},
 		{name: "with newline",
@@ -127,41 +135,41 @@ func TestUpdateImportQuery(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			updatedQuery := UpdateImportQuery(test.query, ProxyTarget{Host: "127.0.0.1", Port: 4333})
+			updatedQuery := UpdateImportQuery(test.query, ProxyTarget{Host: loopbackHost, Port: 4333})
 			assert.Equal(t, test.expected, updatedQuery)
 		})
 	}
 }
 
 func TestUpdateImportQueryParquetSourceClause(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL PARQUET file '/path/to/filename.parquet'"
-	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: "127.0.0.1", Port: 4333})
+	query := parquetLocalImportQuery
+	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: loopbackHost, Port: 4333})
 	assert.Equal(t, "IMPORT into table FROM PARQUET AT 'http://127.0.0.1:4333;MaxConcurrentReads=1' FILE 'data.parquet' ", updatedQuery)
 }
 
 func TestUpdateImportQueryParquetFileClause(t *testing.T) {
 	query := "IMPORT INTO table_1 FROM LOCAL PARQUET USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.parquet' FILE 'tab1_part2.parquet' COLUMN SEPARATOR = ';' SKIP = 5;"
-	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: "127.0.0.1", Port: 4333})
+	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: loopbackHost, Port: 4333})
 	assert.Equal(t, "IMPORT INTO table_1 FROM PARQUET AT 'http://127.0.0.1:4333;MaxConcurrentReads=1' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.parquet' COLUMN SEPARATOR = ';' SKIP = 5;", updatedQuery)
 }
 
 func TestUpdateImportQueryParquetPlaintext(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL PARQUET file '/path/to/filename.parquet'"
-	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: "127.0.0.1", Port: 4333})
+	query := parquetLocalImportQuery
+	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: loopbackHost, Port: 4333})
 	assert.Contains(t, updatedQuery, "PARQUET AT 'http://127.0.0.1:4333;MaxConcurrentReads=1'")
 	assert.NotContains(t, updatedQuery, "PUBLIC KEY")
 }
 
 func TestUpdateImportQueryParquetTls(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL PARQUET file '/path/to/filename.parquet'"
-	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: "127.0.0.1", Port: 4333, Fingerprint: "sha256//abc123"})
-	assert.Equal(t, "IMPORT into table FROM PARQUET AT 'https://127.0.0.1:4333;MaxConcurrentReads=1' PUBLIC KEY 'sha256//abc123' FILE 'data.parquet' ", updatedQuery)
+	query := parquetLocalImportQuery
+	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: loopbackHost, Port: 4333, Fingerprint: testFingerprint})
+	assert.Equal(t, "IMPORT into table FROM PARQUET AT 'https://127.0.0.1:4333;MaxConcurrentReads=1' PUBLIC KEY '"+testFingerprint+"' FILE 'data.parquet' ", updatedQuery)
 }
 
 func TestUpdateImportQueryCsvTls(t *testing.T) {
-	query := "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'"
-	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: "127.0.0.1", Port: 4333, Fingerprint: "sha256//abc123"})
-	assert.Equal(t, "IMPORT into table FROM CSV AT 'https://127.0.0.1:4333' PUBLIC KEY 'sha256//abc123' FILE 'data.csv' ", updatedQuery)
+	query := csvLocalImportQuery
+	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: loopbackHost, Port: 4333, Fingerprint: testFingerprint})
+	assert.Equal(t, "IMPORT into table FROM CSV AT 'https://127.0.0.1:4333' PUBLIC KEY '"+testFingerprint+"' FILE 'data.csv' ", updatedQuery)
 }
 
 func TestUpdateImportQuerySchemeFollowsFingerprint(t *testing.T) {
@@ -171,14 +179,14 @@ func TestUpdateImportQuerySchemeFollowsFingerprint(t *testing.T) {
 		fingerprint    string
 		expectedScheme string
 	}{
-		{name: "csv without fingerprint", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'", fingerprint: "", expectedScheme: "http"},
-		{name: "parquet without fingerprint", query: "IMPORT into table FROM LOCAL PARQUET file '/path/to/filename.parquet'", fingerprint: "", expectedScheme: "http"},
-		{name: "csv with fingerprint", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'", fingerprint: "sha256//abc123", expectedScheme: "https"},
-		{name: "parquet with fingerprint", query: "IMPORT into table FROM LOCAL PARQUET file '/path/to/filename.parquet'", fingerprint: "sha256//abc123", expectedScheme: "https"},
+		{name: "csv without fingerprint", query: csvLocalImportQuery, fingerprint: "", expectedScheme: "http"},
+		{name: "parquet without fingerprint", query: parquetLocalImportQuery, fingerprint: "", expectedScheme: "http"},
+		{name: "csv with fingerprint", query: csvLocalImportQuery, fingerprint: testFingerprint, expectedScheme: "https"},
+		{name: "parquet with fingerprint", query: parquetLocalImportQuery, fingerprint: testFingerprint, expectedScheme: "https"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			updatedQuery := UpdateImportQuery(test.query, ProxyTarget{Host: "127.0.0.1", Port: 4333, Fingerprint: test.fingerprint})
+			updatedQuery := UpdateImportQuery(test.query, ProxyTarget{Host: loopbackHost, Port: 4333, Fingerprint: test.fingerprint})
 			assert.Contains(t, updatedQuery, fmt.Sprintf("AT '%s://127.0.0.1:4333", test.expectedScheme))
 			if test.fingerprint == "" {
 				assert.NotContains(t, updatedQuery, "PUBLIC KEY")
@@ -244,7 +252,7 @@ func TestGetRowSeparatorCompleteQuery(t *testing.T) {
 		{name: "only row separator fragment", query: "ROW SEPARATOR = 'CRLF'", expected: "\r\n"},
 		{name: "pipe as quote char not supported", query: "ROW SEPARATOR = |CRLF|", expected: "\n"},
 		{name: "unknown value returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'unknown'", expected: "\n"},
-		{name: "missing expression returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv'", expected: "\n"},
+		{name: "missing expression returns default", query: csvLocalImportQuery, expected: "\n"},
 		{name: "trailing text", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR = 'CRLF' trailing text", expected: "\r\n"},
 		{name: "multiple spaces", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR \t = \t 'CRLF';", expected: "\r\n"},
 		{name: "no spaces returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR='CRLF';", expected: "\n"},
@@ -297,7 +305,7 @@ func TestMultipleHostResolve(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(hosts))
 	assert.Equal(t, "exasol1", hosts[0])
-	assert.Equal(t, "127.0.0.1", hosts[1])
+	assert.Equal(t, loopbackHost, hosts[1])
 	assert.Equal(t, "exasol3", hosts[2])
 }
 
@@ -337,7 +345,7 @@ func TestIPRangeResolve(t *testing.T) {
 	hosts, err := ResolveHosts("127.0.0.1..3")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(hosts))
-	assert.Equal(t, "127.0.0.1", hosts[0])
+	assert.Equal(t, loopbackHost, hosts[0])
 	assert.Equal(t, "127.0.0.2", hosts[1])
 	assert.Equal(t, "127.0.0.3", hosts[2])
 }

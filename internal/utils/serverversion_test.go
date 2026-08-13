@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const serverVersionWithoutPatch = "2025.1"
+
 func TestParseServerVersionThreeParts(t *testing.T) {
 	major, minor, patch, ok := parseServerVersion("2025.1.11")
 	assert.True(t, ok)
@@ -15,7 +17,7 @@ func TestParseServerVersionThreeParts(t *testing.T) {
 }
 
 func TestParseServerVersionTwoParts(t *testing.T) {
-	major, minor, patch, ok := parseServerVersion("2025.1")
+	major, minor, patch, ok := parseServerVersion(serverVersionWithoutPatch)
 	assert.True(t, ok)
 	assert.Equal(t, 2025, major)
 	assert.Equal(t, 1, minor)
@@ -79,7 +81,7 @@ func TestSupportsPublicKeyPinningAtOrAboveThreshold(t *testing.T) {
 		{name: "CI matrix leg observed to accept the clause", releaseVersion: "2025.1.10"},
 		{name: "CI matrix leg observed to accept the clause on a higher major", releaseVersion: "2026.1.0"},
 		{name: "higher minor", releaseVersion: "2025.2.1"},
-		{name: "missing patch treated as zero at the threshold", releaseVersion: "2025.1"},
+		{name: "missing patch treated as zero at the threshold", releaseVersion: serverVersionWithoutPatch},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -113,7 +115,7 @@ func TestSupportsNativeParquetImportBelowThreshold(t *testing.T) {
 		{name: "lower patch", releaseVersion: "2025.1.10"},
 		{name: "lower minor", releaseVersion: "2025.0.99"},
 		{name: "lower major", releaseVersion: "7.1.30"},
-		{name: "missing patch defaults to zero, below threshold", releaseVersion: "2025.1"},
+		{name: "missing patch defaults to zero, below threshold", releaseVersion: serverVersionWithoutPatch},
 		{name: "non-numeric patch below threshold", releaseVersion: "2025.1.abc"},
 	}
 	for _, test := range tests {

@@ -32,7 +32,11 @@ import (
 // formats' encrypted-channel handshake can deadlock rather than error when the
 // driver and server disagree about who acts first, so a call still running
 // after this deadline is stuck waiting on a peer that will never answer.
-const importDeadline = 30 * time.Second
+const (
+	importDeadline          = 30 * time.Second
+	parquetVersionErrorCode = "E-EGOD-31"
+	createSchemaIfMissing   = "CREATE SCHEMA IF NOT EXISTS "
+)
 
 type IntegrationTestSuite struct {
 	suite.Suite
@@ -638,7 +642,7 @@ func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 			},
 		)
 	} else {
-		suite.ErrorContains(err, "E-EGOD-31")
+		suite.ErrorContains(err, parquetVersionErrorCode)
 	}
 }
 
@@ -656,7 +660,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
 	} else {
-		suite.ErrorContains(err, "E-EGOD-31")
+		suite.ErrorContains(err, parquetVersionErrorCode)
 	}
 }
 
@@ -674,7 +678,7 @@ func (suite *IntegrationTestSuite) TestParquetImportNotExistentFile() {
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.ErrorContains(err, "E-EGOD-28")
 	} else {
-		suite.ErrorContains(err, "E-EGOD-31")
+		suite.ErrorContains(err, parquetVersionErrorCode)
 	}
 }
 
@@ -756,7 +760,7 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	schemaName := "TEST_SCHEMA_LEAK_PARQUET"
-	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+	_, _ = database.ExecContext(ctx, createSchemaIfMissing+schemaName)
 	defer suite.cleanup(database, schemaName)
 
 	_, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.MISSING_TABLE FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName))
@@ -782,7 +786,7 @@ func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.NoError(err, "a supporting server should not raise the version gate error")
 	} else {
-		suite.ErrorContains(err, "E-EGOD-31")
+		suite.ErrorContains(err, parquetVersionErrorCode)
 		suite.ErrorContains(err, "2025.1.11")
 		suite.ErrorContains(err, suite.exasol.DbVersion)
 	}
@@ -849,7 +853,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
 
 	if !suite.exasol.SupportsNativeParquetImport() {
-		suite.ErrorContains(err, "E-EGOD-31")
+		suite.ErrorContains(err, parquetVersionErrorCode)
 		return
 	}
 	suite.NoError(err, "import over an encrypted proxy connection should be successful")
@@ -996,7 +1000,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	suite.NoError(err, "should generate csv file")
 	defer os.Remove(file.Name())
 
-	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+	_, _ = database.ExecContext(ctx, createSchemaIfMissing+schemaName)
 	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
 
@@ -1041,7 +1045,7 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 	defer os.Remove(file.Name())
 	defer suite.cleanup(database, schemaName)
 
-	_, _ = database.ExecContext(ctx, "CREATE SCHEMA IF NOT EXISTS "+schemaName)
+	_, _ = database.ExecContext(ctx, createSchemaIfMissing+schemaName)
 
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
 

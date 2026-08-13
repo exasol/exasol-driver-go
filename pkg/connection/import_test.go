@@ -15,11 +15,12 @@ import (
 )
 
 const (
-	csvImportQuery            = "IMPORT INTO TEST_TABLE FROM LOCAL CSV FILE '../../testData/data.csv'"
-	parquetImportQuery        = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet'"
-	missingFilePath           = "../../testData/no-such-file.parquet"
-	missingParquetImportQuery = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '" + missingFilePath + "'"
-	twoFileParquetImportQuery = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet' FILE '../../testData/data.parquet'"
+	csvImportQuery               = "IMPORT INTO TEST_TABLE FROM LOCAL CSV FILE '../../testData/data.csv'"
+	parquetImportQuery           = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet'"
+	missingFilePath              = "../../testData/no-such-file.parquet"
+	missingParquetImportQuery    = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '" + missingFilePath + "'"
+	twoFileParquetImportQuery    = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet' FILE '../../testData/data.parquet'"
+	createImportStatementFailure = "could not create the import statement: %v"
 )
 
 const (
@@ -138,7 +139,9 @@ func answerMagicWords(connection net.Conn) error {
 		Port  uint32
 		Host  [16]byte
 	}{Start: 1, Port: 8563}
-	copy(reply.Host[:], "10.0.0.1")
+	// RFC 5737 reserves 192.0.2.0/24 for documentation. The address is only
+	// serialized into this fake peer's reply and is never used as a destination.
+	copy(reply.Host[:], net.IPv4(192, 0, 2, 1).String())
 	return binary.Write(connection, binary.LittleEndian, reply)
 }
 
@@ -213,7 +216,7 @@ func TestGetUpdatedQueryPinsTheEncryptedConnection(t *testing.T) {
 	peer := startSilentPeer(t)
 	statement, err := NewImportStatement(csvImportQuery, utils.ImportFormatCSV, peer.encryptedConfig())
 	if err != nil {
-		t.Fatalf("could not create the import statement: %v", err)
+		t.Fatalf(createImportStatementFailure, err)
 	}
 	t.Cleanup(statement.Close)
 
@@ -229,7 +232,7 @@ func TestGetUpdatedQueryPinsNothingWithoutEncryption(t *testing.T) {
 	peer := startSilentPeer(t)
 	statement, err := NewImportStatement(csvImportQuery, utils.ImportFormatCSV, peer.plaintextConfig())
 	if err != nil {
-		t.Fatalf("could not create the import statement: %v", err)
+		t.Fatalf(createImportStatementFailure, err)
 	}
 	t.Cleanup(statement.Close)
 
@@ -244,7 +247,7 @@ func TestTransferStopsOnContextCancelWithTls(t *testing.T) {
 
 	statement, err := NewImportStatement(csvImportQuery, utils.ImportFormatCSV, peer.encryptedConfig())
 	if err != nil {
-		t.Fatalf("could not create the import statement: %v", err)
+		t.Fatalf(createImportStatementFailure, err)
 	}
 	connection := peer.acceptedConnection(t)
 
@@ -259,7 +262,7 @@ func TestTransferStopsOnContextCancelParquet(t *testing.T) {
 
 	statement, err := NewImportStatement(parquetImportQuery, utils.ImportFormatParquet, peer.plaintextConfig())
 	if err != nil {
-		t.Fatalf("could not create the import statement: %v", err)
+		t.Fatalf(createImportStatementFailure, err)
 	}
 	connection := peer.acceptedConnection(t)
 
@@ -292,7 +295,7 @@ func TestNewImportStatementDoesNotHandshakeBeforeTransfer(t *testing.T) {
 	select {
 	case result := <-constructed:
 		if result.err != nil {
-			t.Fatalf("could not create the import statement: %v", result.err)
+			t.Fatalf(createImportStatementFailure, result.err)
 		}
 		t.Cleanup(result.statement.Close)
 	case <-time.After(cancellationDeadline):

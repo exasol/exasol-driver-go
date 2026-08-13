@@ -20,7 +20,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const serveTimeout = 5 * time.Second
+const (
+	serveTimeout        = 5 * time.Second
+	contentRangeHeader  = "Content-Range"
+	partialContentRange = "bytes 2-5/10"
+)
 
 type importPeer struct {
 	conn    net.Conn
@@ -84,7 +88,9 @@ func newStartedProxy(t *testing.T) (*Proxy, net.Conn) {
 		Port  uint32
 		Host  [16]byte
 	}{Start: 1, Port: 8563}
-	copy(reply.Host[:], "10.0.0.1")
+	// RFC 5737 reserves 192.0.2.0/24 for documentation. The address is only
+	// serialized over the in-memory test pipe and is never used as a destination.
+	copy(reply.Host[:], net.IPv4(192, 0, 2, 1).String())
 	if err := binary.Write(peerConn, binary.LittleEndian, reply); err != nil {
 		t.Fatalf("could not answer the magic words: %v", err)
 	}
@@ -183,13 +189,13 @@ func TestServeFileRangesPartialContent(t *testing.T) {
 		wantRange      string
 		wantBody       string
 	}{
-		{"closed range", "bytes=2-5", "bytes 2-5/10", "2345"},
+		{"closed range", "bytes=2-5", partialContentRange, "2345"},
 		{"single byte", "bytes=9-9", "bytes 9-9/10", "9"},
 		{"explicit bounds spanning the whole file", "bytes=0-9", "bytes 0-9/10", "0123456789"},
 		{"last byte position beyond the end is clamped", "bytes=7-99", "bytes 7-9/10", "789"},
 		{"suffix range", "bytes=-3", "bytes 7-9/10", "789"},
 		{"suffix longer than the file", "bytes=-99", "bytes 0-9/10", "0123456789"},
-		{"bounds padded with spaces", "bytes= 2 - 5 ", "bytes 2-5/10", "2345"},
+		{"bounds padded with spaces", "bytes= 2 - 5 ", partialContentRange, "2345"},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			peer, wait := startServeFileRanges(t, context.Background(), data)
@@ -197,7 +203,7 @@ func TestServeFileRangesPartialContent(t *testing.T) {
 			response := peer.exchange(t, newRangeRequest(t, testCase.requestedRange))
 
 			assert.Equal(t, http.StatusPartialContent, response.StatusCode)
-			assert.Equal(t, testCase.wantRange, response.Header.Get("Content-Range"))
+			assert.Equal(t, testCase.wantRange, response.Header.Get(contentRangeHeader))
 			assert.Equal(t, int64(len(testCase.wantBody)), response.ContentLength)
 			assert.Equal(t, testCase.wantBody, string(readBody(t, response)))
 
@@ -214,7 +220,7 @@ func TestServeFileRangesOpenEndedRange(t *testing.T) {
 	response := peer.exchange(t, newRangeRequest(t, "bytes=4-"))
 
 	assert.Equal(t, http.StatusPartialContent, response.StatusCode)
-	assert.Equal(t, "bytes 4-9/10", response.Header.Get("Content-Range"))
+	assert.Equal(t, "bytes 4-9/10", response.Header.Get(contentRangeHeader))
 	assert.Equal(t, int64(6), response.ContentLength)
 	assert.Equal(t, "456789", string(readBody(t, response)))
 
@@ -230,7 +236,7 @@ func TestServeFileRangesWholeFile(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, int64(len(data)), response.ContentLength)
-	assert.Empty(t, response.Header.Get("Content-Range"))
+	assert.Empty(t, response.Header.Get(contentRangeHeader))
 	assert.Equal(t, data, readBody(t, response))
 
 	assert.NoError(t, peer.conn.Close())
@@ -446,7 +452,7 @@ func TestServeFileRangesOverTls(t *testing.T) {
 	response := peer.exchange(t, newRangeRequest(t, "bytes=2-5"))
 
 	assert.Equal(t, http.StatusPartialContent, response.StatusCode)
-	assert.Equal(t, "bytes 2-5/10", response.Header.Get("Content-Range"))
+	assert.Equal(t, partialContentRange, response.Header.Get(contentRangeHeader))
 	assert.Equal(t, int64(4), response.ContentLength)
 	assert.Equal(t, "2345", string(readBody(t, response)))
 
