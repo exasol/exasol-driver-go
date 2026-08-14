@@ -243,9 +243,16 @@ func (p *Proxy) SendFile(ctx context.Context, file *os.File, rowSeparator string
 	return nil
 }
 
-// ServeFileRanges answers the HTTP requests Exasol issues while reading a local
-// file it pulls rather than receives, and returns once the server stops asking.
-// It serves slices of data from memory, so the caller owns reading the file.
+// ServeFileRanges answers range requests from an in-memory file. It is kept for
+// callers that already hold the content; file-backed imports should use
+// ServeReaderRanges to avoid loading the complete file into memory.
+func (p *Proxy) ServeFileRanges(ctx context.Context, data []byte) error {
+	return p.ServeReaderRanges(ctx, bytes.NewReader(data), int64(len(data)))
+}
+
+// ServeReaderRanges answers the HTTP requests Exasol issues while reading a
+// local file it pulls rather than receives, and returns once the server stops
+// asking. Each response reads only the requested section from source.
 //
 // Exasol ends the conversation by closing the connection, so a request that
 // fails to arrive finishes the transfer successfully, whether the cause is end
@@ -260,12 +267,12 @@ func (p *Proxy) SendFile(ctx context.Context, file *os.File, rowSeparator string
 // because the connection may have been wrapped in a TLS layer in the meantime
 // and a reader bound to the raw socket would parse encrypted bytes as HTTP.
 //
-// ServeFileRanges answers exactly one reader sequentially over one connection;
+// ServeReaderRanges answers exactly one reader sequentially over one connection;
 // it has no way to multiplex a second concurrent reader onto the same
 // bufio.Reader. internal/utils.UpdateImportQuery holds the server to that by
 // appending the ";MaxConcurrentReads=1" URL suffix, so the two must change
 // together: relaxing one without the other breaks the contract silently.
-func (p *Proxy) ServeFileRanges(ctx context.Context, data []byte) error {
+func (p *Proxy) ServeReaderRanges(ctx context.Context, source io.ReaderAt, size int64) error {
 	requests := bufio.NewReader(p.connection)
 	for {
 		if ctx.Err() != nil {
@@ -275,60 +282,61 @@ func (p *Proxy) ServeFileRanges(ctx context.Context, data []byte) error {
 		if err != nil {
 			return nil
 		}
-		if err := p.answer(request, data); err != nil {
+		if err := p.answer(request, source, size); err != nil {
 			return err
 		}
 	}
 }
 
-func (p *Proxy) answer(request *http.Request, data []byte) error {
+func (p *Proxy) answer(request *http.Request, source io.ReaderAt, size int64) error {
 	switch request.Method {
 	case http.MethodHead:
-		return p.announceFileSize(data)
+		return p.announceFileSize(size)
 	case http.MethodGet:
 		requestedRange := request.Header.Get("Range")
 		if requestedRange == "" {
-			return p.sendWholeFile(data)
+			return p.sendWholeFile(source, size)
 		}
-		return p.sendByteRange(requestedRange, data)
+		return p.sendByteRange(requestedRange, source, size)
 	default:
 		return p.rejectMethod(request.Method)
 	}
 }
 
-func (p *Proxy) announceFileSize(data []byte) error {
+func (p *Proxy) announceFileSize(size int64) error {
 	return p.sendHeaders([]string{
 		"HTTP/1.1 200 OK",
-		fmt.Sprintf("Content-Length: %d", len(data)),
+		fmt.Sprintf("Content-Length: %d", size),
 	})
 }
 
-func (p *Proxy) sendWholeFile(data []byte) error {
-	if err := p.announceFileSize(data); err != nil {
+func (p *Proxy) sendWholeFile(source io.ReaderAt, size int64) error {
+	if err := p.announceFileSize(size); err != nil {
 		return err
 	}
-	return p.sendBody(data)
+	return p.sendBody(io.NewSectionReader(source, 0, size), size)
 }
 
-func (p *Proxy) sendByteRange(requestedRange string, data []byte) error {
-	first, last, satisfiable := parseByteRange(requestedRange, len(data))
+func (p *Proxy) sendByteRange(requestedRange string, source io.ReaderAt, size int64) error {
+	first, last, satisfiable := parseByteRange(requestedRange, size)
 	if !satisfiable {
 		return p.sendStatusWithoutBody("HTTP/1.1 400 Bad Request")
 	}
 	err := p.sendHeaders([]string{
 		"HTTP/1.1 206 Partial Content",
-		fmt.Sprintf("Content-Range: bytes %d-%d/%d", first, last, len(data)),
+		fmt.Sprintf("Content-Range: bytes %d-%d/%d", first, last, size),
 		fmt.Sprintf("Content-Length: %d", last-first+1),
 	})
 	if err != nil {
 		return err
 	}
-	return p.sendBody(data[first : last+1])
+	length := last - first + 1
+	return p.sendBody(io.NewSectionReader(source, first, length), length)
 }
 
-func (p *Proxy) sendBody(body []byte) error {
-	if _, err := p.connection.Write(body); err != nil {
-		return fmt.Errorf("%w: could not send %d bytes of the import file to the server, %s", errors.ErrInvalidProxyConn, len(body), err)
+func (p *Proxy) sendBody(body io.Reader, size int64) error {
+	if _, err := io.CopyN(p.connection, body, size); err != nil {
+		return fmt.Errorf("%w: could not send %d bytes of the import file to the server, %s", errors.ErrInvalidProxyConn, size, err)
 	}
 	return nil
 }
@@ -354,7 +362,7 @@ func (p *Proxy) rejectMethod(method string) error {
 // bytes into an inclusive, in-bounds slice. It reports whether the range can be
 // served at all, without distinguishing an unparsable range from an
 // unsatisfiable one, because both are answered the same way.
-func parseByteRange(requestedRange string, total int) (first, last int, satisfiable bool) {
+func parseByteRange(requestedRange string, total int64) (first, last int64, satisfiable bool) {
 	spec, isByteUnit := strings.CutPrefix(requestedRange, "bytes=")
 	if !isByteUnit || total == 0 {
 		return 0, 0, false
@@ -391,8 +399,8 @@ func parseByteRange(requestedRange string, total int) (first, last int, satisfia
 	return first, last, true
 }
 
-func parsePosition(text string) (int, bool) {
-	position, err := strconv.Atoi(text)
+func parsePosition(text string) (int64, bool) {
+	position, err := strconv.ParseInt(text, 10, 64)
 	if err != nil || position < 0 {
 		return 0, false
 	}

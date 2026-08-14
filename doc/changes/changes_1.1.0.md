@@ -6,7 +6,7 @@ Code name: Import local Parquet files
 
 This release adds support for local Parquet import, with `IMPORT INTO <table> FROM LOCAL PARQUET FILE '<path>'`. This works alongside the existing local CSV import. A statement can name exactly one Parquet file.
 
-The driver sends the file to Exasol over HTTP range requests. It does not stream the file. The driver reads the whole file into memory for the duration of the statement.
+The driver streams the byte ranges requested by Exasol without loading the whole file into memory.
 
 Native local Parquet import requires Exasol 2025.1.11 or later. Against an older server, the driver does not open a connection. The statement fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 

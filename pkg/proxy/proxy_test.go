@@ -31,6 +31,28 @@ type importPeer struct {
 	replies *bufio.Reader
 }
 
+type recordedRead struct {
+	offset int64
+	length int
+}
+
+type recordingReaderAt struct {
+	data  []byte
+	reads []recordedRead
+}
+
+func (r *recordingReaderAt) ReadAt(target []byte, offset int64) (int, error) {
+	r.reads = append(r.reads, recordedRead{offset: offset, length: len(target)})
+	if offset >= int64(len(r.data)) {
+		return 0, io.EOF
+	}
+	read := copy(target, r.data[offset:])
+	if read < len(target) {
+		return read, io.EOF
+	}
+	return read, nil
+}
+
 func startServeFileRanges(t *testing.T, ctx context.Context, data []byte) (*importPeer, func() error) {
 	t.Helper()
 	peerConn, proxy := newPipedProxy(t)
@@ -211,6 +233,24 @@ func TestServeFileRangesPartialContent(t *testing.T) {
 			assert.NoError(t, wait())
 		})
 	}
+}
+
+func TestServeReaderRangesReadsOnlyRequestedSection(t *testing.T) {
+	source := &recordingReaderAt{data: []byte("0123456789")}
+	peerConn, proxy := newPipedProxy(t)
+	wait := make(chan error, 1)
+	go func() {
+		wait <- proxy.ServeReaderRanges(context.Background(), source, int64(len(source.data)))
+	}()
+	peer := &importPeer{conn: peerConn, replies: bufio.NewReader(peerConn)}
+
+	response := peer.exchange(t, newRangeRequest(t, "bytes=2-5"))
+
+	assert.Equal(t, "2345", string(readBody(t, response)))
+	assert.NoError(t, peerConn.Close())
+	assert.NoError(t, <-wait)
+	assert.Equal(t, []recordedRead{{offset: 2, length: 4}}, source.reads,
+		"serving a range must not read the complete source into memory")
 }
 
 func TestServeFileRangesOpenEndedRange(t *testing.T) {

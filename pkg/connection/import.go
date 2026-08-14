@@ -13,23 +13,23 @@ import (
 // ImportStatement is one local import in progress: the proxy connection that
 // carries the file, the format that decides how the bytes move over it, and the
 // fingerprint the server needs to accept the encrypted connection. It owns the
-// lifecycle of the transfer, while the proxy owns the bytes.
+// file and the lifecycle of the transfer, while the proxy owns the transport.
 type ImportStatement struct {
-	query       string
-	format      utils.ImportFormat
-	fileContent []byte
-	fingerprint string
-	proxy       *proxy.Proxy
+	query           string
+	format          utils.ImportFormat
+	parquetFile     *os.File
+	parquetFileSize int64
+	fingerprint     string
+	proxy           *proxy.Proxy
 }
 
 // NewImportStatement opens the proxy connection a local import runs over and
 // leaves it ready for the transfer, without moving a single byte of the file.
 //
-// A Parquet import is read into memory here, before the connection is dialled,
-// so a caller who names a file that does not exist is told so directly. Doing it
-// later would report the miss from the transfer goroutine, whose error is
-// discarded in favour of the server's, and the caller would see an ETL failure
-// naming a statement it never wrote.
+// A Parquet file is opened here, before the connection is dialled, so a caller
+// who names a file that does not exist is told so directly. The open file is
+// retained and streamed during Transfer; its contents are not loaded into
+// memory.
 //
 // The format is supplied rather than derived, because the caller has already
 // classified the statement to decide whether the server supports it at all.
@@ -39,25 +39,29 @@ type ImportStatement struct {
 func NewImportStatement(query string, format utils.ImportFormat, cfg *config.Config) (*ImportStatement, error) {
 	statement := &ImportStatement{query: query, format: format}
 	if format == utils.ImportFormatParquet {
-		content, err := readImportFile(query)
+		file, size, err := openImportFile(query)
 		if err != nil {
 			return nil, err
 		}
-		statement.fileContent = content
+		statement.parquetFile = file
+		statement.parquetFileSize = size
 	}
 
 	connection, err := createProxy(cfg.Host, cfg.Port)
 	if err != nil {
+		statement.closeParquetFile()
 		return nil, err
 	}
 	if err := connection.StartProxy(); err != nil {
 		connection.Close()
+		statement.closeParquetFile()
 		return nil, err
 	}
 	if cfg.LocalImportEncryption {
 		fingerprint, err := connection.EnableTLS()
 		if err != nil {
 			connection.Close()
+			statement.closeParquetFile()
 			return nil, err
 		}
 		statement.fingerprint = fingerprint
@@ -67,27 +71,31 @@ func NewImportStatement(query string, format utils.ImportFormat, cfg *config.Con
 	return statement, nil
 }
 
-// readImportFile reads the single file a Parquet import names, reporting a
-// missing or unreadable file the same way the CSV path's utils.OpenFile does.
-// The error of the standard library names no error code and would reach the
-// caller as an unrecognisable path error.
+// openImportFile opens the single file a Parquet import names and captures its
+// size without reading its contents. Keeping the descriptor open lets Transfer
+// stream the same file that was validated here.
 //
 // Serving only the first of several named files would be a silent partial
-// import, so the count is refused here rather than assumed: reading the first
+// import, so the count is refused here rather than assumed: opening the first
 // path is safe only once no other path exists.
-func readImportFile(query string) ([]byte, error) {
+func openImportFile(query string) (*os.File, int64, error) {
 	paths, err := utils.GetFilePaths(query)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if len(paths) > 1 {
-		return nil, errors.NewParquetImportMultipleFiles(len(paths))
+		return nil, 0, errors.NewParquetImportMultipleFiles(len(paths))
 	}
-	content, err := os.ReadFile(paths[0])
+	file, err := utils.OpenFile(paths[0])
 	if err != nil {
-		return nil, errors.NewFileNotFound(paths[0])
+		return nil, 0, err
 	}
-	return content, nil
+	info, err := file.Stat()
+	if err != nil {
+		file.Close()
+		return nil, 0, errors.NewFileNotFound(paths[0])
+	}
+	return file, info.Size(), nil
 }
 
 func createProxy(host string, port int) (*proxy.Proxy, error) {
@@ -112,7 +120,17 @@ func (i *ImportStatement) GetUpdatedQuery() string {
 }
 
 func (i *ImportStatement) Close() {
-	i.proxy.Close()
+	if i.proxy != nil {
+		i.proxy.Close()
+	}
+	i.closeParquetFile()
+}
+
+func (i *ImportStatement) closeParquetFile() {
+	if i.parquetFile != nil {
+		i.parquetFile.Close()
+		i.parquetFile = nil
+	}
 }
 
 // Transfer moves the file over the proxy connection and returns once the server
@@ -139,7 +157,7 @@ func (i *ImportStatement) Transfer(ctx context.Context) error {
 	}()
 
 	if i.format == utils.ImportFormatParquet {
-		return i.proxy.ServeFileRanges(ctx, i.fileContent)
+		return i.proxy.ServeReaderRanges(ctx, i.parquetFile, i.parquetFileSize)
 	}
 	return i.pushFiles(ctx)
 }
