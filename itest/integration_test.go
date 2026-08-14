@@ -1014,6 +1014,50 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	)
 }
 
+// TestCancelRunningImport verifies that cancelling the context of an active
+// local import also stops the file transfer. The file is deliberately large so
+// the import is still transferring when the context is cancelled; a small
+// "$SLEEP" query would only exercise statement cancellation, not the transfer
+// context used by imports.
+func (suite *IntegrationTestSuite) TestCancelRunningImport() {
+	database := suite.openConnection(suite.createDefaultConfig())
+	defer database.Close()
+
+	schemaName := "TEST_SCHEMA_CANCEL_IMPORT"
+	tableName := "TEST_TABLE"
+	ctx := context.Background()
+	_, _ = database.ExecContext(ctx, createSchemaIfMissing+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
+
+	file, err := suite.generateExampleCSVFile(time.Now().Format(time.RFC3339), 200000)
+	suite.NoError(err, "should generate csv file")
+	suite.NoError(file.Close(), "should close generated csv file")
+	defer os.Remove(file.Name())
+
+	statement := fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '%s' COLUMN SEPARATOR = ',' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName, file.Name())
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	result := make(chan error, 1)
+	go func() {
+		_, execErr := database.ExecContext(cancelCtx, statement)
+		result <- execErr
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	start := time.Now()
+	cancel()
+
+	select {
+	case err := <-result:
+		suite.ErrorIs(err, context.Canceled)
+		suite.Less(time.Since(start), 5*time.Second, "cancelled import should return promptly")
+	case <-time.After(5 * time.Second):
+		suite.Fail("cancelled import did not return promptly")
+	}
+}
+
 // See https://github.com/exasol/exasol-driver-go/issues/79
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
