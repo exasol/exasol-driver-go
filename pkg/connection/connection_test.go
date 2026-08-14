@@ -255,17 +255,35 @@ func (suite *ConnectionTestSuite) TestParquetImportSurfacesTheErrorOfTheServer()
 	peer.acceptedConnection(suite.T())
 }
 
-func (suite *ConnectionTestSuite) TestCsvImportRunsOnServerWithoutNativeParquetSupport() {
+func (suite *ConnectionTestSuite) TestCsvImportDisablesRequestedEncryptionOnUnsupportedServer() {
 	peer := startSilentPeer(suite.T())
 	suite.simulateRowCountResponse(3)
 	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
+	conn.Config.LocalImportEncryption = true
 
 	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
 
-	suite.NoError(err, "neither guard belongs to CSV, which has always pushed several files to a server of any version")
+	suite.NoError(err, "an old server must retain CSV support by falling back to plaintext")
 	suite.NotNil(result)
 	suite.Len(suite.sentStatements(), 1)
 	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'http://")
+	suite.NotContains(suite.sentStatements()[0], "PUBLIC KEY")
+	peer.acceptedConnection(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestCsvImportUsesRequestedEncryptionOnSupportingServer() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateRowCountResponse(3)
+	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	conn.Config.LocalImportEncryption = true
+
+	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Len(suite.sentStatements(), 1)
+	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'https://")
+	suite.Contains(suite.sentStatements()[0], "PUBLIC KEY")
 	peer.acceptedConnection(suite.T())
 }
 

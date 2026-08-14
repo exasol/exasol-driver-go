@@ -10,7 +10,7 @@ The driver streams the byte ranges requested by Exasol without loading the whole
 
 Native local Parquet import requires Exasol 2025.1.11 or later. Against an older server, the driver does not open a connection. The statement fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 
-This release also adds the `localimportencryption` driver property. When enabled, the driver encrypts the proxy connection. This connection carries the local import file (CSV or Parquet). The driver uses a throwaway, self-signed TLS key for this connection, and pins the key with a `PUBLIC KEY` clause on the rewritten statement. The property is off by default. It does not change the behavior of an existing connection string.
+This release also adds the `localimportencryption` driver property. By default, the driver encrypts the proxy connection that carries a local CSV or Parquet file when the server supports `PUBLIC KEY` pinning. On older servers, the driver automatically falls back to plaintext. The driver uses a throwaway, self-signed TLS key for encrypted proxy connections and pins the key with a `PUBLIC KEY` clause on the rewritten statement. Set the property to `0` to disable local-import encryption explicitly.
 
 This release does not add a Parquet-parsing dependency. `dependencies.md` is unchanged.
 

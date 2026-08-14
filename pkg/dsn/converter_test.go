@@ -58,9 +58,14 @@ func (suite *ConverterTestSuite) TestConvertUrlpath() {
 	suite.Equal("/v1/databases/db123/connect?ticket=123", config.UrlPath)
 }
 
-func (suite *ConverterTestSuite) TestConvertLocalImportEncryption() {
-	config := suite.convert("exa:localhost:1234;localimportencryption=1")
+func (suite *ConverterTestSuite) TestConvertLocalImportEncryptionDefaultsToEnabled() {
+	config := suite.convert("exa:localhost:1234")
 	suite.Equal(true, config.LocalImportEncryption)
+}
+
+func (suite *ConverterTestSuite) TestConvertLocalImportEncryptionCanBeDisabled() {
+	config := suite.convert("exa:localhost:1234;localimportencryption=0")
+	suite.Equal(false, config.LocalImportEncryption)
 }
 
 func (suite *ConverterTestSuite) convert(dsnValue string) *config.Config {

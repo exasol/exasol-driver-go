@@ -236,13 +236,20 @@ func (suite *DsnTestSuite) TestParseValidDsnWithEscapedRefreshToken() {
 	suite.Equal(false, *dsn.Compression)
 }
 
-func (suite *DsnTestSuite) TestLocalImportEncryptionDefaultsToDisabled() {
+func (suite *DsnTestSuite) TestLocalImportEncryptionDefaultsToEnabled() {
 	dsn, err := ParseDSN("exa:localhost:1234")
 	suite.NoError(err)
-	suite.Equal(false, *dsn.LocalImportEncryption)
+	suite.Equal(true, *dsn.LocalImportEncryption)
 }
 
-func (suite *DsnTestSuite) TestLocalImportEncryptionRoundTrip() {
+func (suite *DsnTestSuite) TestLocalImportEncryptionCanBeDisabled() {
+	dsn, err := ParseDSN("exa:localhost:1234;user=sys;password=exasol;localimportencryption=0")
+	suite.NoError(err)
+	suite.Equal(false, *dsn.LocalImportEncryption)
+	suite.Contains(dsn.ToDSN(), "localimportencryption=0")
+}
+
+func (suite *DsnTestSuite) TestLocalImportEncryptionEnabledRoundTrip() {
 	dsn, err := ParseDSN("exa:localhost:1234;user=sys;password=exasol;localimportencryption=1")
 	suite.NoError(err)
 	suite.Equal(true, *dsn.LocalImportEncryption)

@@ -34,10 +34,9 @@ func SupportsNativeParquetImport(releaseVersion string) bool {
 // answer the same kind of question, and the two thresholds genuinely differ:
 // 2025.1.10 accepts the clause but cannot serve native Parquet import.
 //
-// The driver does not gate on this today, so an encrypted import against an
-// older server still surfaces the server's own syntax error. Recording the
-// threshold here keeps that follow-up a one-line change rather than a
-// rediscovery. See decision-log § [16] for the evidence behind the version.
+// Connection uses this gate to disable local-import encryption automatically
+// on older servers, which cannot parse the clause at all. See decision-log
+// § [16] for the evidence behind the version.
 func SupportsPublicKeyPinning(releaseVersion string) bool {
 	return atLeastVersion(releaseVersion, minPublicKeyPinningMajor, minPublicKeyPinningMinor, minPublicKeyPinningPatch)
 }

@@ -30,7 +30,7 @@ type DSNConfig struct {
 	AccessToken               string            // Access token (alternative to username/password)
 	RefreshToken              string            // Refresh token (alternative to username/password)
 	UrlPath                   string            // If the connection is a Http connection RestApi, this is the path of the query
-	LocalImportEncryption     *bool             // If true, encrypt the local-import proxy connection via TLS (default: false)
+	LocalImportEncryption     *bool             // If true, encrypt the local-import proxy connection via TLS (default: true)
 }
 
 // DSNConfigBuilder is a builder for DSNConfig objects.
@@ -128,7 +128,7 @@ func (c *DSNConfigBuilder) Schema(schema string) *DSNConfigBuilder {
 	return c
 }
 
-// LocalImportEncryption defines if the local-import proxy connection should be encrypted via TLS (default: false).
+// LocalImportEncryption defines if the local-import proxy connection should be encrypted via TLS (default: true).
 func (c *DSNConfigBuilder) LocalImportEncryption(enabled bool) *DSNConfigBuilder {
 	c.Config.LocalImportEncryption = &enabled
 	return c
@@ -241,7 +241,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		FetchSize:                 2000,
 		QueryTimeout:              0,
 		UrlPath:                   "",
-		LocalImportEncryption:     utils.BoolToPtr(false),
+		LocalImportEncryption:     utils.BoolToPtr(true),
 	}
 }
 
