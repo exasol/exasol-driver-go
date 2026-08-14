@@ -156,7 +156,7 @@ Use the sql driver to load data from a local Parquet file into your Exasol Datab
 
 ```go
 result, err := exasol.Exec(`
-IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE './testData/data.parquet'
+IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE '../testData/data.parquet'
 `)
 ```
 

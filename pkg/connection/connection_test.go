@@ -32,8 +32,7 @@ const (
 )
 
 const (
-	multiFileParquetImportQuery = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet' FILE '../../testData/data.parquet'"
-	multiFileCsvImportQuery     = "IMPORT INTO TEST_TABLE FROM LOCAL CSV FILE '../../testData/data.csv' FILE '../../testData/data.csv'"
+	multiFileCsvImportQuery = "IMPORT INTO TEST_TABLE FROM LOCAL CSV FILE '../../testData/data.csv' FILE '../../testData/data.csv'"
 )
 
 func mockExceptionError(exception types.Exception) string {
@@ -175,8 +174,9 @@ func (suite *ConnectionTestSuite) TestParquetImportMultipleFilesRejectedOnServer
 	peer := startSilentPeer(suite.T())
 	suite.simulateServerRejectingAnyStatement()
 	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
+	parquetQuery := parquetImportQueryWithFiles(createParquetFixture(suite.T()), createParquetFixture(suite.T()))
 
-	result, err := conn.exec(context.Background(), multiFileParquetImportQuery, nil)
+	result, err := conn.exec(context.Background(), parquetQuery, nil)
 
 	suite.Nil(result)
 	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named '2' files",
@@ -189,8 +189,9 @@ func (suite *ConnectionTestSuite) TestParquetImportMultipleFilesRejectedOnSuppor
 	peer := startSilentPeer(suite.T())
 	suite.simulateServerRejectingAnyStatement()
 	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	parquetQuery := parquetImportQueryWithFiles(createParquetFixture(suite.T()), createParquetFixture(suite.T()))
 
-	result, err := conn.exec(context.Background(), multiFileParquetImportQuery, nil)
+	result, err := conn.exec(context.Background(), parquetQuery, nil)
 
 	suite.Nil(result)
 	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named '2' files",
@@ -203,8 +204,9 @@ func (suite *ConnectionTestSuite) TestParquetImportRejectedOnServerBelowThreshol
 	peer := startSilentPeer(suite.T())
 	suite.simulateServerRejectingAnyStatement()
 	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
+	parquetQuery := parquetImportQuery(createParquetFixture(suite.T()))
 
-	result, err := conn.exec(context.Background(), parquetImportQuery, nil)
+	result, err := conn.exec(context.Background(), parquetQuery, nil)
 
 	suite.Nil(result)
 	suite.EqualError(err, "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '7.1.30'",
@@ -231,8 +233,9 @@ func (suite *ConnectionTestSuite) TestParquetImportServedOnSupportingServer() {
 	peer := startSilentPeer(suite.T())
 	suite.simulateRowCountResponse(3)
 	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	parquetQuery := parquetImportQuery(createParquetFixture(suite.T()))
 
-	result, err := suite.execWithinDeadline(conn, parquetImportQuery)
+	result, err := suite.execWithinDeadline(conn, parquetQuery)
 
 	suite.NoError(err)
 	suite.NotNil(result)
@@ -246,8 +249,9 @@ func (suite *ConnectionTestSuite) TestParquetImportSurfacesTheErrorOfTheServer()
 	peer := startSilentPeer(suite.T())
 	suite.simulateServerRejectingAnyStatement()
 	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	parquetQuery := parquetImportQuery(createParquetFixture(suite.T()))
 
-	result, err := suite.execWithinDeadline(conn, parquetImportQuery)
+	result, err := suite.execWithinDeadline(conn, parquetQuery)
 
 	suite.Nil(result)
 	suite.EqualError(err, mockExceptionError(mockException),

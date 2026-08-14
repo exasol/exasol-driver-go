@@ -20,6 +20,7 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/connection"
 	"github.com/exasol/exasol-driver-go/pkg/dsn"
 	"github.com/exasol/exasol-driver-go/pkg/integrationTesting"
+	"github.com/parquet-go/parquet-go"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
@@ -46,6 +47,8 @@ type IntegrationTestSuite struct {
 	port   int
 	host   string
 }
+
+const parquetFixtureName = "../testData/data.parquet"
 
 func TestIntegrationSuite(t *testing.T) {
 	if testing.Short() {
@@ -620,13 +623,17 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile()
+	suite.NoError(err, "should generate parquet file")
+	defer file.Close()
+	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
-	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+	result, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.NoError(err, "import should be successful")
@@ -650,13 +657,17 @@ func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile()
+	suite.NoError(err, "should generate parquet file")
+	defer file.Close()
+	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20), c int)", schemaName, tableName))
 
-	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
@@ -707,13 +718,17 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementInString() {
 func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile()
+	suite.NoError(err, "should generate parquet file")
+	defer file.Close()
+	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
-	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet' FILE '../testData/data.parquet'`, schemaName, tableName))
+	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s' FILE '%s'`, schemaName, tableName, file.Name(), file.Name()))
 	suite.ErrorContains(err, "E-EGOD-32")
 }
 
@@ -742,11 +757,15 @@ func (suite *IntegrationTestSuite) execImportWithinDeadline(database *sql.DB, st
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile()
+	suite.NoError(err, "should generate parquet file")
+	defer file.Close()
+	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_LEAK_PARQUET"
 	_, _ = database.ExecContext(ctx, createSchemaIfMissing+schemaName)
 	defer suite.cleanup(database, schemaName)
 
-	_, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.MISSING_TABLE FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName))
+	_, err = suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.MISSING_TABLE FROM LOCAL PARQUET FILE '%s'`, schemaName, file.Name()))
 	suite.Error(err, "import into a missing table should be failing")
 }
 
@@ -758,13 +777,17 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile()
+	suite.NoError(err, "should generate parquet file")
+	defer file.Close()
+	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
-	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.NoError(err, "a supporting server should not raise the version gate error")
@@ -826,6 +849,10 @@ func (suite *IntegrationTestSuite) TestServerVersionCapturedAtLogin() {
 func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
 	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile()
+	suite.NoError(err, "should generate parquet file")
+	defer file.Close()
+	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_ENCRYPTED_PARQUET"
 	tableName := "TEST_TABLE"
 	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
@@ -833,7 +860,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 	suite.assertImportsAreEncrypted(database)
 
-	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '../testData/data.parquet'`, schemaName, tableName))
+	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if !suite.exasol.SupportsNativeParquetImport() {
 		suite.ErrorContains(err, parquetVersionErrorCode)
@@ -1095,6 +1122,35 @@ func (suite *IntegrationTestSuite) generateExampleCSVFile(exampleData string, am
 	}
 	writer.Flush()
 	return file, err
+}
+
+type exampleParquetRow struct {
+	A int64  `parquet:"a"`
+	B string `parquet:"b"`
+}
+
+func (suite *IntegrationTestSuite) generateExampleParquetFile() (*os.File, error) {
+	filePath := parquetFixtureName
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return nil, err
+	}
+	fileName := filePath
+	if err := file.Close(); err != nil {
+		_ = os.Remove(fileName)
+		return nil, err
+	}
+
+	rows := []exampleParquetRow{
+		{A: 11, B: "test1"},
+		{A: 12, B: "test2"},
+		{A: 13, B: "test3"},
+	}
+	if err := parquet.WriteFile(fileName, rows); err != nil {
+		_ = os.Remove(fileName)
+		return nil, err
+	}
+	return os.Open(fileName)
 }
 
 func (suite *IntegrationTestSuite) TestMultiImportStatement() {

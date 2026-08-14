@@ -3,25 +3,69 @@ package connection
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"io/fs"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/exasol/exasol-driver-go/internal/config"
 	"github.com/exasol/exasol-driver-go/internal/utils"
+	"github.com/parquet-go/parquet-go"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
 	csvImportQuery               = "IMPORT INTO TEST_TABLE FROM LOCAL CSV FILE '../../testData/data.csv'"
-	parquetImportQuery           = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet'"
+	parquetFixtureName           = "../testData/data.parquet"
 	missingFilePath              = "../../testData/no-such-file.parquet"
 	missingParquetImportQuery    = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '" + missingFilePath + "'"
-	twoFileParquetImportQuery    = "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '../../testData/data.parquet' FILE '../../testData/data.parquet'"
 	createImportStatementFailure = "could not create the import statement: %v"
 )
+
+type parquetTestRow struct {
+	A int64  `parquet:"a"`
+	B string `parquet:"b"`
+}
+
+func createParquetFixture(t *testing.T) string {
+	t.Helper()
+	filePath := filepath.Join("..", parquetFixtureName)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		t.Fatalf("could not create parquet fixture: %v", err)
+	}
+	path := filePath
+	if err := file.Close(); err != nil {
+		t.Fatalf("could not close parquet fixture: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Remove(path) })
+
+	rows := []parquetTestRow{
+		{A: 11, B: "test1"},
+		{A: 12, B: "test2"},
+		{A: 13, B: "test3"},
+	}
+	if err := parquet.WriteFile(path, rows); err != nil {
+		t.Fatalf("could not write parquet fixture: %v", err)
+	}
+	return path
+}
+
+func parquetImportQuery(path string) string {
+	return fmt.Sprintf("IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '%s'", path)
+}
+
+func parquetImportQueryWithFiles(paths ...string) string {
+	query := "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET"
+	for _, path := range paths {
+		query += fmt.Sprintf(" FILE '%s'", path)
+	}
+	return query
+}
 
 const (
 	// cancellationDeadline is the bound a cancelled transfer must meet. Both
@@ -204,8 +248,9 @@ func TestNewImportStatementReportsMissingParquetFile(t *testing.T) {
 // unreachable here too and not merely documented as the caller's duty.
 func TestNewImportStatementRejectsMultipleParquetFiles(t *testing.T) {
 	peer := startSilentPeer(t)
+	path := createParquetFixture(t)
 
-	statement, err := NewImportStatement(twoFileParquetImportQuery, utils.ImportFormatParquet, peer.plaintextConfig())
+	statement, err := NewImportStatement(parquetImportQueryWithFiles(path, path), utils.ImportFormatParquet, peer.plaintextConfig())
 
 	assert.Nil(t, statement)
 	assert.ErrorContains(t, err, "E-EGOD-32")
@@ -259,8 +304,9 @@ func TestTransferStopsOnContextCancelWithTls(t *testing.T) {
 
 func TestTransferStopsOnContextCancelParquet(t *testing.T) {
 	peer := startSilentPeer(t)
+	path := createParquetFixture(t)
 
-	statement, err := NewImportStatement(parquetImportQuery, utils.ImportFormatParquet, peer.plaintextConfig())
+	statement, err := NewImportStatement(parquetImportQuery(path), utils.ImportFormatParquet, peer.plaintextConfig())
 	if err != nil {
 		t.Fatalf(createImportStatementFailure, err)
 	}
