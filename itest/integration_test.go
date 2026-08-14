@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/exasol/exasol-driver-go"
+	"github.com/exasol/exasol-driver-go/internal/testutil"
 	"github.com/exasol/exasol-driver-go/pkg/connection"
 	"github.com/exasol/exasol-driver-go/pkg/dsn"
 	"github.com/exasol/exasol-driver-go/pkg/integrationTesting"
@@ -716,35 +717,17 @@ func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	suite.ErrorContains(err, "E-EGOD-32")
 }
 
-// execImportWithinDeadline runs statement through database.ExecContext on a
-// goroutine and returns its affected-row count and error once it completes.
-// Both Parquet's pull-based transport and the encrypted-channel handshake can
-// deadlock instead of erroring when the driver and server disagree about who
-// acts first, so a call still running after importDeadline elapses is stuck
-// waiting on a peer that will never answer; this fails the test naming the
-// statement rather than letting the job hang.
+// execImportWithinDeadline returns the affected-row count while bounding import
+// execution. Local-import protocol mismatches can otherwise deadlock the test.
 func (suite *IntegrationTestSuite) execImportWithinDeadline(database *sql.DB, statement string) (int64, error) {
-	type importOutcome struct {
-		affectedRows int64
-		err          error
-	}
-	imported := make(chan importOutcome, 1)
-	go func() {
+	return testutil.RunWithDeadline(suite.T(), importDeadline, func() (int64, error) {
 		result, err := database.ExecContext(context.Background(), statement)
-		outcome := importOutcome{err: err}
-		if err == nil {
-			outcome.affectedRows, _ = result.RowsAffected()
+		if err != nil {
+			return 0, err
 		}
-		imported <- outcome
-	}()
-
-	select {
-	case outcome := <-imported:
-		return outcome.affectedRows, outcome.err
-	case <-time.After(importDeadline):
-		suite.FailNowf("import did not return", "statement %q did not finish within %s", statement, importDeadline)
-		return 0, nil
-	}
+		affectedRows, _ := result.RowsAffected()
+		return affectedRows, nil
+	}, "statement %q did not finish within %s", statement, importDeadline)
 }
 
 // See https://github.com/exasol/exasol-driver-go/issues/79

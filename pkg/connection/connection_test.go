@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/exasol/exasol-driver-go/internal/config"
+	"github.com/exasol/exasol-driver-go/internal/testutil"
 	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/types"
@@ -706,26 +707,8 @@ func (suite *ConnectionTestSuite) sentStatements() []string {
 	return statements
 }
 
-// execWithinDeadline reports what exec returned, and fails the test when exec
-// outlives the deadline. A local import runs its transfer concurrently with the
-// statement, and a transfer nobody ends keeps exec waiting for it, so a deadlock
-// has to be reported rather than left to hang the suite.
 func (suite *ConnectionTestSuite) execWithinDeadline(conn *Connection, query string) (driver.Result, error) {
-	type outcome struct {
-		result driver.Result
-		err    error
-	}
-	executed := make(chan outcome, 1)
-	go func() {
-		result, err := conn.exec(context.Background(), query, nil)
-		executed <- outcome{result: result, err: err}
-	}()
-
-	select {
-	case done := <-executed:
-		return done.result, done.err
-	case <-time.After(execDeadline):
-		suite.FailNow(fmt.Sprintf("exec did not return within %s, so nothing ended the transfer running beside the statement", execDeadline))
-		return nil, nil
-	}
+	return testutil.RunWithDeadline(suite.T(), execDeadline,
+		func() (driver.Result, error) { return conn.exec(context.Background(), query, nil) },
+		"exec did not return within %s, so nothing ended the transfer running beside the statement", execDeadline)
 }
