@@ -137,7 +137,7 @@ Use the sql driver to load data from one or more CSV files into your Exasol Data
 
 **Limitations:**
 * The driver supports only CSV and Parquet files. It does not support FBV.
-* The driver does not support the `SECURE` option.
+* The driver does not support the SQL `SECURE` option. To encrypt the proxy connection that transfers a local CSV or Parquet file, set the [`localimportencryption`](#connection-string) driver property to `1`.
 
 ```go
 result, err := exasol.Exec(`
