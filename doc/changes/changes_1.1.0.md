@@ -21,6 +21,10 @@ This release does not add a Parquet-parsing dependency. `dependencies.md` is unc
 
 ## Dependency Updates
 
+### Test Dependency Updates
+
+* Added `github.com/parquet-go/parquet-go:v0.32.0`
+
 ### Other Dependency Updates
 
 * Updated `toolchain:go1.26.4` to `go1.26.6`
