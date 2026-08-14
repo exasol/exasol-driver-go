@@ -1,4 +1,4 @@
-# Exasol Driver go 1.0.18, released 2026-08-05
+# Exasol Driver go 1.1.0, released 2026-??-??
 
 Code name: Import local Parquet files
 
@@ -16,7 +16,7 @@ This release does not add a Parquet-parsing dependency. `dependencies.md` is unc
 
 ## Features
 
-* Added native import of local Parquet files
+* #152: Added native import of local Parquet files
 * Added the `localimportencryption` driver property to encrypt the local-import proxy connection
 
 ## Dependency Updates
