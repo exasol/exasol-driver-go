@@ -828,24 +828,9 @@ func (suite *IntegrationTestSuite) TestServerVersionCapturedAtLogin() {
 	suite.Equal(suite.exasol.DbVersion, serverVersion, "the captured version should match the server this suite started")
 }
 
-// TestParquetImportWithEncryptedProxy is the only place where the encrypted
-// proxy connection meets a real server. The unit tests around it prove that Go's
-// TLS primitives work against each other over an in-memory pipe; none of them
-// can show which side of the real conversation opens the handshake, because
-// both the client and the server role wrap the connection and return without
-// touching the wire. Only a live server settles that the driver answers the
-// handshake as the TLS server.
-//
-// Asserting first that the connection really carries the option is what keeps a
-// green result meaningful. Rows landing over a connection that was silently
-// never encrypted look exactly like rows landing over an encrypted one, so
-// without that assertion the test could pass while proving nothing at all.
-//
-// The import runs under a deadline because the failure this test guards against
-// does not surface as an error. A handshake started before the server has read
-// the pinned key, or answered in the wrong role, leaves both sides waiting for
-// the other with no timeout of their own, so an unbounded call would hang the
-// job rather than report the defect.
+// TestParquetImportWithEncryptedProxy verifies a local Parquet import over an
+// encrypted proxy connection against a live server. The deadline prevents TLS
+// handshake regressions from hanging the integration suite.
 func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
 	ctx := context.Background()
