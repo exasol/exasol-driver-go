@@ -68,10 +68,6 @@ func TestSupportsNativeParquetImportAtOrAboveThreshold(t *testing.T) {
 	}
 }
 
-// The three versions this suite's CI matrix runs are pinned by name, because
-// they are the only ones the PUBLIC KEY threshold was established against: an
-// encrypted CSV import was observed to fail on 7.1.30 with a syntax error at the
-// clause and to succeed on 2025.1.10 and 2026.1.0. See decision-log § [16].
 func TestSupportsPublicKeyPinningAtOrAboveThreshold(t *testing.T) {
 	tests := []struct {
 		name           string
