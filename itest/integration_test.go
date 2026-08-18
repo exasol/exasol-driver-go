@@ -673,7 +673,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if suite.exasol.SupportsNativeParquetImport() {
-		suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)'")
+		suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
 	} else {
 		suite.EqualError(err, parquetVersionErrorMessage(suite.exasol.DbVersion))
 	}
@@ -948,7 +948,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20), c int)", schemaName, tableName))
 
 	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)'")
+	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
 }
 
 func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
@@ -961,7 +961,7 @@ func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int)", schemaName, tableName))
 
 	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE 'wrong.csv'`, schemaName, tableName))
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-5105: Following error occured while reading data from external connection'")
+	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-5105: Following error occured while reading data from external connection")
 }
 
 func (suite *IntegrationTestSuite) TestImportStatementInString() {
@@ -1245,7 +1245,7 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 	database := suite.openConnection(suite.createDefaultConfig().QueryTimeout(1))
 	defer database.Close()
 	rows, err := database.Query(`SELECT "$SLEEP"(2)`)
-	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'R0001' and message 'Query terminated because timeout has been reached.'")
+	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code 'R0001' and message 'Query terminated because timeout has been reached.")
 	suite.Nil(rows)
 }
 
