@@ -33,27 +33,17 @@ func TestParseServerVersionTrailingSuffix(t *testing.T) {
 }
 
 func TestUnparsableServerVersionIsUnsupported(t *testing.T) {
-	tests := []struct {
-		name           string
-		releaseVersion string
-	}{
+	tests := []supportTestCase{
 		{name: "single component", releaseVersion: "2025"},
 		{name: "empty string", releaseVersion: ""},
 		{name: "non-numeric major", releaseVersion: "abc.1.11"},
 		{name: "non-numeric minor", releaseVersion: "2025.abc.11"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.False(t, SupportsNativeParquetImport(test.releaseVersion))
-		})
-	}
+	assertSupport(t, SupportsNativeParquetImport, false, tests)
 }
 
 func TestSupportsNativeParquetImportAtOrAboveThreshold(t *testing.T) {
-	tests := []struct {
-		name           string
-		releaseVersion string
-	}{
+	tests := []supportTestCase{
 		{name: "exact threshold", releaseVersion: "2025.1.11"},
 		{name: "higher patch", releaseVersion: "2025.1.12"},
 		{name: "higher minor", releaseVersion: "2025.2.0"},
@@ -61,62 +51,51 @@ func TestSupportsNativeParquetImportAtOrAboveThreshold(t *testing.T) {
 		{name: "missing patch treated as zero, higher minor", releaseVersion: "2025.2"},
 		{name: "non-numeric patch on a higher major", releaseVersion: "2026.1.abc"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.True(t, SupportsNativeParquetImport(test.releaseVersion))
-		})
-	}
+	assertSupport(t, SupportsNativeParquetImport, true, tests)
 }
 
 func TestSupportsPublicKeyPinningAtOrAboveThreshold(t *testing.T) {
-	tests := []struct {
-		name           string
-		releaseVersion string
-	}{
+	tests := []supportTestCase{
 		{name: "exact threshold", releaseVersion: "2025.1.0"},
 		{name: "CI matrix leg observed to accept the clause", releaseVersion: "2025.1.10"},
 		{name: "CI matrix leg observed to accept the clause on a higher major", releaseVersion: "2026.1.0"},
 		{name: "higher minor", releaseVersion: "2025.2.1"},
 		{name: "missing patch treated as zero at the threshold", releaseVersion: serverVersionWithoutPatch},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.True(t, SupportsPublicKeyPinning(test.releaseVersion))
-		})
-	}
+	assertSupport(t, SupportsPublicKeyPinning, true, tests)
 }
 
 func TestSupportsPublicKeyPinningBelowThreshold(t *testing.T) {
-	tests := []struct {
-		name           string
-		releaseVersion string
-	}{
+	tests := []supportTestCase{
 		{name: "CI matrix leg observed to reject the clause", releaseVersion: "7.1.30"},
 		{name: "lower minor", releaseVersion: "2025.0.99"},
 		{name: "lower major", releaseVersion: "2024.9.9"},
 		{name: "unparsable version is treated as unsupported", releaseVersion: "not-a-version"},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.False(t, SupportsPublicKeyPinning(test.releaseVersion))
-		})
-	}
+	assertSupport(t, SupportsPublicKeyPinning, false, tests)
 }
 
 func TestSupportsNativeParquetImportBelowThreshold(t *testing.T) {
-	tests := []struct {
-		name           string
-		releaseVersion string
-	}{
+	tests := []supportTestCase{
 		{name: "lower patch", releaseVersion: "2025.1.10"},
 		{name: "lower minor", releaseVersion: "2025.0.99"},
 		{name: "lower major", releaseVersion: "7.1.30"},
 		{name: "missing patch defaults to zero, below threshold", releaseVersion: serverVersionWithoutPatch},
 		{name: "non-numeric patch below threshold", releaseVersion: "2025.1.abc"},
 	}
+	assertSupport(t, SupportsNativeParquetImport, false, tests)
+}
+
+type supportTestCase struct {
+	name           string
+	releaseVersion string
+}
+
+func assertSupport(t *testing.T, supports func(string) bool, want bool, tests []supportTestCase) {
+	t.Helper()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.False(t, SupportsNativeParquetImport(test.releaseVersion))
+			assert.Equal(t, want, supports(test.releaseVersion))
 		})
 	}
 }
