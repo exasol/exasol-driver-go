@@ -1,4 +1,4 @@
-# Exasol Driver go 1.1.0, released 2026-??-??
+# Exasol Driver go 1.1.0, released 2026-08-19
 
 Code name: Import local Parquet files
 
