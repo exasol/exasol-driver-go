@@ -35,10 +35,13 @@ import (
 // driver and server disagree about who acts first, so a call still running
 // after this deadline is stuck waiting on a peer that will never answer.
 const (
-	importDeadline          = 30 * time.Second
-	parquetVersionErrorCode = "E-EGOD-31"
-	createSchemaIfMissing   = "CREATE SCHEMA IF NOT EXISTS "
+	importDeadline        = 30 * time.Second
+	createSchemaIfMissing = "CREATE SCHEMA IF NOT EXISTS "
 )
+
+func parquetVersionErrorMessage(serverVersion string) string {
+	return fmt.Sprintf("E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '%s'", serverVersion)
+}
 
 type IntegrationTestSuite struct {
 	suite.Suite
@@ -650,7 +653,7 @@ func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 			},
 		)
 	} else {
-		suite.ErrorContains(err, parquetVersionErrorCode)
+		suite.EqualError(err, parquetVersionErrorMessage(suite.exasol.DbVersion))
 	}
 }
 
@@ -670,9 +673,9 @@ func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if suite.exasol.SupportsNativeParquetImport() {
-		suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
+		suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)'")
 	} else {
-		suite.ErrorContains(err, parquetVersionErrorCode)
+		suite.EqualError(err, parquetVersionErrorMessage(suite.exasol.DbVersion))
 	}
 }
 
@@ -688,9 +691,9 @@ func (suite *IntegrationTestSuite) TestParquetImportNotExistentFile() {
 	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE 'wrong.parquet'`, schemaName, tableName))
 
 	if suite.exasol.SupportsNativeParquetImport() {
-		suite.ErrorContains(err, "E-EGOD-28")
+		suite.EqualError(err, "E-EGOD-28: file 'wrong.parquet' not found")
 	} else {
-		suite.ErrorContains(err, parquetVersionErrorCode)
+		suite.EqualError(err, parquetVersionErrorMessage(suite.exasol.DbVersion))
 	}
 }
 
@@ -729,7 +732,7 @@ func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20))", schemaName, tableName))
 
 	_, err = database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s' FILE '%s'`, schemaName, tableName, file.Name(), file.Name()))
-	suite.ErrorContains(err, "E-EGOD-32")
+	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files")
 }
 
 // execImportWithinDeadline returns the affected-row count while bounding import
@@ -792,9 +795,7 @@ func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	if suite.exasol.SupportsNativeParquetImport() {
 		suite.NoError(err, "a supporting server should not raise the version gate error")
 	} else {
-		suite.ErrorContains(err, parquetVersionErrorCode)
-		suite.ErrorContains(err, "2025.1.11")
-		suite.ErrorContains(err, suite.exasol.DbVersion)
+		suite.EqualError(err, parquetVersionErrorMessage(suite.exasol.DbVersion))
 	}
 }
 
@@ -848,7 +849,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
 
 	if !suite.exasol.SupportsNativeParquetImport() {
-		suite.ErrorContains(err, parquetVersionErrorCode)
+		suite.EqualError(err, parquetVersionErrorMessage(suite.exasol.DbVersion))
 		return
 	}
 	suite.NoError(err, "import over an encrypted proxy connection should be successful")
@@ -947,7 +948,7 @@ func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(20), c int)", schemaName, tableName))
 
 	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, schemaName, tableName))
-	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)")
+	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-6009: Number of columns in source (=2) and destination (=3)'")
 }
 
 func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
@@ -960,7 +961,7 @@ func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int)", schemaName, tableName))
 
 	_, err := database.ExecContext(ctx, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL CSV FILE 'wrong.csv'`, schemaName, tableName))
-	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-5105: Following error occured while reading data from external connection")
+	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code '42636' and message 'ETL-5105: Following error occured while reading data from external connection'")
 }
 
 func (suite *IntegrationTestSuite) TestImportStatementInString() {
@@ -1244,7 +1245,7 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 	database := suite.openConnection(suite.createDefaultConfig().QueryTimeout(1))
 	defer database.Close()
 	rows, err := database.Query(`SELECT "$SLEEP"(2)`)
-	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code 'R0001' and message 'Query terminated because timeout has been reached.")
+	suite.EqualError(err, "E-EGOD-11: execution failed with SQL error code 'R0001' and message 'Query terminated because timeout has been reached.'")
 	suite.Nil(rows)
 }
 
