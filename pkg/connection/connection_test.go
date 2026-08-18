@@ -179,7 +179,7 @@ func (suite *ConnectionTestSuite) TestParquetImportMultipleFilesRejectedOnServer
 	result, err := conn.exec(context.Background(), parquetQuery, nil)
 
 	suite.Nil(result)
-	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named '2' files",
+	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files",
 		"the file count makes this statement unservable on every server, so the version of this one must not answer first")
 	suite.assertNothingSent()
 	peer.assertNotDialled(suite.T())
@@ -194,7 +194,7 @@ func (suite *ConnectionTestSuite) TestParquetImportMultipleFilesRejectedOnSuppor
 	result, err := conn.exec(context.Background(), parquetQuery, nil)
 
 	suite.Nil(result)
-	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named '2' files",
+	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files",
 		"concatenating Parquet files corrupts the container, so no server version makes this statement servable")
 	suite.assertNothingSent()
 	peer.assertNotDialled(suite.T())

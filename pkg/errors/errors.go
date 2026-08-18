@@ -171,7 +171,7 @@ func NewParquetImportNotSupported(releaseVersion string) DriverErr {
 
 func NewParquetImportMultipleFiles(fileCount int) DriverErr {
 	return NewDriverErr(exaerror.New("E-EGOD-32").
-		Message("local Parquet import supports exactly one file, but the statement named {{file count}} files").
+		Message("local Parquet import supports exactly one file, but the statement named {{file count|uq}} files").
 		Parameter("file count", fileCount))
 }
 

@@ -159,5 +159,5 @@ func (suite *ErrorsTestSuite) TestNewParquetImportNotSupported() {
 }
 
 func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
-	suite.EqualError(NewParquetImportMultipleFiles(2), "E-EGOD-32: local Parquet import supports exactly one file, but the statement named '2' files")
+	suite.EqualError(NewParquetImportMultipleFiles(2), "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files")
 }
