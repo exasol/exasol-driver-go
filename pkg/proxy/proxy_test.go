@@ -23,6 +23,7 @@ import (
 const (
 	serveTimeout        = 5 * time.Second
 	contentRangeHeader  = "Content-Range"
+	closedRangeHeader   = "bytes=2-5"
 	partialContentRange = "bytes 2-5/10"
 )
 
@@ -211,7 +212,7 @@ func TestServeFileRangesPartialContent(t *testing.T) {
 		wantRange      string
 		wantBody       string
 	}{
-		{"closed range", "bytes=2-5", partialContentRange, "2345"},
+		{"closed range", closedRangeHeader, partialContentRange, "2345"},
 		{"single byte", "bytes=9-9", "bytes 9-9/10", "9"},
 		{"explicit bounds spanning the whole file", "bytes=0-9", "bytes 0-9/10", "0123456789"},
 		{"last byte position beyond the end is clamped", "bytes=7-99", "bytes 7-9/10", "789"},
@@ -244,7 +245,7 @@ func TestServeReaderRangesReadsOnlyRequestedSection(t *testing.T) {
 	}()
 	peer := &importPeer{conn: peerConn, replies: bufio.NewReader(peerConn)}
 
-	response := peer.exchange(t, newRangeRequest(t, "bytes=2-5"))
+	response := peer.exchange(t, newRangeRequest(t, closedRangeHeader))
 
 	assert.Equal(t, "2345", string(readBody(t, response)))
 	assert.NoError(t, peerConn.Close())
@@ -489,7 +490,7 @@ func TestServeFileRangesOverTls(t *testing.T) {
 	})
 	peer := &importPeer{conn: encrypted, replies: bufio.NewReader(encrypted)}
 
-	response := peer.exchange(t, newRangeRequest(t, "bytes=2-5"))
+	response := peer.exchange(t, newRangeRequest(t, closedRangeHeader))
 
 	assert.Equal(t, http.StatusPartialContent, response.StatusCode)
 	assert.Equal(t, partialContentRange, response.Header.Get(contentRangeHeader))

@@ -35,8 +35,10 @@ import (
 // driver and server disagree about who acts first, so a call still running
 // after this deadline is stuck waiting on a peer that will never answer.
 const (
-	importDeadline        = 30 * time.Second
-	createSchemaIfMissing = "CREATE SCHEMA IF NOT EXISTS "
+	importDeadline                  = 30 * time.Second
+	createSchemaIfMissing           = "CREATE SCHEMA IF NOT EXISTS "
+	generateParquetFileErrorMessage = "should generate parquet file"
+	generateCSVFileErrorMessage     = "should generate csv file"
 )
 
 func parquetVersionErrorMessage(serverVersion string) string {
@@ -627,7 +629,7 @@ func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	file, err := suite.generateExampleParquetFile()
-	suite.NoError(err, "should generate parquet file")
+	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
@@ -661,7 +663,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	file, err := suite.generateExampleParquetFile()
-	suite.NoError(err, "should generate parquet file")
+	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
@@ -722,7 +724,7 @@ func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	file, err := suite.generateExampleParquetFile()
-	suite.NoError(err, "should generate parquet file")
+	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
@@ -761,7 +763,7 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	file, err := suite.generateExampleParquetFile()
-	suite.NoError(err, "should generate parquet file")
+	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_LEAK_PARQUET"
@@ -781,7 +783,7 @@ func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
 	file, err := suite.generateExampleParquetFile()
-	suite.NoError(err, "should generate parquet file")
+	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_8"
@@ -836,7 +838,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
 	ctx := context.Background()
 	file, err := suite.generateExampleParquetFile()
-	suite.NoError(err, "should generate parquet file")
+	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
 	schemaName := "TEST_SCHEMA_ENCRYPTED_PARQUET"
@@ -993,7 +995,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 
 	exampleData := time.Now().Format(time.RFC3339)
 	file, err := suite.generateExampleCSVFile(exampleData, 20000)
-	suite.NoError(err, "should generate csv file")
+	suite.NoError(err, generateCSVFileErrorMessage)
 	defer os.Remove(file.Name())
 
 	_, _ = database.ExecContext(ctx, createSchemaIfMissing+schemaName)
@@ -1044,7 +1046,7 @@ func (suite *IntegrationTestSuite) TestCancelRunningImport() {
 	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int , b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100))", schemaName, tableName))
 
 	file, err := suite.generateExampleCSVFile(time.Now().Format(time.RFC3339), 200000)
-	suite.NoError(err, "should generate csv file")
+	suite.NoError(err, generateCSVFileErrorMessage)
 	suite.NoError(file.Close(), "should close generated csv file")
 	defer os.Remove(file.Name())
 
@@ -1080,7 +1082,7 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 
 	exampleData := time.Now().Format(time.RFC3339)
 	file, err := suite.generateExampleCSVFile(exampleData, 20000)
-	suite.NoError(err, "should generate csv file")
+	suite.NoError(err, generateCSVFileErrorMessage)
 
 	defer os.Remove(file.Name())
 	defer suite.cleanup(database, schemaName)
