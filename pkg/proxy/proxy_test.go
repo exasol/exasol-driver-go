@@ -22,6 +22,7 @@ import (
 
 const (
 	serveTimeout        = 5 * time.Second
+	acceptRangesHeader  = "Accept-Ranges"
 	contentRangeHeader  = "Content-Range"
 	closedRangeHeader   = "bytes=2-5"
 	partialContentRange = "bytes 2-5/10"
@@ -197,6 +198,7 @@ func TestServeFileRangesHead(t *testing.T) {
 	response := peer.exchange(t, newImportRequest(t, http.MethodHead))
 
 	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "bytes", response.Header.Get(acceptRangesHeader))
 	assert.Equal(t, int64(len(data)), response.ContentLength)
 	assert.Empty(t, readBody(t, response))
 
@@ -276,6 +278,7 @@ func TestServeFileRangesWholeFile(t *testing.T) {
 	response := peer.exchange(t, newImportRequest(t, http.MethodGet))
 
 	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "bytes", response.Header.Get(acceptRangesHeader))
 	assert.Equal(t, int64(len(data)), response.ContentLength)
 	assert.Empty(t, response.Header.Get(contentRangeHeader))
 	assert.Equal(t, data, readBody(t, response))

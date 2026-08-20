@@ -306,6 +306,7 @@ func (p *Proxy) answer(request *http.Request, source io.ReaderAt, size int64) er
 func (p *Proxy) announceFileSize(size int64) error {
 	return p.sendHeaders([]string{
 		"HTTP/1.1 200 OK",
+		"Accept-Ranges: bytes",
 		fmt.Sprintf("Content-Length: %d", size),
 	})
 }
