@@ -39,6 +39,8 @@ const (
 	createSchemaIfMissing           = "CREATE SCHEMA IF NOT EXISTS "
 	generateParquetFileErrorMessage = "should generate parquet file"
 	generateCSVFileErrorMessage     = "should generate csv file"
+	smallParquetRowCount            = 3
+	largeParquetRowCount            = 20000
 )
 
 func parquetVersionErrorMessage(serverVersion string) string {
@@ -628,7 +630,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
-	file, err := suite.generateExampleParquetFile()
+	file, err := suite.generateExampleParquetFile(smallParquetRowCount)
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -659,10 +661,50 @@ func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 	}
 }
 
+// A large Parquet file makes Exasol fetch multiple sections of the file and
+// exercises the proxy's byte-range serving loop rather than only its setup.
+func (suite *IntegrationTestSuite) TestParquetImportStatementBigFile() {
+	if !suite.exasol.SupportsNativeParquetImport() {
+		suite.T().Skipf("native Parquet import is not supported by Exasol %s", suite.exasol.DbVersion)
+	}
+
+	database := suite.openConnection(suite.createDefaultConfig())
+	ctx := context.Background()
+	file, err := suite.generateExampleParquetFile(largeParquetRowCount)
+	suite.NoError(err, generateParquetFileErrorMessage)
+	defer file.Close()
+	defer os.Remove(file.Name())
+
+	schemaName := "TEST_SCHEMA_LARGE_PARQUET"
+	tableName := "TEST_TABLE"
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	defer suite.cleanup(database, schemaName)
+	_, _ = database.ExecContext(ctx, fmt.Sprintf("CREATE TABLE %s.%s (a int, b VARCHAR(20))", schemaName, tableName))
+
+	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s.%s FROM LOCAL PARQUET FILE '%s'`, schemaName, tableName, file.Name()))
+	suite.NoError(err, "large Parquet import should be successful")
+	suite.Equal(int64(largeParquetRowCount), affectedRows)
+
+	rows, err := database.Query(fmt.Sprintf("SELECT COUNT(*) FROM %s.%s", schemaName, tableName))
+	suite.NoError(err, "count query should work")
+	suite.assertTableResult(rows, []string{"COUNT(*)"}, [][]interface{}{{int64(largeParquetRowCount)}})
+
+	rows, err = database.Query(fmt.Sprintf("SELECT * FROM %s.%s ORDER BY a LIMIT 3", schemaName, tableName))
+	suite.NoError(err, "sample query should work")
+	suite.assertTableResult(rows,
+		[]string{"A", "B"},
+		[][]interface{}{
+			{int64(11), "test1"},
+			{int64(12), "test2"},
+			{int64(13), "test3"},
+		},
+	)
+}
+
 func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
-	file, err := suite.generateExampleParquetFile()
+	file, err := suite.generateExampleParquetFile(smallParquetRowCount)
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -723,7 +765,7 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementInString() {
 func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
-	file, err := suite.generateExampleParquetFile()
+	file, err := suite.generateExampleParquetFile(smallParquetRowCount)
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -762,7 +804,7 @@ func (suite *IntegrationTestSuite) execImportWithinDeadline(database *sql.DB, st
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
-	file, err := suite.generateExampleParquetFile()
+	file, err := suite.generateExampleParquetFile(smallParquetRowCount)
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -782,7 +824,7 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx := context.Background()
-	file, err := suite.generateExampleParquetFile()
+	file, err := suite.generateExampleParquetFile(smallParquetRowCount)
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -837,7 +879,7 @@ func (suite *IntegrationTestSuite) TestServerVersionCapturedAtLogin() {
 func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
 	ctx := context.Background()
-	file, err := suite.generateExampleParquetFile()
+	file, err := suite.generateExampleParquetFile(smallParquetRowCount)
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -1117,7 +1159,7 @@ type exampleParquetRow struct {
 	B string `parquet:"b"`
 }
 
-func (suite *IntegrationTestSuite) generateExampleParquetFile() (*os.File, error) {
+func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.File, error) {
 	filePath := parquetFixtureName
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -1129,10 +1171,12 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile() (*os.File, error
 		return nil, err
 	}
 
-	rows := []exampleParquetRow{
-		{A: 11, B: "test1"},
-		{A: 12, B: "test2"},
-		{A: 13, B: "test3"},
+	rows := make([]exampleParquetRow, 0, amount)
+	for i := 0; i < amount; i++ {
+		rows = append(rows, exampleParquetRow{
+			A: int64(i + 11),
+			B: fmt.Sprintf("test%d", i+1),
+		})
 	}
 	if err := parquet.WriteFile(fileName, rows); err != nil {
 		_ = os.Remove(fileName)
