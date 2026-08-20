@@ -12,8 +12,6 @@ Native local Parquet import requires Exasol 2025.1.11 or later. Against an older
 
 This release also adds the `localimportencryption` driver property. By default, the driver encrypts the proxy connection that carries a local CSV or Parquet file when the server supports `PUBLIC KEY` pinning. On older servers, the driver automatically falls back to plaintext. The driver uses a throwaway, self-signed TLS key for encrypted proxy connections and pins the key with a `PUBLIC KEY` clause on the rewritten statement. Set the property to `0` to disable local-import encryption explicitly.
 
-This release does not add a Parquet-parsing dependency. `dependencies.md` is unchanged.
-
 ## Features
 
 * #152: Added native import of local Parquet files
