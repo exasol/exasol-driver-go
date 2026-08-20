@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/exasol/exasol-driver-go/internal/utils"
 	testSetupAbstraction "github.com/exasol/exasol-test-setup-abstraction-server/go-client"
 	"github.com/stretchr/testify/suite"
 )
@@ -62,6 +63,26 @@ func (setup *DbTestSetup) IsExasolVersion8() bool {
 		setup.suite.FailNow("error getting exasol version: " + err.Error())
 	}
 	return version >= 8
+}
+
+// SupportsNativeParquetImport reports whether the server this suite started can
+// serve a local Parquet import natively, deciding from the version the setup was
+// started with rather than a live query, since that version is already known.
+func (setup *DbTestSetup) SupportsNativeParquetImport() bool {
+	return utils.SupportsNativeParquetImport(setup.DbVersion)
+}
+
+// SupportsPublicKeyPinning reports whether the server this suite started can
+// parse the PUBLIC KEY clause an encrypted local import pins its proxy
+// connection with, deciding from the version the setup was started with for the
+// same reason as SupportsNativeParquetImport.
+//
+// This is a separate question from native Parquet import and not a stricter one:
+// 2025.1.10 parses the clause yet is below the Parquet threshold, so a test of
+// the encrypted channel on either format must ask this rather than reuse the
+// Parquet predicate.
+func (setup *DbTestSetup) SupportsPublicKeyPinning() bool {
+	return utils.SupportsPublicKeyPinning(setup.DbVersion)
 }
 
 func (setup *DbTestSetup) getExasolMajorVersion() (int, error) {

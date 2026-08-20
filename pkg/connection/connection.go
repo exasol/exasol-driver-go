@@ -29,6 +29,11 @@ type Connection struct {
 	websocket wsconn.WebsocketConnection
 	Ctx       context.Context
 	IsClosed  bool
+	// ServerVersion holds the release version the server reported in its login
+	// response (authResponse.ReleaseVersion). It is empty until Login succeeds.
+	// An empty or unparsable value makes utils.SupportsNativeParquetImport refuse
+	// a Parquet import rather than treat the check as failed.
+	ServerVersion string
 }
 
 func (c *Connection) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
@@ -187,11 +192,20 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 		logger.ErrorLogger.Print(errors.ErrClosed)
 		return nil, driver.ErrBadConn
 	}
+	format := utils.GetImportFormat(query)
+	if format == utils.ImportFormatParquet {
+		if err := c.rejectUnservableParquetImport(query); err != nil {
+			return nil, err
+		}
+	}
+
 	result := make(chan driver.Result, 1)
 	errs, errctx := errgroup.WithContext(ctx)
+	transferCtx, stopTransfer := context.WithCancel(errctx)
+	defer stopTransfer()
 
-	if utils.IsImportQuery(query) {
-		importStatement, err := NewImportStatement(query, c.Config.Host, c.Config.Port)
+	if format != utils.ImportFormatNone {
+		importStatement, err := NewImportStatement(query, format, c.localImportConfig())
 		if err != nil {
 			return nil, err
 		}
@@ -199,21 +213,28 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 
 		query = importStatement.GetUpdatedQuery()
 		errs.Go(func() error {
-			uploadErr := importStatement.UploadFiles(errctx)
-			if uploadErr != nil {
-				logger.ErrorLogger.Printf("Error uploading files: %v", uploadErr)
+			transferErr := importStatement.Transfer(transferCtx)
+			if transferErr != nil {
+				logger.ErrorLogger.Printf("Error transferring the import file: %v", transferErr)
 				// In case of error we close the statement immediately, so the execute step can proceed.
 				importStatement.Close()
 			}
 			return nil
 		})
 	}
+
+	var runStatement func() error
 	// No values provided, simple execute is enough
 	if len(args) == 0 {
-		errs.Go(c.executeSimpleWrapper(errctx, query, result))
+		runStatement = c.executeSimpleWrapper(errctx, query, result)
 	} else {
-		errs.Go(c.executePreparedStatementWrapper(errctx, query, args, result))
+		runStatement = c.executePreparedStatementWrapper(errctx, query, args, result)
 	}
+	errs.Go(func() error {
+		defer stopTransfer()
+		return runStatement()
+	})
+
 	err := errs.Wait()
 	close(result)
 
@@ -222,6 +243,42 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 	}
 
 	return <-result, nil
+}
+
+// localImportConfig applies the server capability gate to the requested DSN
+// setting. Unsupported servers receive plaintext rather than a PUBLIC KEY
+// clause they cannot parse; an explicit false setting remains false everywhere.
+func (c *Connection) localImportConfig() *config.Config {
+	importConfig := *c.Config
+	importConfig.LocalImportEncryption = c.Config.LocalImportEncryption && utils.SupportsPublicKeyPinning(c.ServerVersion)
+	return &importConfig
+}
+
+// rejectUnservableParquetImport reports why a local Parquet import cannot run,
+// before a proxy connection is opened or a statement is sent, and reports
+// nothing when it can.
+//
+// The file-count guard deliberately runs first. A statement naming several
+// files is unservable on every server, because the rewrite collapses them into
+// one connection and concatenated Parquet files are a corrupt container, so
+// that answer must not be shadowed by a capability check the file count makes
+// irrelevant. Ordering it the other way tells a caller on an older server to
+// upgrade, and the same statement fails again on the server they upgrade to.
+//
+// The version guard therefore only ever sees a statement naming one file, which
+// is also what NewImportStatement relies on.
+func (c *Connection) rejectUnservableParquetImport(query string) error {
+	paths, err := utils.GetFilePaths(query)
+	if err != nil {
+		return err
+	}
+	if len(paths) > 1 {
+		return errors.NewParquetImportMultipleFiles(len(paths))
+	}
+	if !utils.SupportsNativeParquetImport(c.ServerVersion) {
+		return errors.NewParquetImportNotSupported(c.ServerVersion)
+	}
+	return nil
 }
 
 func (c *Connection) executeSimpleWrapper(ctx context.Context, query string, result chan driver.Result) func() error {
@@ -321,6 +378,7 @@ func (c *Connection) Login(ctx context.Context) error {
 		c.IsClosed = true
 		return fmt.Errorf("failed to login: %w", err)
 	}
+	c.ServerVersion = authResponse.ReleaseVersion
 	c.IsClosed = false
 
 	return nil

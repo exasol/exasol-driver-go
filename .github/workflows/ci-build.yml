@@ -8,14 +8,14 @@ jobs:
   matrix-build:
     strategy:
       matrix:
-        go: ["1.26.4"]
-        db: ["2025.1.10", "2026.1.0", "7.1.30"]
+        go: ["1.26.6"]
+        db: ["2025.1.14", "2026.1.1", "7.1.30"]
         include:
           - go: "1.25.11"
             db: "2026.1.0"
     env:
-      DEFAULT_GO: "1.26.4"
-      DEFAULT_DB: "2026.1.0"
+      DEFAULT_GO: "1.26.6"
+      DEFAULT_DB: "2026.1.1"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-go-${{ matrix.go }}-db-${{ matrix.db }}
       cancel-in-progress: true

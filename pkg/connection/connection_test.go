@@ -3,17 +3,37 @@ package connection
 import (
 	"context"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/exasol/exasol-driver-go/internal/config"
+	"github.com/exasol/exasol-driver-go/internal/testutil"
 	"github.com/exasol/exasol-driver-go/pkg/connection/wsconn"
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/types"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
 var mockException = types.Exception{Text: "mock error", SQLCode: "mock sql code"}
+
+const (
+	// supportedServerVersion is the CI leg that serves a local Parquet import natively.
+	supportedServerVersion = "2026.1.0"
+	// unsupportedServerVersion is a CI leg below the 2025.1.11 threshold, where a
+	// Parquet import must be refused before anything is dialled or sent.
+	unsupportedServerVersion = "7.1.30"
+	// execDeadline bounds a local import driven through exec. A Parquet transfer
+	// parks in a read only the server can satisfy, so an import nobody tells to
+	// stop hangs the caller for good; the bound reports that as a failure.
+	execDeadline = 5 * time.Second
+)
+
+const (
+	multiFileCsvImportQuery = "IMPORT INTO TEST_TABLE FROM LOCAL CSV FILE '../../testData/data.csv' FILE '../../testData/data.csv'"
+)
 
 func mockExceptionError(exception types.Exception) string {
 	return errors.NewSqlErr(exception.SQLCode, exception.Text).Error()
@@ -148,6 +168,127 @@ func (suite *ConnectionTestSuite) TestExec() {
 	rowsAffected, err := rows.RowsAffected()
 	suite.NoError(err)
 	suite.Equal(int64(42), rowsAffected)
+}
+
+func (suite *ConnectionTestSuite) TestParquetImportMultipleFilesRejectedOnServerBelowThreshold() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateServerRejectingAnyStatement()
+	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
+	parquetQuery := parquetImportQueryWithFiles(createParquetFixture(suite.T()), createParquetFixture(suite.T()))
+
+	result, err := conn.exec(context.Background(), parquetQuery, nil)
+
+	suite.Nil(result)
+	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files",
+		"the file count makes this statement unservable on every server, so the version of this one must not answer first")
+	suite.assertNothingSent()
+	peer.assertNotDialled(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestParquetImportMultipleFilesRejectedOnSupportingServer() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateServerRejectingAnyStatement()
+	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	parquetQuery := parquetImportQueryWithFiles(createParquetFixture(suite.T()), createParquetFixture(suite.T()))
+
+	result, err := conn.exec(context.Background(), parquetQuery, nil)
+
+	suite.Nil(result)
+	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files",
+		"concatenating Parquet files corrupts the container, so no server version makes this statement servable")
+	suite.assertNothingSent()
+	peer.assertNotDialled(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestParquetImportRejectedOnServerBelowThreshold() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateServerRejectingAnyStatement()
+	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
+	parquetQuery := parquetImportQuery(createParquetFixture(suite.T()))
+
+	result, err := conn.exec(context.Background(), parquetQuery, nil)
+
+	suite.Nil(result)
+	suite.EqualError(err, "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '7.1.30'",
+		"a statement naming one file reaches the version guard, which is the only thing left that can refuse it")
+	suite.assertNothingSent()
+	peer.assertNotDialled(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestParquetImportWithoutFileRejected() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateServerRejectingAnyStatement()
+	conn := suite.createConnectionTo(peer, supportedServerVersion)
+
+	result, err := conn.exec(context.Background(), "IMPORT INTO TEST_TABLE FROM LOCAL PARQUET", nil)
+
+	suite.Nil(result)
+	suite.EqualError(err, "E-EGOD-27: could not parse import query",
+		"a statement naming no file at all is refused for what it says, not for the version of the server it was written for")
+	suite.assertNothingSent()
+	peer.assertNotDialled(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestParquetImportServedOnSupportingServer() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateRowCountResponse(3)
+	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	parquetQuery := parquetImportQuery(createParquetFixture(suite.T()))
+
+	result, err := suite.execWithinDeadline(conn, parquetQuery)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Len(suite.sentStatements(), 1)
+	suite.Contains(suite.sentStatements()[0], "FROM PARQUET AT 'http://",
+		"the server reads the file from the proxy connection, so the statement it receives must name that connection instead of a local file")
+	peer.acceptedConnection(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestParquetImportSurfacesTheErrorOfTheServer() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateServerRejectingAnyStatement()
+	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	parquetQuery := parquetImportQuery(createParquetFixture(suite.T()))
+
+	result, err := suite.execWithinDeadline(conn, parquetQuery)
+
+	suite.Nil(result)
+	suite.EqualError(err, mockExceptionError(mockException),
+		"the server states why the import failed, so a transfer cut short by that same failure must not report over it")
+	peer.acceptedConnection(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestCsvImportDisablesRequestedEncryptionOnUnsupportedServer() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateRowCountResponse(3)
+	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
+	conn.Config.LocalImportEncryption = true
+
+	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
+
+	suite.NoError(err, "an old server must retain CSV support by falling back to plaintext")
+	suite.NotNil(result)
+	suite.Len(suite.sentStatements(), 1)
+	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'http://")
+	suite.NotContains(suite.sentStatements()[0], "PUBLIC KEY")
+	peer.acceptedConnection(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestCsvImportUsesRequestedEncryptionOnSupportingServer() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateRowCountResponse(3)
+	conn := suite.createConnectionTo(peer, supportedServerVersion)
+	conn.Config.LocalImportEncryption = true
+
+	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Len(suite.sentStatements(), 1)
+	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'https://")
+	suite.Contains(suite.sentStatements()[0], "PUBLIC KEY")
+	peer.acceptedConnection(suite.T())
 }
 
 func (suite *ConnectionTestSuite) TestPrepareContextFailsClosed() {
@@ -381,6 +522,24 @@ func (suite *ConnectionTestSuite) TestPasswordLoginSuccess() {
 	suite.NoError(err)
 }
 
+func (suite *ConnectionTestSuite) TestLoginCapturesServerVersion() {
+	suite.websocketMock.SimulateOKResponse(types.LoginCommand{Command: types.Command{Command: "login"}, ProtocolVersion: 42},
+		types.PublicKeyResponse{
+			PublicKeyPem: `-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAK4nFBtH5EBOFw+yqga1XS1G/eCkVSBYDDxMXVEHsUMqAcyH1M2khKFX
+ZZqyqPzyU+Gm9Hn0K9YuoteX2l/Ruf4AsvMfm9JujB11bobk9isILutKMfdJ7Pmu
+uYIhswioGpmyPXr/wqz1NFkt5wMzm6sU3lFfCjD5SxU6arQ1zVY3AgMBAAE=
+-----END RSA PUBLIC KEY-----`,
+			PublicKeyModulus:  `AE27141B47E4404E170FB2AA06B55D2D46FDE0A45520580C3C4C5D5107B1432A01CC87D4CDA484A157659AB2A8FCF253E1A6F479F42BD62EA2D797DA5FD1B9FE00B2F31F9BD26E8C1D756E86E4F62B082EEB4A31F749ECF9AEB98221B308A81A99B23D7AFFC2ACF534592DE703339BAB14DE515F0A30F94B153A6AB435CD5637`,
+			PublicKeyExponent: "010001"})
+	suite.websocketMock.SimulateOKResponseOnAnyMessage(types.AuthResponse{ReleaseVersion: "2025.1.11"})
+	conn := suite.createOpenConnection()
+
+	err := conn.Login(context.Background())
+	suite.NoError(err)
+	suite.Equal("2025.1.11", conn.ServerVersion)
+}
+
 func (suite *ConnectionTestSuite) TestAccessTokenLoginSuccess() {
 	suite.simulateTokenLoginSuccess()
 	conn := suite.createOpenConnection()
@@ -523,4 +682,55 @@ func (suite *ConnectionTestSuite) createOpenConnection() *Connection {
 		websocket: suite.websocketMock,
 	}
 	return conn
+}
+
+// createConnectionTo is a connection whose local imports reach the given peer and
+// whose server reports the given release version, which is what decides whether a
+// Parquet import can run at all.
+func (suite *ConnectionTestSuite) createConnectionTo(peer *silentPeer, serverVersion string) *Connection {
+	conn := suite.createOpenConnection()
+	conn.Config = peer.plaintextConfig()
+	conn.ServerVersion = serverVersion
+	return conn
+}
+
+// simulateServerRejectingAnyStatement answers whatever reaches the server with an
+// error. A statement a guard should have refused then fails this suite's own
+// assertions instead of panicking inside a mock that expects no call at all.
+func (suite *ConnectionTestSuite) simulateServerRejectingAnyStatement() {
+	suite.websocketMock.SimulateErrorResponseOnAnyMessage(mockException)
+}
+
+// simulateRowCountResponse accepts whatever reaches the server, because the
+// statement of a local import names an address the driver learns only once the
+// proxy connection is open.
+func (suite *ConnectionTestSuite) simulateRowCountResponse(rowCount int) {
+	suite.websocketMock.SimulateOKResponseOnAnyMessage(types.SqlQueriesResponse{
+		NumResults: 1,
+		Results:    []json.RawMessage{wsconn.JsonMarshall(types.SqlQueryResponseRowCount{ResultType: "rowCount", RowCount: rowCount})},
+	})
+}
+
+func (suite *ConnectionTestSuite) assertNothingSent() {
+	suite.websocketMock.AssertNotCalled(suite.T(), "WriteMessage", mock.Anything, mock.Anything)
+}
+
+// sentStatements is every statement the driver put on the websocket, in order.
+func (suite *ConnectionTestSuite) sentStatements() []string {
+	var statements []string
+	for _, call := range suite.websocketMock.Calls {
+		if call.Method != "WriteMessage" {
+			continue
+		}
+		command := types.SqlCommand{}
+		suite.NoError(json.Unmarshal(call.Arguments[1].([]byte), &command))
+		statements = append(statements, command.SQLText)
+	}
+	return statements
+}
+
+func (suite *ConnectionTestSuite) execWithinDeadline(conn *Connection, query string) (driver.Result, error) {
+	return testutil.RunWithDeadline(suite.T(), execDeadline,
+		func() (driver.Result, error) { return conn.exec(context.Background(), query, nil) },
+		"exec did not return within %s, so nothing ended the transfer running beside the statement", execDeadline)
 }

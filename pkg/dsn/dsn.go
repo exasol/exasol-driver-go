@@ -30,6 +30,7 @@ type DSNConfig struct {
 	AccessToken               string            // Access token (alternative to username/password)
 	RefreshToken              string            // Refresh token (alternative to username/password)
 	UrlPath                   string            // If the connection is a Http connection RestApi, this is the path of the query
+	LocalImportEncryption     *bool             // If true, encrypt the local-import proxy connection via TLS (default: true)
 }
 
 // DSNConfigBuilder is a builder for DSNConfig objects.
@@ -127,6 +128,12 @@ func (c *DSNConfigBuilder) Schema(schema string) *DSNConfigBuilder {
 	return c
 }
 
+// LocalImportEncryption defines if the local-import proxy connection should be encrypted via TLS (default: true).
+func (c *DSNConfigBuilder) LocalImportEncryption(enabled bool) *DSNConfigBuilder {
+	c.Config.LocalImportEncryption = &enabled
+	return c
+}
+
 // String converts the configuration to a DSN (data source name) that can be used for connecting to an Exasol database.
 func (c *DSNConfigBuilder) String() string {
 	return c.Config.ToDSN()
@@ -177,6 +184,9 @@ func (c *DSNConfig) ToDSN() string {
 	}
 	if c.UrlPath != "" {
 		fmt.Fprintf(&sb, "urlpath=%s;", escapeDsnParamValue(c.UrlPath))
+	}
+	if c.LocalImportEncryption != nil {
+		fmt.Fprintf(&sb, "localimportencryption=%d;", utils.BoolToInt(*c.LocalImportEncryption))
 	}
 
 	return strings.TrimRight(sb.String(), ";")
@@ -231,6 +241,7 @@ func getDefaultConfig(host string, port int) *DSNConfig {
 		FetchSize:                 2000,
 		QueryTimeout:              0,
 		UrlPath:                   "",
+		LocalImportEncryption:     utils.BoolToPtr(true),
 	}
 }
 
@@ -290,6 +301,8 @@ func getConfigWithParameters(host string, port int, parametersString string) (*D
 			config.ResultSetMaxRows = maxRowsValue
 		case "urlpath":
 			config.UrlPath = unescapeDsnParamValue(value)
+		case "localimportencryption":
+			config.LocalImportEncryption = utils.BoolToPtr(value == "1")
 		default:
 			config.Params[key] = unescapeDsnParamValue(value)
 		}
