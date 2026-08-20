@@ -321,7 +321,7 @@ func (p *Proxy) sendWholeFile(source io.ReaderAt, size int64) error {
 func (p *Proxy) sendByteRange(requestedRange string, source io.ReaderAt, size int64) error {
 	first, last, satisfiable := parseByteRange(requestedRange, size)
 	if !satisfiable {
-		return p.sendStatusWithoutBody("HTTP/1.1 400 Bad Request")
+		return p.sendRangeNotSatisfiable(size)
 	}
 	err := p.sendHeaders([]string{
 		"HTTP/1.1 206 Partial Content",
@@ -333,6 +333,14 @@ func (p *Proxy) sendByteRange(requestedRange string, source io.ReaderAt, size in
 	}
 	length := last - first + 1
 	return p.sendBody(io.NewSectionReader(source, first, length), length)
+}
+
+func (p *Proxy) sendRangeNotSatisfiable(size int64) error {
+	return p.sendHeaders([]string{
+		"HTTP/1.1 416 Range Not Satisfiable",
+		fmt.Sprintf("Content-Range: bytes */%d", size),
+		"Content-Length: 0",
+	})
 }
 
 func (p *Proxy) sendBody(body io.Reader, size int64) error {

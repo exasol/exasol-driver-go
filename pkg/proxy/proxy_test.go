@@ -305,7 +305,8 @@ func TestServeFileRangesUnsatisfiableRange(t *testing.T) {
 
 			response := peer.exchange(t, newRangeRequest(t, testCase.requestedRange))
 
-			assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+			assert.Equal(t, http.StatusRequestedRangeNotSatisfiable, response.StatusCode)
+			assert.Equal(t, fmt.Sprintf("bytes */%d", len(testCase.data)), response.Header.Get(contentRangeHeader))
 			assert.Equal(t, int64(0), response.ContentLength)
 
 			stillServing := peer.exchange(t, newImportRequest(t, http.MethodHead))
@@ -340,7 +341,8 @@ func TestServeFileRangesMalformedRange(t *testing.T) {
 
 			response := peer.exchange(t, newRangeRequest(t, testCase.requestedRange))
 
-			assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+			assert.Equal(t, http.StatusRequestedRangeNotSatisfiable, response.StatusCode)
+			assert.Equal(t, fmt.Sprintf("bytes */%d", len(data)), response.Header.Get(contentRangeHeader))
 			assert.Equal(t, int64(0), response.ContentLength)
 
 			stillServing := peer.exchange(t, newImportRequest(t, http.MethodHead))
