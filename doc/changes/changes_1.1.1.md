@@ -1,4 +1,4 @@
-# Exasol Driver go 1.1.1, released 2026-09-04
+# Exasol Driver go 1.1.1, released 2026-09-??
 
 Code name: Serialize WebSocket access
 
