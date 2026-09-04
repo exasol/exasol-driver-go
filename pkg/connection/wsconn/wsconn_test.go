@@ -139,7 +139,9 @@ func newBlockingSocket() *blockingSocket {
 	return &blockingSocket{started: make(chan struct{}), release: make(chan struct{})}
 }
 
-func (socket *blockingSocket) EnableWriteCompression(bool) {}
+func (socket *blockingSocket) EnableWriteCompression(bool) {
+	// This is a no-op for the blockingSocket used in tests.
+}
 
 func (socket *blockingSocket) WriteMessage(int, []byte) error {
 	socket.block()
