@@ -2,8 +2,11 @@ package wsconn
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 
+	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -68,4 +71,115 @@ func (suite *WebsocketTestSuite) TestBytesToHexString() {
 			suite.Equal(testCase.expectedHex, bytesToHexString(testCase.data))
 		})
 	}
+}
+
+func (suite *WebsocketTestSuite) TestSerializesConcurrentWebsocketAccess() {
+	for _, testCase := range []struct {
+		name            string
+		call            func(*wsConnImpl)
+		expectedLogLine string
+	}{
+		{
+			name: "reads",
+			call: func(connection *wsConnImpl) {
+				_, _, _ = connection.ReadMessage()
+			},
+			expectedLogLine: "Concurrent WebSocket reads detected; serializing access",
+		},
+		{
+			name: "writes",
+			call: func(connection *wsConnImpl) {
+				_ = connection.WriteMessage(1, nil)
+			},
+			expectedLogLine: "Concurrent WebSocket writes detected; serializing access",
+		},
+	} {
+		suite.Run(testCase.name, func() {
+			traceLogger := newRecordingLogger()
+			previousTraceLogger := logger.TraceLogger
+			logger.SetTraceLogger(traceLogger)
+			defer logger.SetTraceLogger(previousTraceLogger)
+
+			socket := newBlockingSocket()
+			connection := &wsConnImpl{socket: socket}
+			var calls sync.WaitGroup
+			calls.Add(2)
+			go func() {
+				defer calls.Done()
+				testCase.call(connection)
+			}()
+			<-socket.started
+			go func() {
+				defer calls.Done()
+				testCase.call(connection)
+			}()
+
+			suite.Equal(testCase.expectedLogLine, <-traceLogger.messages)
+			close(socket.release)
+			calls.Wait()
+			suite.Equal(int32(1), socket.maximumConcurrentCalls.Load())
+			select {
+			case unexpected := <-traceLogger.messages:
+				suite.Failf("unexpected trace message", "%q", unexpected)
+			default:
+			}
+		})
+	}
+}
+
+type blockingSocket struct {
+	started                chan struct{}
+	release                chan struct{}
+	startedOnce            sync.Once
+	activeCalls            atomic.Int32
+	maximumConcurrentCalls atomic.Int32
+}
+
+func newBlockingSocket() *blockingSocket {
+	return &blockingSocket{started: make(chan struct{}), release: make(chan struct{})}
+}
+
+func (socket *blockingSocket) EnableWriteCompression(bool) {}
+
+func (socket *blockingSocket) WriteMessage(int, []byte) error {
+	socket.block()
+	return nil
+}
+
+func (socket *blockingSocket) ReadMessage() (int, []byte, error) {
+	socket.block()
+	return 0, nil, nil
+}
+
+func (socket *blockingSocket) Close() error {
+	return nil
+}
+
+func (socket *blockingSocket) block() {
+	activeCalls := socket.activeCalls.Add(1)
+	for maximum := socket.maximumConcurrentCalls.Load(); activeCalls > maximum; {
+		if socket.maximumConcurrentCalls.CompareAndSwap(maximum, activeCalls) {
+			break
+		}
+		maximum = socket.maximumConcurrentCalls.Load()
+	}
+	socket.startedOnce.Do(func() { close(socket.started) })
+	<-socket.release
+	socket.activeCalls.Add(-1)
+}
+
+type recordingLogger struct {
+	messages chan string
+}
+
+func newRecordingLogger() *recordingLogger {
+	return &recordingLogger{messages: make(chan string, 2)}
+}
+
+func (logger *recordingLogger) Print(v ...interface{}) {
+	logger.messages <- fmt.Sprint(v...)
+}
+
+func (logger *recordingLogger) Printf(format string, v ...interface{}) {
+	logger.messages <- fmt.Sprintf(format, v...)
 }

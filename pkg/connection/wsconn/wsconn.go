@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/exasol/exasol-driver-go/pkg/errors"
+	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -27,8 +29,21 @@ type WebsocketConnection interface {
 	Close() error
 }
 
+type websocketSocket interface {
+	EnableWriteCompression(enable bool)
+	WriteMessage(messageType int, data []byte) error
+	ReadMessage() (messageType int, p []byte, err error)
+	Close() error
+}
+
 type wsConnImpl struct {
-	socket *websocket.Conn
+	socket websocketSocket
+
+	readMutex  sync.Mutex
+	writeMutex sync.Mutex
+
+	readContentionLogOnce  sync.Once
+	writeContentionLogOnce sync.Once
 }
 
 var cipherSuites = []uint16{
@@ -74,15 +89,39 @@ func CreateConnection(ctx context.Context, skipVerify bool, expectedFingerprint 
 }
 
 func (ws *wsConnImpl) WriteMessage(messageType int, data []byte) error {
+	ws.lockWrite()
+	defer ws.writeMutex.Unlock()
 	return ws.socket.WriteMessage(messageType, data)
 }
 
 func (ws *wsConnImpl) ReadMessage() (messageType int, p []byte, err error) {
+	ws.lockRead()
+	defer ws.readMutex.Unlock()
 	return ws.socket.ReadMessage()
 }
 
 func (ws *wsConnImpl) Close() error {
 	return ws.socket.Close()
+}
+
+func (ws *wsConnImpl) lockRead() {
+	if ws.readMutex.TryLock() {
+		return
+	}
+	ws.readContentionLogOnce.Do(func() {
+		logger.TraceLogger.Print("Concurrent WebSocket reads detected; serializing access")
+	})
+	ws.readMutex.Lock()
+}
+
+func (ws *wsConnImpl) lockWrite() {
+	if ws.writeMutex.TryLock() {
+		return
+	}
+	ws.writeContentionLogOnce.Do(func() {
+		logger.TraceLogger.Print("Concurrent WebSocket writes detected; serializing access")
+	})
+	ws.writeMutex.Lock()
 }
 
 // certificateVerifier returns a function that verifies that a certificate has the given fingerprint.
