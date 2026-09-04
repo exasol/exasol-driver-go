@@ -47,6 +47,7 @@ func TestGetImportFormatCsv(t *testing.T) {
 		{name: "import in string with placeholders", query: "insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');", expectedResult: ImportFormatNone},
 		{name: "import in string", query: "insert into table1 values ('import into schema.table from local csv file ''/path/to/filename.csv''');", expectedResult: ImportFormatNone},
 		{name: "import in string with schema", query: "insert into schema.tab1 values ('IMPORT into schema.table FROM LOCAL CSV file ''/path/to/filename.csv'';')", expectedResult: ImportFormatNone},
+		{name: "multiline import in string", query: "insert into table1 (SQL_TEXT)\nvalues ('\nimport into table2 from local csv file ''/path/to/file'' column separator = '';'' column delimiter = '''';\n');", expectedResult: ImportFormatNone},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -120,6 +121,9 @@ func TestUpdateImportQuery(t *testing.T) {
 		{name: "import statement in a string",
 			query:    "insert into tab1 values ('IMPORT into table FROM LOCAL CSV file ''/path/to/filename.csv'';')",
 			expected: "insert into tab1 values ('IMPORT into table FROM LOCAL CSV file ''/path/to/filename.csv'';')"},
+		{name: "multiline import statement in a string",
+			query:    "insert into table1 (SQL_TEXT)\nvalues ('\nimport into table2 from local csv file ''/path/to/file'' column separator = '';'' column delimiter = '''';\n');",
+			expected: "insert into table1 (SQL_TEXT)\nvalues ('\nimport into table2 from local csv file ''/path/to/file'' column separator = '';'' column delimiter = '''';\n');"},
 		{name: "single file",
 			query:    csvLocalImportQuery,
 			expected: "IMPORT into table FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv' "},

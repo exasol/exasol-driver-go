@@ -51,7 +51,7 @@ func namedGroup(name, regexp string) string {
 	return fmt.Sprintf("(?P<%s>%s)", name, regexp)
 }
 
-var localImportRegex = regexp.MustCompile(`(?ims)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE +
+var localImportRegex = regexp.MustCompile(`(?is)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE +
 	namedGroup(IMPORT_FORMAT_PLACEHOLDER, "CSV|PARQUET") + `.*$`)
 
 // GetImportFormat reports which file format, if any, a local IMPORT statement names in its

@@ -4,7 +4,8 @@ Code name:
 
 ## Summary
 
-## Features
+This release fixes local IMPORT detection for SQL statements containing multiline string literals.
 
-* ISSUE_NUMBER: description
+## Bug Fixes
 
+* #151: Fixed false detection of IMPORT statements inside multiline SQL string literals
