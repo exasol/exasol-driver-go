@@ -44,6 +44,9 @@ func TestGetImportFormatCsv(t *testing.T) {
 		{name: "with brackets", query: "IMPORT(something) INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
 		{name: "lower case", query: "import into schema.table from local csv file '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
 		{name: "with additional whitespace", query: " IMPORT \t INTO SCHEMA.TABLE\n\tFROM  LOCAL  CSV  FILE  '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
+		{name: "with leading line comment", query: "-- load fixture\nIMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
+		{name: "with leading block comment", query: "/* load fixture */\nIMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
+		{name: "with leading block comment, no newline", query: "/* load fixture */IMPORT INTO SCHEMA.TABLE FROM LOCAL CSV FILE '/path/to/filename.csv'", expectedResult: ImportFormatCSV},
 		{name: "import in string with placeholders", query: "insert into table1 values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');", expectedResult: ImportFormatNone},
 		{name: "import in string", query: "insert into table1 values ('import into schema.table from local csv file ''/path/to/filename.csv''');", expectedResult: ImportFormatNone},
 		{name: "import in string with schema", query: "insert into schema.tab1 values ('IMPORT into schema.table FROM LOCAL CSV file ''/path/to/filename.csv'';')", expectedResult: ImportFormatNone},
@@ -67,6 +70,7 @@ func TestGetImportFormatParquet(t *testing.T) {
 		{name: "with brackets", query: "IMPORT(something) INTO SCHEMA.TABLE FROM LOCAL PARQUET FILE '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
 		{name: "lower case", query: "import into schema.table from local parquet file '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
 		{name: "with additional whitespace", query: " IMPORT \t INTO SCHEMA.TABLE\n\tFROM  LOCAL  PARQUET  FILE  '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
+		{name: "with leading line comment", query: "-- load fixture\nIMPORT INTO SCHEMA.TABLE FROM LOCAL PARQUET FILE '/path/to/filename.parquet'", expectedResult: ImportFormatParquet},
 		{name: "import in string", query: "insert into table1 values ('import into schema.table from local parquet file ''/path/to/filename.parquet''');", expectedResult: ImportFormatNone},
 	}
 	for _, test := range tests {
@@ -234,7 +238,7 @@ func TestGetFilePaths(t *testing.T) {
 
 				foundPaths, err := GetFilePaths(fmt.Sprintf(`IMPORT INTO table_1 FROM CSV
        			AT 'http://192.168.1.1:8080/' USER 'agent_007' IDENTIFIED BY 'secret'
-       			FILE %s 
+       			FILE %s
        			COLUMN SEPARATOR = ';'
        			SKIP = 5;`, strings.Join(preparedPaths, " FILE ")))
 				assert.NoError(t, err)

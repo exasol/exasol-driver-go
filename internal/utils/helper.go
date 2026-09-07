@@ -58,7 +58,7 @@ var localImportRegex = regexp.MustCompile(`(?is)^\s*IMPORT[\s(]+.+FROM` + WHITES
 // FROM LOCAL clause. It is the single place that decides this, so the statement rewrite, the
 // output filename, and the transport selection all read this one value instead of re-deriving it.
 func GetImportFormat(query string) ImportFormat {
-	matches := localImportRegex.FindStringSubmatch(query)
+	matches := localImportRegex.FindStringSubmatch(skipLeadingSQLComments(query))
 	if matches == nil {
 		return ImportFormatNone
 	}
@@ -66,6 +66,31 @@ func GetImportFormat(query string) ImportFormat {
 		return ImportFormatParquet
 	}
 	return ImportFormatCSV
+}
+
+// skipLeadingSQLComments removes whitespace and SQL comments before the first SQL token.
+// Keeping localImportRegex anchored after this step prevents IMPORT text within a string
+// literal from being mistaken for a statement, while allowing commented imports.
+func skipLeadingSQLComments(query string) string {
+	for {
+		query = strings.TrimLeft(query, " \t\r\n\f")
+		switch {
+		case strings.HasPrefix(query, "--"):
+			lineEnd := strings.IndexAny(query, "\r\n")
+			if lineEnd == -1 {
+				return ""
+			}
+			query = query[lineEnd+1:]
+		case strings.HasPrefix(query, "/*"):
+			commentEnd := strings.Index(query[2:], "*/")
+			if commentEnd == -1 {
+				return query
+			}
+			query = query[commentEnd+4:]
+		default:
+			return query
+		}
+	}
 }
 
 const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"
