@@ -43,6 +43,7 @@ func OpenFile(path string) (*os.File, error) {
 func ResolveHosts(h string) ([]string, error) {
 	var hosts []string
 	hostRangeRegex := regexp.MustCompile(`^((.+?)(\d+))\.\.(\d+)$`)
+
 	for _, host := range strings.Split(h, ",") {
 		if hostRangeRegex.MatchString(host) {
 			parsedHosts, err := ParseRange(hostRangeRegex, host)
@@ -60,17 +61,21 @@ func ResolveHosts(h string) ([]string, error) {
 func ParseRange(hostRangeRegex *regexp.Regexp, host string) ([]string, error) {
 	matches := hostRangeRegex.FindStringSubmatch(host)
 	prefix := matches[2]
+
 	start, err := strconv.Atoi(matches[3])
 	if err != nil {
 		return nil, err
 	}
+
 	stop, err := strconv.Atoi(matches[4])
 	if err != nil {
 		return nil, err
 	}
+
 	if stop < start {
 		return nil, errors.NewInvalidHostRangeLimits(host)
 	}
+
 	var hosts []string
 	for i := start; i <= stop; i++ {
 		hosts = append(hosts, fmt.Sprintf("%s%d", prefix, i))
@@ -80,5 +85,7 @@ func ParseRange(hostRangeRegex *regexp.Regexp, host string) ([]string, error) {
 
 func ShuffleHosts(hosts []string) {
 	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano())) //nolint:gosec
-	r.Shuffle(len(hosts), func(i, j int) { hosts[i], hosts[j] = hosts[j], hosts[i] })
+	r.Shuffle(len(hosts), func(i, j int) {
+		hosts[i], hosts[j] = hosts[j], hosts[i]
+	})
 }
