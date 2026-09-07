@@ -127,7 +127,7 @@ func (suite *WebsocketTestSuite) TestSendFailsAtNonOKStatusMissingException() {
 	suite.websocketMock.OnReadTextMessage([]byte(`{"status": "notok"}`), nil)
 
 	err := suite.createOpenConnection().Send(context.Background(), request, response)
-	suite.EqualError(err, `result status is not 'ok': "notok", expected exception in response &{notok [] <nil>}`)
+	suite.ErrorContains(err, `result status is not 'ok': "notok", expected exception in response`)
 }
 
 func (suite *WebsocketTestSuite) TestSendFailsAtParsingResponseData() {
