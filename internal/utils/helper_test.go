@@ -302,6 +302,85 @@ func TestSQLWithoutComments(t *testing.T) {
 	}
 }
 
+func TestQuotedLiteralEnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		start    int
+		expected int
+	}{
+		{name: "single quoted literal", query: "'value'", start: 0, expected: 7},
+		{name: "double quoted identifier", query: `"value"`, start: 0, expected: 7},
+		{name: "escaped single quote", query: "'it''s'", start: 0, expected: 7},
+		{name: "non quote", query: "value", start: 0, expected: 0},
+		{name: "unterminated literal", query: "'value", start: 0, expected: 6},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, quotedLiteralEnd(test.query, test.start))
+		})
+	}
+}
+
+func TestSQLCommentEnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		start    int
+		expected int
+	}{
+		{name: "line comment", query: "-- note\nnext", start: 0, expected: 7},
+		{name: "block comment", query: "/* note */next", start: 0, expected: 10},
+		{name: "non comment", query: "SELECT", start: 0, expected: 0},
+		{name: "final character", query: "-", start: 0, expected: 0},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, sqlCommentEnd(test.query, test.start))
+		})
+	}
+}
+
+func TestLineCommentEnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		start    int
+		expected int
+	}{
+		{name: "line feed", query: "-- note\nnext", start: 2, expected: 7},
+		{name: "carriage return", query: "-- note\rnext", start: 2, expected: 7},
+		{name: "end of query", query: "-- note", start: 2, expected: 7},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, lineCommentEnd(test.query, test.start))
+		})
+	}
+}
+
+func TestBlockCommentEnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		start    int
+		expected int
+	}{
+		{name: "terminated comment", query: "/* note */next", start: 2, expected: 10},
+		{name: "first terminator wins", query: "/* */ */", start: 2, expected: 5},
+		{name: "unterminated comment", query: "/* note", start: 2, expected: 7},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, blockCommentEnd(test.query, test.start))
+		})
+	}
+}
+
 func TestUpdateImportQueryIgnoresFileClausesInComments(t *testing.T) {
 	query := "/* previous FILE 'old.parquet' */IMPORT INTO table_1 FROM LOCAL PARQUET FILE 'new.parquet'"
 

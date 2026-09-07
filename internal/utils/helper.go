@@ -146,50 +146,67 @@ func GetFilePaths(query string) ([]string, error) {
 // comment markers inside a file name or other literal are not comments.
 func sqlWithoutComments(query string) string {
 	masked := []byte(query)
-	inSingleQuote, inDoubleQuote := false, false
 	for index := 0; index < len(query); index++ {
-		if inSingleQuote || inDoubleQuote {
-			quote := byte('\'')
-			if inDoubleQuote {
-				quote = '"'
-			}
-			if query[index] == quote {
-				if index+1 < len(query) && query[index+1] == quote {
-					index++
-					continue
-				}
-				inSingleQuote, inDoubleQuote = false, false
-			}
+		if quoteEnd := quotedLiteralEnd(query, index); quoteEnd > index {
+			index = quoteEnd - 1
 			continue
 		}
-
-		switch {
-		case query[index] == '\'':
-			inSingleQuote = true
-		case query[index] == '"':
-			inDoubleQuote = true
-		case index+1 < len(query) && query[index] == '-' && query[index+1] == '-':
-			end := index + 2
-			for end < len(query) && query[end] != '\n' && query[end] != '\r' {
-				end++
-			}
-			maskComment(masked, index, end)
-			index = end - 1
-		case index+1 < len(query) && query[index] == '/' && query[index+1] == '*':
-			end := index + 2
-			for end+1 < len(query) && (query[end] != '*' || query[end+1] != '/') {
-				end++
-			}
-			if end+1 < len(query) {
-				end += 2
-			} else {
-				end = len(query)
-			}
-			maskComment(masked, index, end)
-			index = end - 1
+		if commentEnd := sqlCommentEnd(query, index); commentEnd > index {
+			maskComment(masked, index, commentEnd)
+			index = commentEnd - 1
 		}
 	}
 	return string(masked)
+}
+
+func quotedLiteralEnd(query string, start int) int {
+	quote := query[start]
+	if quote != '\'' && quote != '"' {
+		return start
+	}
+	for index := start + 1; index < len(query); index++ {
+		if query[index] != quote {
+			continue
+		}
+		if index+1 < len(query) && query[index+1] == quote {
+			index++
+			continue
+		}
+		return index + 1
+	}
+	return len(query)
+}
+
+func sqlCommentEnd(query string, start int) int {
+	if start+1 >= len(query) {
+		return start
+	}
+	switch query[start : start+2] {
+	case "--":
+		return lineCommentEnd(query, start+2)
+	case "/*":
+		return blockCommentEnd(query, start+2)
+	default:
+		return start
+	}
+}
+
+func lineCommentEnd(query string, start int) int {
+	for index := start; index < len(query); index++ {
+		if query[index] == '\n' || query[index] == '\r' {
+			return index
+		}
+	}
+	return len(query)
+}
+
+func blockCommentEnd(query string, start int) int {
+	for index := start; index+1 < len(query); index++ {
+		if query[index] == '*' && query[index+1] == '/' {
+			return index + 2
+		}
+	}
+	return len(query)
 }
 
 func maskComment(query []byte, start, end int) {
