@@ -257,6 +257,51 @@ func TestGetFilePathsIgnoresFileClausesInComments(t *testing.T) {
 	assert.Equal(t, []string{"new.parquet"}, paths)
 }
 
+func TestSQLWithoutComments(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		expected string
+	}{
+		{
+			name:     "line comment preserves newline",
+			query:    "SELECT -- ignored FILE 'old.csv'\r\nFILE 'new.csv'",
+			expected: "SELECT " + strings.Repeat(" ", len("-- ignored FILE 'old.csv'")) + "\r\nFILE 'new.csv'",
+		},
+		{
+			name:     "block comment preserves positions",
+			query:    "SELECT /* ignored FILE 'old.csv' */ FILE 'new.csv'",
+			expected: "SELECT " + strings.Repeat(" ", len("/* ignored FILE 'old.csv' */")) + " FILE 'new.csv'",
+		},
+		{
+			name:     "comment markers in single quoted string are retained",
+			query:    "SELECT '-- not a comment /* either */' -- ignored\nFILE 'new.csv'",
+			expected: "SELECT '-- not a comment /* either */' " + strings.Repeat(" ", len("-- ignored")) + "\nFILE 'new.csv'",
+		},
+		{
+			name:     "escaped single quote keeps parser inside string",
+			query:    "SELECT 'it''s -- not a comment' /* ignored */ FILE 'new.csv'",
+			expected: "SELECT 'it''s -- not a comment' " + strings.Repeat(" ", len("/* ignored */")) + " FILE 'new.csv'",
+		},
+		{
+			name:     "comment markers in double quoted identifier are retained",
+			query:    "SELECT \"-- not a comment\" /* ignored */ FILE 'new.csv'",
+			expected: "SELECT \"-- not a comment\" " + strings.Repeat(" ", len("/* ignored */")) + " FILE 'new.csv'",
+		},
+		{
+			name:     "unterminated block comment masks remaining query",
+			query:    "SELECT /* ignored\nFILE 'old.csv'",
+			expected: "SELECT " + strings.Repeat(" ", len("/* ignored")) + "\n" + strings.Repeat(" ", len("FILE 'old.csv'")),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, sqlWithoutComments(test.query))
+		})
+	}
+}
+
 func TestUpdateImportQueryIgnoresFileClausesInComments(t *testing.T) {
 	query := "/* previous FILE 'old.parquet' */IMPORT INTO table_1 FROM LOCAL PARQUET FILE 'new.parquet'"
 

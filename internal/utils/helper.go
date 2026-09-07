@@ -177,7 +177,7 @@ func sqlWithoutComments(query string) string {
 			index = end - 1
 		case index+1 < len(query) && query[index] == '/' && query[index+1] == '*':
 			end := index + 2
-			for end+1 < len(query) && !(query[end] == '*' && query[end+1] == '/') {
+			for end+1 < len(query) && (query[end] != '*' || query[end+1] != '/') {
 				end++
 			}
 			if end+1 < len(query) {
@@ -255,7 +255,7 @@ func UpdateImportQuery(query string, target ProxyTarget) string {
 		for i, match := range fileMatches {
 			updatedQuery.WriteString(query[lastEnd:match[0]])
 			if i == 0 {
-				updatedQuery.WriteString(fmt.Sprintf("FILE '%s' ", fileName))
+				fmt.Fprintf(&updatedQuery, "FILE '%s' ", fileName)
 			}
 			lastEnd = match[1]
 		}
