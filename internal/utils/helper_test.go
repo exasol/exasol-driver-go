@@ -248,6 +248,23 @@ func TestGetFilePaths(t *testing.T) {
 	}
 }
 
+func TestGetFilePathsIgnoresFileClausesInComments(t *testing.T) {
+	query := "/* previous FILE 'old.parquet' */IMPORT INTO table_1 FROM LOCAL PARQUET FILE 'new.parquet' -- FILE 'also-old.parquet'"
+
+	paths, err := GetFilePaths(query)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"new.parquet"}, paths)
+}
+
+func TestUpdateImportQueryIgnoresFileClausesInComments(t *testing.T) {
+	query := "/* previous FILE 'old.parquet' */IMPORT INTO table_1 FROM LOCAL PARQUET FILE 'new.parquet'"
+
+	updatedQuery := UpdateImportQuery(query, ProxyTarget{Host: loopbackHost, Port: 4333})
+
+	assert.Equal(t, "/* previous FILE 'old.parquet' */IMPORT INTO table_1 FROM PARQUET AT 'http://127.0.0.1:4333;MaxConcurrentReads=1' FILE 'data.parquet' ", updatedQuery)
+}
+
 func TestGetRowSeparatorCompleteQuery(t *testing.T) {
 	tests := []struct {
 		name     string

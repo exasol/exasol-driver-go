@@ -125,7 +125,7 @@ var fileQueryRegex = regexp.MustCompile(`(?i)` + `FILE` + WHITESPACE +
 	QUOTE + namedGroup(FILE_PLACEHOLDER, `[a-zA-Z0-9:<> \\/._\-~]+`) + QUOTE + ` ?`)
 
 func GetFilePaths(query string) ([]string, error) {
-	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
+	r := fileQueryRegex.FindAllStringSubmatch(sqlWithoutComments(query), -1)
 	var files []string
 	for _, matches := range r {
 		for i, name := range fileQueryRegex.SubexpNames() {
@@ -138,6 +138,66 @@ func GetFilePaths(query string) ([]string, error) {
 		return nil, errors.ErrInvalidImportQuery
 	}
 	return files, nil
+}
+
+// sqlWithoutComments returns query with SQL comments replaced by whitespace.
+// It preserves byte positions so matches against the returned string can safely
+// be applied to the original query. Quoted strings are retained verbatim: SQL
+// comment markers inside a file name or other literal are not comments.
+func sqlWithoutComments(query string) string {
+	masked := []byte(query)
+	inSingleQuote, inDoubleQuote := false, false
+	for index := 0; index < len(query); index++ {
+		if inSingleQuote || inDoubleQuote {
+			quote := byte('\'')
+			if inDoubleQuote {
+				quote = '"'
+			}
+			if query[index] == quote {
+				if index+1 < len(query) && query[index+1] == quote {
+					index++
+					continue
+				}
+				inSingleQuote, inDoubleQuote = false, false
+			}
+			continue
+		}
+
+		switch {
+		case query[index] == '\'':
+			inSingleQuote = true
+		case query[index] == '"':
+			inDoubleQuote = true
+		case index+1 < len(query) && query[index] == '-' && query[index+1] == '-':
+			end := index + 2
+			for end < len(query) && query[end] != '\n' && query[end] != '\r' {
+				end++
+			}
+			maskComment(masked, index, end)
+			index = end - 1
+		case index+1 < len(query) && query[index] == '/' && query[index+1] == '*':
+			end := index + 2
+			for end+1 < len(query) && !(query[end] == '*' && query[end+1] == '/') {
+				end++
+			}
+			if end+1 < len(query) {
+				end += 2
+			} else {
+				end = len(query)
+			}
+			maskComment(masked, index, end)
+			index = end - 1
+		}
+	}
+	return string(masked)
+}
+
+func maskComment(query []byte, start, end int) {
+	for index := start; index < end; index++ {
+		if query[index] != '\n' && query[index] != '\r' {
+			query[index] = ' '
+		}
+	}
 }
 
 func OpenFile(path string) (*os.File, error) {
@@ -188,13 +248,19 @@ func UpdateImportQuery(query string, target ProxyTarget) string {
 		urlSuffix = ";MaxConcurrentReads=1"
 	}
 
-	r := fileQueryRegex.FindAllStringSubmatch(query, -1)
-	for i, matches := range r {
-		if i == 0 {
-			query = strings.Replace(query, matches[0], fmt.Sprintf("FILE '%s' ", fileName), 1)
-		} else {
-			query = strings.Replace(query, matches[0], "", 1)
+	fileMatches := fileQueryRegex.FindAllStringIndex(sqlWithoutComments(query), -1)
+	if len(fileMatches) > 0 {
+		var updatedQuery strings.Builder
+		lastEnd := 0
+		for i, match := range fileMatches {
+			updatedQuery.WriteString(query[lastEnd:match[0]])
+			if i == 0 {
+				updatedQuery.WriteString(fmt.Sprintf("FILE '%s' ", fileName))
+			}
+			lastEnd = match[1]
 		}
+		updatedQuery.WriteString(query[lastEnd:])
+		query = updatedQuery.String()
 	}
 
 	proxyURL := fmt.Sprintf("%s://%s:%d%s", target.scheme(), target.Host, target.Port, urlSuffix)
