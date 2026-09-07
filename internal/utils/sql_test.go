@@ -422,6 +422,7 @@ func TestGetRowSeparatorCompleteQuery(t *testing.T) {
 		{name: "multiple spaces", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR \t = \t 'CRLF';", expected: "\r\n"},
 		{name: "no spaces returns default", query: "IMPORT into table FROM LOCAL CSV file '/path/to/filename.csv' ROW SEPARATOR='CRLF';", expected: "\n"},
 		{name: "with line breaks", query: "IMPORT into table\nFROM LOCAL CSV file '/path/to/filename.csv'\nROW\r\nSEPARATOR = 'CRLF';", expected: "\r\n"},
+		{name: "ignores row separator in leading same-line comment", query: "/* ROW SEPARATOR = 'CRLF' */IMPORT INTO t FROM LOCAL CSV FILE 'data.csv' ROW SEPARATOR = 'LF'", expected: "\n"},
 		{name: "unknown query returns default", query: "select * from table", expected: "\n"},
 	}
 	for _, test := range tests {

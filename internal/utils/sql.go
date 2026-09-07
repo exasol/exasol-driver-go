@@ -62,7 +62,7 @@ const QUOTE = `["']`
 var rowSeparatorQueryRegex = regexp.MustCompile(`(?i)` + `ROW` + WHITESPACE + `SEPARATOR` + WHITESPACE + `=` + WHITESPACE + QUOTE + namedGroup(ROW_SEPARATOR_PLACEHOLDER, "[a-zA-Z]+") + QUOTE)
 
 func GetRowSeparator(query string) string {
-	r := rowSeparatorQueryRegex.FindStringSubmatch(query)
+	r := rowSeparatorQueryRegex.FindStringSubmatch(sqlWithoutComments(query))
 	separator := "LF"
 	for i, name := range rowSeparatorQueryRegex.SubexpNames() {
 		if name == ROW_SEPARATOR_PLACEHOLDER && len(r) >= i {
