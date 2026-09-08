@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/stretchr/testify/suite"
@@ -114,7 +115,13 @@ func (suite *WebsocketTestSuite) TestSerializesConcurrentWebsocketAccess() {
 				testCase.call(connection)
 			}()
 
-			suite.Equal(testCase.expectedLogLine, <-traceLogger.messages)
+			select {
+			case msg := <-traceLogger.messages:
+				suite.Equal(testCase.expectedLogLine, msg)
+			case <-time.After(1 * time.Second):
+				suite.Fail("timed out waiting for trace message")
+			}
+
 			close(socket.release)
 			calls.Wait()
 			suite.Equal(int32(1), socket.maximumConcurrentCalls.Load())
