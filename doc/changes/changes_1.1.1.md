@@ -1,14 +1,19 @@
 # Exasol Driver go 1.1.1, released 2026-??-??
 
-Code name:
+Code name: Serialize WebSocket access and fix local IMPORT
 
 ## Summary
 
 This release fixes local IMPORT detection for SQL statements containing multiline string literals.
 
+This release prevents a runtime panic when multiple operations access one WebSocket connection concurrently and malformed frames are received. The driver now serializes WebSocket reads and writes. Protocol errors continue to be returned as connection errors.
+
+When trace logging is enabled, the driver logs the first detected concurrent read and write per connection. These diagnostics contain no request or response payloads.
+
 ## Bug Fixes
 
 * #151: Fixed false detection of IMPORT statements inside multiline SQL string literals
+* #139: Prevented a slice-bounds panic caused by concurrent WebSocket access
 
 ## Dependency Updates
 
