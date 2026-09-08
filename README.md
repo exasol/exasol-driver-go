@@ -137,7 +137,7 @@ Use the sql driver to load data from one or more CSV files into your Exasol Data
 
 **Limitations:**
 * The driver supports only CSV and Parquet files. It does not support FBV.
-* The driver does not support the SQL `SECURE` option. Instead, it encrypts the proxy connection that transfers a local CSV or Parquet file by default. The [`localimportencryption`](#connection-string) driver property is deprecated; set it to `0` only when plaintext is explicitly required.
+* The driver does not support the SQL `SECURE` option. Instead, it encrypts the proxy connection that transfers a local CSV or Parquet file by default when the server supports it. Exasol 8 does not support encrypted local imports, so the driver automatically uses plaintext there. The [`localimportencryption`](#connection-string) driver property is deprecated; set it to `0` only when plaintext is explicitly required.
 
 ```go
 result, err := exasol.Exec(`
@@ -164,7 +164,7 @@ IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE '../testData/data.parquet'
 * A statement can name exactly one Parquet file. A CSV import can still name several files.
 * The statement requires Exasol 2025.1.11 or later. Against an older server, the import fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 * The driver streams the byte ranges requested by Exasol without loading the whole file into memory.
-* By default, the proxy connection that carries the file is encrypted. The `localimportencryption` driver property is deprecated; set it to `0` only when plaintext is explicitly required.
+* By default, the proxy connection that carries the file is encrypted when the server supports it. Exasol 8 does not support encrypted local imports, so the driver automatically uses plaintext there. The `localimportencryption` driver property is deprecated; set it to `0` only when plaintext is explicitly required.
 
 ### Connection String
 
@@ -186,7 +186,7 @@ Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exaso
 | `validateservercertificate` |  0=off, 1=on  | `1`         | TLS certificate verification. Disable it if you want to use a self-signed or invalid certificate (server side). |
 | `certificatefingerprint`    |  string       |             | Expected fingerprint of the server's TLS certificate. See below for details. |
 | `fetchsize`                 | numeric, >0   | `128*1024`  | Amount of data in kB which should be obtained by Exasol during a fetch. The application can run out of memory if the value is too high. |
-| `localimportencryption`     |  0=off, 1=on  | `1`         | **Deprecated.** Encrypt the proxy connection used for a local CSV or Parquet import. Set to `0` only when plaintext is explicitly required. See [Import Local Parquet Files](#import-local-parquet-files). |
+| `localimportencryption`     |  0=off, 1=on  | `1`         | **Deprecated.** Encrypt the proxy connection used for a local CSV or Parquet import when supported by the server. Set to `0` only when plaintext is explicitly required. See [Import Local Parquet Files](#import-local-parquet-files). |
 | `password`                  |  string       |             | Exasol password.                                |
 | `resultsetmaxrows`          |  numeric      |             | Set the max amount of rows in the result set.   |
 | `schema`                    |  string       |             | Exasol schema name.                             |

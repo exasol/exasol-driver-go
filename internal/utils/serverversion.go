@@ -12,6 +12,8 @@ const (
 	minParquetImportPatch = 11
 )
 
+const minPublicKeyPinningMajor = 2025
+
 var leadingDigitsRegex = regexp.MustCompile(`^\d+`)
 
 // SupportsNativeParquetImport reports whether a server reporting the given release
@@ -20,6 +22,15 @@ var leadingDigitsRegex = regexp.MustCompile(`^\d+`)
 // corrective action beyond refusing the import.
 func SupportsNativeParquetImport(releaseVersion string) bool {
 	return atLeastVersion(releaseVersion, minParquetImportMajor, minParquetImportMinor, minParquetImportPatch)
+}
+
+// SupportsPublicKeyPinning reports whether a server reporting the given release
+// version can parse the PUBLIC KEY clause that pins an encrypted local import's
+// proxy connection. Exasol 8 releases cannot parse this clause, so imports use
+// plaintext there. Unparsable release versions are treated as unsupported.
+func SupportsPublicKeyPinning(releaseVersion string) bool {
+	major, _, _, ok := parseServerVersion(releaseVersion)
+	return ok && major >= minPublicKeyPinningMajor
 }
 
 func atLeastVersion(releaseVersion string, major int, minor int, patch int) bool {

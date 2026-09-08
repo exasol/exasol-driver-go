@@ -943,10 +943,14 @@ func (suite *IntegrationTestSuite) assertImportsAreEncrypted(database *sql.DB) {
 // could still hang or fail here, so this repeats the same live-server proof
 // for the write path.
 //
-// CSV import carries no server-version gate of its own, unlike Parquet. All
-// supported server versions accept the PUBLIC KEY clause that pins the encrypted
-// proxy connection.
+// CSV import carries no server-version gate of its own, unlike Parquet. Exasol
+// 8 cannot parse the PUBLIC KEY clause that pins the encrypted proxy connection,
+// so that supported server family runs CSV imports over plaintext instead.
 func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
+	if !suite.exasol.SupportsPublicKeyPinning() {
+		suite.T().Skipf("Exasol %s cannot parse the PUBLIC KEY clause that pins an encrypted local import", suite.exasol.DbVersion)
+	}
+
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
 	ctx := context.Background()
 	schemaName := "TEST_SCHEMA_ENCRYPTED_CSV"

@@ -54,6 +54,24 @@ func TestSupportsNativeParquetImportAtOrAboveThreshold(t *testing.T) {
 	assertSupport(t, SupportsNativeParquetImport, true, tests)
 }
 
+func TestSupportsPublicKeyPinning(t *testing.T) {
+	tests := []struct {
+		name           string
+		releaseVersion string
+		want           bool
+	}{
+		{name: "supported 2025 release", releaseVersion: "2025.1.10", want: true},
+		{name: "supported later release", releaseVersion: "2026.1.1", want: true},
+		{name: "Exasol 8 cannot parse the clause", releaseVersion: "8.29.13", want: false},
+		{name: "unparsable version", releaseVersion: "not-a-version", want: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, SupportsPublicKeyPinning(test.releaseVersion))
+		})
+	}
+}
+
 func TestSupportsNativeParquetImportBelowThreshold(t *testing.T) {
 	tests := []supportTestCase{
 		{name: "lower patch", releaseVersion: "2025.1.10"},

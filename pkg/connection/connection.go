@@ -205,7 +205,7 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 	defer stopTransfer()
 
 	if format != utils.ImportFormatNone {
-		importStatement, err := NewImportStatement(query, format, c.Config)
+		importStatement, err := NewImportStatement(query, format, c.localImportConfig())
 		if err != nil {
 			return nil, err
 		}
@@ -243,6 +243,15 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 	}
 
 	return <-result, nil
+}
+
+// localImportConfig disables local-import encryption only for Exasol 8, whose
+// IMPORT grammar cannot parse the PUBLIC KEY clause. An explicit false setting
+// remains false for every server version.
+func (c *Connection) localImportConfig() *config.Config {
+	importConfig := *c.Config
+	importConfig.LocalImportEncryption = c.Config.LocalImportEncryption && utils.SupportsPublicKeyPinning(c.ServerVersion)
+	return &importConfig
 }
 
 // rejectUnservableParquetImport reports why a local Parquet import cannot run,

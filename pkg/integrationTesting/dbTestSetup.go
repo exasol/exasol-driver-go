@@ -72,6 +72,13 @@ func (setup *DbTestSetup) SupportsNativeParquetImport() bool {
 	return utils.SupportsNativeParquetImport(setup.DbVersion)
 }
 
+// SupportsPublicKeyPinning reports whether the server this suite started can
+// parse the PUBLIC KEY clause an encrypted local import uses to pin its proxy
+// connection.
+func (setup *DbTestSetup) SupportsPublicKeyPinning() bool {
+	return utils.SupportsPublicKeyPinning(setup.DbVersion)
+}
+
 func (setup *DbTestSetup) getExasolMajorVersion() (int, error) {
 	db := setup.createConnection()
 	defer db.Close()

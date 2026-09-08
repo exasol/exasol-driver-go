@@ -291,6 +291,22 @@ func (suite *ConnectionTestSuite) TestCsvImportUsesRequestedEncryptionOnSupporti
 	peer.acceptedConnection(suite.T())
 }
 
+func (suite *ConnectionTestSuite) TestCsvImportDisablesRequestedEncryptionOnExasol8() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateRowCountResponse(3)
+	conn := suite.createConnectionTo(peer, "8.29.13")
+	conn.Config.LocalImportEncryption = true
+
+	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Len(suite.sentStatements(), 1)
+	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'http://")
+	suite.NotContains(suite.sentStatements()[0], "PUBLIC KEY")
+	peer.acceptedConnection(suite.T())
+}
+
 func (suite *ConnectionTestSuite) TestPrepareContextFailsClosed() {
 	conn := suite.createOpenConnection()
 	conn.IsClosed = true
