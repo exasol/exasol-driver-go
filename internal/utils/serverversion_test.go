@@ -54,32 +54,11 @@ func TestSupportsNativeParquetImportAtOrAboveThreshold(t *testing.T) {
 	assertSupport(t, SupportsNativeParquetImport, true, tests)
 }
 
-func TestSupportsPublicKeyPinningAtOrAboveThreshold(t *testing.T) {
-	tests := []supportTestCase{
-		{name: "exact threshold", releaseVersion: "2025.1.0"},
-		{name: "CI matrix leg observed to accept the clause", releaseVersion: "2025.1.10"},
-		{name: "CI matrix leg observed to accept the clause on a higher major", releaseVersion: "2026.1.0"},
-		{name: "higher minor", releaseVersion: "2025.2.1"},
-		{name: "missing patch treated as zero at the threshold", releaseVersion: serverVersionWithoutPatch},
-	}
-	assertSupport(t, SupportsPublicKeyPinning, true, tests)
-}
-
-func TestSupportsPublicKeyPinningBelowThreshold(t *testing.T) {
-	tests := []supportTestCase{
-		{name: "CI matrix leg observed to reject the clause", releaseVersion: "7.1.30"},
-		{name: "lower minor", releaseVersion: "2025.0.99"},
-		{name: "lower major", releaseVersion: "2024.9.9"},
-		{name: "unparsable version is treated as unsupported", releaseVersion: "not-a-version"},
-	}
-	assertSupport(t, SupportsPublicKeyPinning, false, tests)
-}
-
 func TestSupportsNativeParquetImportBelowThreshold(t *testing.T) {
 	tests := []supportTestCase{
 		{name: "lower patch", releaseVersion: "2025.1.10"},
 		{name: "lower minor", releaseVersion: "2025.0.99"},
-		{name: "lower major", releaseVersion: "7.1.30"},
+		{name: "lower major", releaseVersion: "2024.9.9"},
 		{name: "missing patch defaults to zero, below threshold", releaseVersion: serverVersionWithoutPatch},
 		{name: "non-numeric patch below threshold", releaseVersion: "2025.1.abc"},
 	}

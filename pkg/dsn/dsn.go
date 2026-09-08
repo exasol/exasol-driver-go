@@ -30,7 +30,8 @@ type DSNConfig struct {
 	AccessToken               string            // Access token (alternative to username/password)
 	RefreshToken              string            // Refresh token (alternative to username/password)
 	UrlPath                   string            // If the connection is a Http connection RestApi, this is the path of the query
-	LocalImportEncryption     *bool             // If true, encrypt the local-import proxy connection via TLS (default: true)
+	// Deprecated: Local imports are encrypted by default on supported Exasol versions. This option will be removed in a future major release.
+	LocalImportEncryption *bool // If true, encrypt the local-import proxy connection via TLS (default: true)
 }
 
 // DSNConfigBuilder is a builder for DSNConfig objects.
@@ -129,6 +130,7 @@ func (c *DSNConfigBuilder) Schema(schema string) *DSNConfigBuilder {
 }
 
 // LocalImportEncryption defines if the local-import proxy connection should be encrypted via TLS (default: true).
+// Deprecated: Local imports are encrypted by default on supported Exasol versions. This option will be removed in a future major release.
 func (c *DSNConfigBuilder) LocalImportEncryption(enabled bool) *DSNConfigBuilder {
 	c.Config.LocalImportEncryption = &enabled
 	return c

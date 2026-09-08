@@ -155,7 +155,7 @@ func (suite *ErrorsTestSuite) TestNewInvalidArgType() {
 }
 
 func (suite *ErrorsTestSuite) TestNewParquetImportNotSupported() {
-	suite.EqualError(NewParquetImportNotSupported("7.1.30"), "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '7.1.30'")
+	suite.EqualError(NewParquetImportNotSupported("2025.1.10"), "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '2025.1.10'")
 }
 
 func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
