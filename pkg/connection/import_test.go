@@ -257,6 +257,19 @@ func TestNewImportStatementRejectsMultipleParquetFiles(t *testing.T) {
 	peer.assertNotDialled(t)
 }
 
+func TestNewImportStatementIgnoresFileClausesInComments(t *testing.T) {
+	peer := startSilentPeer(t)
+	path := createParquetFixture(t)
+	query := fmt.Sprintf("/* previous FILE 'old.parquet' */IMPORT INTO TEST_TABLE FROM LOCAL PARQUET FILE '%s'", path)
+
+	statement, err := NewImportStatement(query, utils.ImportFormatParquet, peer.plaintextConfig())
+
+	if err != nil {
+		t.Fatalf(createImportStatementFailure, err)
+	}
+	t.Cleanup(statement.Close)
+}
+
 func TestGetUpdatedQueryPinsTheEncryptedConnection(t *testing.T) {
 	peer := startSilentPeer(t)
 	statement, err := NewImportStatement(csvImportQuery, utils.ImportFormatCSV, peer.encryptedConfig())

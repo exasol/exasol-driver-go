@@ -16,6 +16,12 @@ For running the integrations tests you need [Docker](https://www.docker.com/) an
 go test ./...
 ```
 
+To force tests to run instead of using cached results, add `-count=1`:
+
+```shell
+go test -count=1 ./...
+```
+
 Integration tests use [exasol-test-setup-abstraction-server](https://github.com/exasol/exasol-test-setup-abstraction-server) and thus indirectly [exasol-testcontainers](https://github.com/exasol/exasol-testcontainers/). To speedup tests during development you need to enable reusing of test containers by creating file `~/.testcontainers.properties` with the following content:
 
 ```properties
