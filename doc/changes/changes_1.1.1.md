@@ -14,6 +14,7 @@ When trace logging is enabled, the driver logs the first detected concurrent rea
 
 * #151: Fixed false detection of IMPORT statements inside multiline SQL string literals
 * #139: Prevented a slice-bounds panic caused by concurrent WebSocket access
+* #151: Fixed false detection of IMPORT statements inside multiline SQL string literals
 
 ## Dependency Updates
 
