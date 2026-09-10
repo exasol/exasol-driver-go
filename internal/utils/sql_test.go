@@ -156,6 +156,18 @@ func TestUpdateImportQuery(t *testing.T) {
 		{name: "with newline",
 			query:    "IMPORT INTO table_1\nFROM LOCAL CSV USER 'agent_007' IDENTIFIED BY 'secret' FILE 'tab1_part1.csv' FILE 'tab1_part2.csv' COLUMN SEPARATOR = ';'\r\nSKIP = 5;",
 			expected: "IMPORT INTO table_1\nFROM CSV AT 'http://127.0.0.1:4333' USER 'agent_007' IDENTIFIED BY 'secret' FILE 'data.csv' COLUMN SEPARATOR = ';'\r\nSKIP = 5;"},
+		{name: "does not rewrite local source clauses in comments",
+			query:    "/* LOCAL CSV */ IMPORT INTO table FROM LOCAL CSV FILE '/path/to/filename.csv' -- LOCAL CSV",
+			expected: "/* LOCAL CSV */ IMPORT INTO table FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv' -- LOCAL CSV"},
+		{name: "does not rewrite local source clauses in quoted identifiers",
+			query:    "IMPORT INTO \"LOCAL CSV\" FROM LOCAL CSV FILE '/path/to/filename.csv'",
+			expected: "IMPORT INTO \"LOCAL CSV\" FROM CSV AT 'http://127.0.0.1:4333' FILE 'data.csv' "},
+		{name: "does not rewrite parquet source clauses in comments",
+			query:    "/* LOCAL PARQUET */ IMPORT INTO table FROM LOCAL PARQUET FILE '/path/to/filename.parquet' -- LOCAL PARQUET",
+			expected: "/* LOCAL PARQUET */ IMPORT INTO table FROM PARQUET AT 'http://127.0.0.1:4333;MaxConcurrentReads=1' FILE 'data.parquet' -- LOCAL PARQUET"},
+		{name: "does not rewrite parquet source clauses in quoted identifiers",
+			query:    "IMPORT INTO \"LOCAL PARQUET\" FROM LOCAL PARQUET FILE '/path/to/filename.parquet'",
+			expected: "IMPORT INTO \"LOCAL PARQUET\" FROM PARQUET AT 'http://127.0.0.1:4333;MaxConcurrentReads=1' FILE 'data.parquet' "},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

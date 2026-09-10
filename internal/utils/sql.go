@@ -22,6 +22,8 @@ const (
 func namedGroup(name, regexp string) string { return fmt.Sprintf("(?P<%s>%s)", name, regexp) }
 
 var localImportRegex = regexp.MustCompile(`(?is)^\s*IMPORT[\s(]+.+FROM` + WHITESPACE + `LOCAL` + WHITESPACE + namedGroup(IMPORT_FORMAT_PLACEHOLDER, "CSV|PARQUET") + `.*$`)
+var localCSVSourceRegex = regexp.MustCompile(`(?i)LOCAL` + WHITESPACE + `CSV`)
+var localParquetSourceRegex = regexp.MustCompile(`(?i)LOCAL` + WHITESPACE + `PARQUET`)
 
 func GetImportFormat(query string) ImportFormat {
 	matches := localImportRegex.FindStringSubmatch(skipLeadingSQLComments(query))
@@ -103,6 +105,25 @@ func sqlWithoutComments(query string) string {
 	masked := []byte(query)
 	for index := 0; index < len(query); index++ {
 		if quoteEnd := quotedLiteralEnd(query, index); quoteEnd > index {
+			index = quoteEnd - 1
+			continue
+		}
+		if commentEnd := sqlCommentEnd(query, index); commentEnd > index {
+			maskComment(masked, index, commentEnd)
+			index = commentEnd - 1
+		}
+	}
+	return string(masked)
+}
+
+// sqlWithoutCommentsAndQuotedLiterals masks text that is not executable SQL
+// while preserving byte positions. This permits indices found in the returned
+// string to be applied to the original query.
+func sqlWithoutCommentsAndQuotedLiterals(query string) string {
+	masked := []byte(query)
+	for index := 0; index < len(query); index++ {
+		if quoteEnd := quotedLiteralEnd(query, index); quoteEnd > index {
+			maskComment(masked, index, quoteEnd)
 			index = quoteEnd - 1
 			continue
 		}
@@ -216,5 +237,13 @@ func UpdateImportQuery(query string, target ProxyTarget) string {
 	}
 	proxyURL := fmt.Sprintf("%s://%s:%d%s", target.scheme(), target.Host, target.Port, urlSuffix)
 	updatedImport := fmt.Sprintf("%s AT '%s'%s", formatKeyword, proxyURL, target.publicKeyClause())
-	return string(regexp.MustCompile(`(?i)(LOCAL`+WHITESPACE+formatKeyword+`)`).ReplaceAll([]byte(query), []byte(updatedImport)))
+	sourceRegex := localCSVSourceRegex
+	if format == ImportFormatParquet {
+		sourceRegex = localParquetSourceRegex
+	}
+	match := sourceRegex.FindStringIndex(sqlWithoutCommentsAndQuotedLiterals(query))
+	if match == nil {
+		return query
+	}
+	return query[:match[0]] + updatedImport + query[match[1]:]
 }
