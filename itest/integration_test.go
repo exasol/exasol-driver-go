@@ -943,15 +943,9 @@ func (suite *IntegrationTestSuite) assertImportsAreEncrypted(database *sql.DB) {
 // could still hang or fail here, so this repeats the same live-server proof
 // for the write path.
 //
-// CSV import carries no server-version gate of its own, unlike Parquet, but the
-// PUBLIC KEY clause that pins the encrypted connection is itself a server
-// capability, so the rows can only be asserted where the server can parse it.
-// Exasol 7.1.30 answers "syntax error, unexpected IDENTIFIER_PART_, expecting
-// FILE_" at that clause. The gate is therefore on SupportsPublicKeyPinning and
-// not on SupportsNativeParquetImport: 2025.1.10 parses the clause while being
-// below the Parquet threshold, so the two questions have different answers on
-// the very leg that separates them. Decision-log § [16] records the evidence and
-// the driver-side gap it leaves open.
+// CSV import carries no server-version gate of its own, unlike Parquet. Exasol
+// 8 cannot parse the PUBLIC KEY clause that pins the encrypted proxy connection,
+// so that supported server family runs CSV imports over plaintext instead.
 func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
 	if !suite.exasol.SupportsPublicKeyPinning() {
 		suite.T().Skipf("Exasol %s cannot parse the PUBLIC KEY clause that pins an encrypted local import", suite.exasol.DbVersion)

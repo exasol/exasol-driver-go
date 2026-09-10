@@ -22,9 +22,9 @@ var mockException = types.Exception{Text: "mock error", SQLCode: "mock sql code"
 const (
 	// supportedServerVersion is the CI leg that serves a local Parquet import natively.
 	supportedServerVersion = "2026.1.0"
-	// unsupportedServerVersion is a CI leg below the 2025.1.11 threshold, where a
+	// unsupportedServerVersion is below the 2025.1.11 threshold, where a
 	// Parquet import must be refused before anything is dialled or sent.
-	unsupportedServerVersion = "7.1.30"
+	unsupportedServerVersion = "2025.1.10"
 	// execDeadline bounds a local import driven through exec. A Parquet transfer
 	// parks in a read only the server can satisfy, so an import nobody tells to
 	// stop hangs the caller for good; the bound reports that as a failure.
@@ -209,7 +209,7 @@ func (suite *ConnectionTestSuite) TestParquetImportRejectedOnServerBelowThreshol
 	result, err := conn.exec(context.Background(), parquetQuery, nil)
 
 	suite.Nil(result)
-	suite.EqualError(err, "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '7.1.30'",
+	suite.EqualError(err, "E-EGOD-31: local Parquet import requires Exasol version '2025.1.11' or later, but the server reported version '2025.1.10'",
 		"a statement naming one file reaches the version guard, which is the only thing left that can refuse it")
 	suite.assertNothingSent()
 	peer.assertNotDialled(suite.T())
@@ -259,7 +259,7 @@ func (suite *ConnectionTestSuite) TestParquetImportSurfacesTheErrorOfTheServer()
 	peer.acceptedConnection(suite.T())
 }
 
-func (suite *ConnectionTestSuite) TestCsvImportDisablesRequestedEncryptionOnUnsupportedServer() {
+func (suite *ConnectionTestSuite) TestCsvImportUsesRequestedEncryptionOnServerBelowParquetThreshold() {
 	peer := startSilentPeer(suite.T())
 	suite.simulateRowCountResponse(3)
 	conn := suite.createConnectionTo(peer, unsupportedServerVersion)
@@ -267,11 +267,11 @@ func (suite *ConnectionTestSuite) TestCsvImportDisablesRequestedEncryptionOnUnsu
 
 	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
 
-	suite.NoError(err, "an old server must retain CSV support by falling back to plaintext")
+	suite.NoError(err)
 	suite.NotNil(result)
 	suite.Len(suite.sentStatements(), 1)
-	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'http://")
-	suite.NotContains(suite.sentStatements()[0], "PUBLIC KEY")
+	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'https://")
+	suite.Contains(suite.sentStatements()[0], "PUBLIC KEY")
 	peer.acceptedConnection(suite.T())
 }
 
@@ -288,6 +288,22 @@ func (suite *ConnectionTestSuite) TestCsvImportUsesRequestedEncryptionOnSupporti
 	suite.Len(suite.sentStatements(), 1)
 	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'https://")
 	suite.Contains(suite.sentStatements()[0], "PUBLIC KEY")
+	peer.acceptedConnection(suite.T())
+}
+
+func (suite *ConnectionTestSuite) TestCsvImportDisablesRequestedEncryptionOnExasol8() {
+	peer := startSilentPeer(suite.T())
+	suite.simulateRowCountResponse(3)
+	conn := suite.createConnectionTo(peer, "8.29.13")
+	conn.Config.LocalImportEncryption = true
+
+	result, err := suite.execWithinDeadline(conn, multiFileCsvImportQuery)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Len(suite.sentStatements(), 1)
+	suite.Contains(suite.sentStatements()[0], "FROM CSV AT 'http://")
+	suite.NotContains(suite.sentStatements()[0], "PUBLIC KEY")
 	peer.acceptedConnection(suite.T())
 }
 

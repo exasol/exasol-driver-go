@@ -10,6 +10,8 @@ This release prevents a runtime panic when multiple operations access one WebSoc
 
 When trace logging is enabled, the driver logs the first detected concurrent read and write per connection. These diagnostics contain no request or response payloads.
 
+**Note:** Starting with this release, the Go driver is not tested with Exasol version 7.1 any more. Only the latest LTS release 2025.1.x and 8.29.x and the latest release 2026.1.1 are supported. Exasol 7.1 is officially past end-of-life since 2026-06-30 (see https://docs.exasol.com/db/latest/planning/life_cycle/life_cycle_policy.htm).
+
 ## Bug Fixes
 
 * #151: Fixed false detection of IMPORT statements inside multiline SQL string literals

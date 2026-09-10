@@ -205,7 +205,7 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 	defer stopTransfer()
 
 	if format != utils.ImportFormatNone {
-		importStatement, err := NewImportStatement(query, format, c.localImportConfig())
+		importStatement, err := NewImportStatement(query, format, c.createLocalImportConfig())
 		if err != nil {
 			return nil, err
 		}
@@ -245,10 +245,11 @@ func (c *Connection) exec(ctx context.Context, query string, args []driver.Value
 	return <-result, nil
 }
 
-// localImportConfig applies the server capability gate to the requested DSN
-// setting. Unsupported servers receive plaintext rather than a PUBLIC KEY
-// clause they cannot parse; an explicit false setting remains false everywhere.
-func (c *Connection) localImportConfig() *config.Config {
+// createLocalImportConfig creates a copy of the connection configuration and
+// disables local-import encryption only for Exasol 8, whose IMPORT grammar
+// cannot parse the PUBLIC KEY clause. An explicit false setting remains false
+// for every server version.
+func (c *Connection) createLocalImportConfig() *config.Config {
 	importConfig := *c.Config
 	importConfig.LocalImportEncryption = c.Config.LocalImportEncryption && utils.SupportsPublicKeyPinning(c.ServerVersion)
 	return &importConfig

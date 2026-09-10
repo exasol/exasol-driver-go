@@ -12,11 +12,7 @@ const (
 	minParquetImportPatch = 11
 )
 
-const (
-	minPublicKeyPinningMajor = 2025
-	minPublicKeyPinningMinor = 1
-	minPublicKeyPinningPatch = 0
-)
+const minPublicKeyPinningMajor = 2025
 
 var leadingDigitsRegex = regexp.MustCompile(`^\d+`)
 
@@ -30,15 +26,11 @@ func SupportsNativeParquetImport(releaseVersion string) bool {
 
 // SupportsPublicKeyPinning reports whether a server reporting the given release
 // version can parse the PUBLIC KEY clause that pins an encrypted local import's
-// proxy connection. It sits beside SupportsNativeParquetImport because both
-// answer the same kind of question, and the two thresholds genuinely differ:
-// 2025.1.10 accepts the clause but cannot serve native Parquet import.
-//
-// Connection uses this gate to disable local-import encryption automatically
-// on older servers, which cannot parse the clause at all. See decision-log
-// § [16] for the evidence behind the version.
+// proxy connection. Exasol 8 releases cannot parse this clause, so imports use
+// plaintext there. Unparsable release versions are treated as unsupported.
 func SupportsPublicKeyPinning(releaseVersion string) bool {
-	return atLeastVersion(releaseVersion, minPublicKeyPinningMajor, minPublicKeyPinningMinor, minPublicKeyPinningPatch)
+	major, _, _, ok := parseServerVersion(releaseVersion)
+	return ok && major >= minPublicKeyPinningMajor
 }
 
 func atLeastVersion(releaseVersion string, major int, minor int, patch int) bool {
