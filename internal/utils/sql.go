@@ -26,7 +26,7 @@ var localCSVSourceRegex = regexp.MustCompile(`(?i)LOCAL` + WHITESPACE + `CSV`)
 var localParquetSourceRegex = regexp.MustCompile(`(?i)LOCAL` + WHITESPACE + `PARQUET`)
 
 func GetImportFormat(query string) ImportFormat {
-	matches := localImportRegex.FindStringSubmatch(skipLeadingSQLComments(query))
+	matches := localImportRegex.FindStringSubmatch(sqlWithoutCommentsAndQuotedLiterals(query))
 	if matches == nil {
 		return ImportFormatNone
 	}
@@ -34,28 +34,6 @@ func GetImportFormat(query string) ImportFormat {
 		return ImportFormatParquet
 	}
 	return ImportFormatCSV
-}
-
-func skipLeadingSQLComments(query string) string {
-	for {
-		query = strings.TrimLeft(query, " \t\r\n\f")
-		switch {
-		case strings.HasPrefix(query, "--"):
-			lineEnd := strings.IndexAny(query, "\r\n")
-			if lineEnd == -1 {
-				return ""
-			}
-			query = query[lineEnd+1:]
-		case strings.HasPrefix(query, "/*"):
-			commentEnd := strings.Index(query[2:], "*/")
-			if commentEnd == -1 {
-				return query
-			}
-			query = query[commentEnd+4:]
-		default:
-			return query
-		}
-	}
 }
 
 const ROW_SEPARATOR_PLACEHOLDER = "RowSeparatorPlaceholder"

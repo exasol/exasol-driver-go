@@ -19,22 +19,6 @@ const (
 	testFingerprint         = "sha256//abc123"
 )
 
-func TestSkipLeadingSQLComments(t *testing.T) {
-	tests := []struct {
-		name, query, expected string
-	}{
-		{name: "no comment", query: "IMPORT INTO target", expected: "IMPORT INTO target"},
-		{name: "line comment", query: "-- note\nIMPORT INTO target", expected: "IMPORT INTO target"},
-		{name: "block comment", query: "/* note */ IMPORT INTO target", expected: "IMPORT INTO target"},
-		{name: "multiple comments", query: "/* first */ -- second\n IMPORT INTO target", expected: "IMPORT INTO target"},
-		{name: "unterminated line comment", query: "-- note", expected: ""},
-		{name: "unterminated block comment", query: "/* note", expected: "/* note"},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) { assert.Equal(t, test.expected, skipLeadingSQLComments(test.query)) })
-	}
-}
-
 func TestNamedValuesToValues(t *testing.T) {
 	namedValues := []driver.NamedValue{{Name: ""}, {Name: ""}}
 	values, err := NamedValuesToValues(namedValues)
@@ -104,6 +88,10 @@ func TestGetImportFormatNone(t *testing.T) {
 	}{
 		{name: "FBV not supported", query: "IMPORT INTO SCHEMA.TABLE FROM LOCAL FBV FILE '/path/to/filename.fbf'", expectedResult: ImportFormatNone},
 		{name: "select query unsupported", query: "select * from schema.table", expectedResult: ImportFormatNone},
+		{name: "remote csv import with local source in comment", query: "/* heading */ IMPORT INTO t FROM CSV AT 'https://host' FILE 'remote.csv' /* FROM LOCAL CSV */", expectedResult: ImportFormatNone},
+		{name: "remote csv import with local source in quoted value", query: "IMPORT INTO t FROM CSV AT 'https://host/FROM LOCAL CSV' FILE 'remote.csv'", expectedResult: ImportFormatNone},
+		{name: "remote parquet import with local source in comment", query: "/* heading */ IMPORT INTO t FROM PARQUET AT 'https://host' FILE 'remote.parquet' /* FROM LOCAL PARQUET */", expectedResult: ImportFormatNone},
+		{name: "remote parquet import with local source in quoted value", query: "IMPORT INTO t FROM PARQUET AT 'https://host/FROM LOCAL PARQUET' FILE 'remote.parquet'", expectedResult: ImportFormatNone},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
