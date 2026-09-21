@@ -1,6 +1,13 @@
 # Developer Guide
 
-## Testing / Development
+## Versioning
+
+The version in the following places must be identical
+* File `internal/version/version.go`
+* File `.project-keeper.yml`
+* Directory `doc/changes/`: File `changelog.md` and latest file `changes_*.md`
+
+## Testing
 
 Run unit tests only:
 
@@ -26,6 +33,32 @@ Integration tests use [exasol-test-setup-abstraction-server](https://github.com/
 
 ```properties
 testcontainers.reuse.enable=true
+```
+
+### Select Exasol Version for Tests
+
+The default database version is defined by `integrationTesting.defaultExasolDbVersion`.
+
+You can override this version by setting environment variable `DB_VERSION`, e.g.
+```shell
+export DB_VERSION=8.29.13
+```
+
+### Run Selected Tests
+
+Run all tests in a specific package:
+```shell
+go test github.com/exasol/exasol-driver-go/pkg/connection/wsconn -p 1 -v -count 1
+```
+
+Argument `-p` is short for `-parallel` and limits the number of packages to test in parallel.
+
+Run a single test within a suite:
+
+```shell
+go test -count 1 -p 1 -v \
+   -run TestIntegrationSuite/TestSimpleParquetImportStatement \
+   github.com/exasol/exasol-driver-go/itest
 ```
 
 ## Parquet integration-test fixture
