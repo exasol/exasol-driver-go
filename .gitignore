@@ -40,3 +40,6 @@ pom.xml.versionsBackup
 *.flattened-pom.xml
 __debug_bin*
 /.serena/
+
+# Emacs
+/TAGS

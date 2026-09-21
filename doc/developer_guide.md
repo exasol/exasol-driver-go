@@ -28,6 +28,32 @@ Integration tests use [exasol-test-setup-abstraction-server](https://github.com/
 testcontainers.reuse.enable=true
 ```
 
+### Select Exasol Version for Tests
+
+The default database version is defined by `integrationTesting.defaultExasolDbVersion`.
+
+You can override this version by setting environment variable `DB_VERSION`, e.g.
+```shell
+export DB_VERSION=8.29.13
+```
+
+### Run Selected Tests
+
+Run all tests in a specific package:
+```shell
+go test github.com/exasol/exasol-driver-go/pkg/connection/wsconn -p 1 -v -count 1
+```
+
+Argument `-p` is short for `-parallel` and limits the number of packages to test in parallel.
+
+Run a single test within a suite:
+
+```shell
+go test -count 1 -p 1 -v \
+   -run TestIntegrationSuite/TestSimpleParquetImportStatement \
+   github.com/exasol/exasol-driver-go/itest
+```
+
 ## Parquet integration-test fixture
 
 Integration tests generate `../testData/data.parquet` containing the same three rows as `testData/data.csv` — `(11, "test1")`, `(12, "test2")`, `(13, "test3")` — as an `INT64` column named `a` and a UTF-8 string column named `b`. The test-only helper uses `github.com/parquet-go/parquet-go`; the driver itself never parses Parquet.

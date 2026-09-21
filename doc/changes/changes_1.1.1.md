@@ -27,3 +27,7 @@ When trace logging is enabled, the driver logs the first detected concurrent rea
 ### Test Dependency Updates
 
 * Updated `golang.org/x/sync:v0.21.0` to `v0.22.0`
+
+## Documentation
+
+* #162: Described executing single tests and added file `error_code_config.yml`
