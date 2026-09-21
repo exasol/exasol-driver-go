@@ -1,5 +1,3 @@
-# Changes 1.2.0 [▲](../parent.md)
-
 # Exasol Driver go 1.2.0, released 2026-??-??
 
 Code name:
