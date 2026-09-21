@@ -1,6 +1,13 @@
 # Developer Guide
 
-## Testing / Development
+## Versioning
+
+The version in the following places must be identical
+* File `internal/version/version.go`
+* File `.project-keeper.yml`
+* Directory `doc/changes/`: File `changelog.md` and latest file `changes_*.md`
+
+## Testing
 
 Run unit tests only:
 

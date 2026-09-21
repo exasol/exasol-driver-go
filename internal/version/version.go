@@ -1,3 +1,3 @@
 package version
 
-const DriverVersion = "v1.1.1"
+const DriverVersion = "v1.2.0"
