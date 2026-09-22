@@ -46,7 +46,7 @@ var mapPhysicalTypeTests = []struct {
 		"exceeds supported maxiumum", columnType{}},
 	{parquet.Float, 0, "", columnType{Name: "DOUBLE PRECISION"}},
 	{parquet.Double, 0, "", columnType{Name: "DOUBLE PRECISION"}},
-	{33, 0, "Unsupported Parquet physical data type", columnType{}},
+	{33, 0, "unsupported Parquet physical data type", columnType{}},
 }
 
 func TestMapPhysicalType(t *testing.T) {
