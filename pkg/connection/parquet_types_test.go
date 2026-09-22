@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/parquet-go/parquet-go"
+	"github.com/stretchr/testify/assert"
 )
 
 var columnSizeTests = []struct {

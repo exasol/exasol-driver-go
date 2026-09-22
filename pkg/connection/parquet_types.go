@@ -10,7 +10,7 @@ import (
 const (
 	decimalPrecisionInt32 = 10
 	decimalPrecisionInt64 = 19
-	maxVarcharLength    = 2000000
+	maxVarcharLength      = 2000000
 )
 
 // numberOfDigits returns the number of decimal digits required to represent a
@@ -26,7 +26,6 @@ func numberOfDigits(bitCount int) (digits int) {
 	return int(math.Ceil(float64(n) * math.Ln2 / math.Ln10))
 }
 
-
 type columnType struct {
 	Name string
 	Size int64
@@ -38,7 +37,6 @@ func intColumn(scale int64) (result columnType) {
 		Size: scale,
 	}
 }
-
 
 func varcharColumn(length int64) (result columnType) {
 	return columnType{
@@ -66,8 +64,7 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err 
 		// leaf.Node.Type().Length()
 		if size > maxVarcharLength {
 			err = fmt.Errorf(
-				"Size of parquet.FixedLenByteArray" +
-					" exceeds supported maxiumum of %d",
+				"size of parquet.FixedLenByteArray exceeds supported maxiumum of %d",
 				maxVarcharLength)
 		} else {
 			result = varcharColumn(size)
@@ -80,7 +77,7 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err 
 		// DOUBLE: IEEE 64-bit floating point values
 		result = columnType{Name: "DOUBLE PRECISION"}
 	default:
-		err = fmt.Errorf("Unsupported Parquet physical data type %s", physical)
+		err = fmt.Errorf("unsupported Parquet physical data type %s", physical)
 	}
 	return
 }
