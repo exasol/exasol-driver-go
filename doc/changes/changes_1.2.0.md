@@ -6,7 +6,7 @@ Code name:
 
 ## Features
 
-* #165: Added compute column sizes
+* #165: Added support to compute column sizes
 
 ## Documentation
 
