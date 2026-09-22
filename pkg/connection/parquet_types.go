@@ -45,9 +45,11 @@ func varcharColumn(length int64) (result columnType) {
 	}
 }
 
-// See https://github.com/exasol/parquet-edml-generator/blob/main/src/main/
-// java/com/exasol/edmlgenerator/parquet/converter/
-// ParquetColumnToMappingDefinitionConverter.java#L62
+// mapPhysicalType maps the physical parquet.Kind and size as optained by
+// leaf.Node.Type().Length() from the Parquet file schema columns to the
+// resp. Exasol SQL data type.
+//
+// See also https://parquet.apache.org/docs/file-format/types/
 func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err error) {
 	switch physical {
 	case parquet.Int32:
@@ -61,7 +63,6 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err 
 	case parquet.ByteArray:
 		result = varcharColumn(maxVarcharLength)
 	case parquet.FixedLenByteArray:
-		// leaf.Node.Type().Length()
 		if size > maxVarcharLength {
 			err = fmt.Errorf(
 				"size of parquet.FixedLenByteArray exceeds supported maxiumum of %d",
@@ -72,9 +73,6 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err 
 	case parquet.Float:
 		fallthrough
 	case parquet.Double:
-		// https://parquet.apache.org/docs/file-format/types/
-		// FLOAT: IEEE 32-bit floating point values
-		// DOUBLE: IEEE 64-bit floating point values
 		result = columnType{Name: "DOUBLE PRECISION"}
 	default:
 		err = fmt.Errorf("unsupported Parquet physical data type %s", physical)
