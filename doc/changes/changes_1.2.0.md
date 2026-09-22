@@ -7,6 +7,7 @@ Code name:
 ## Features
 
 * #165: Added support to compute column sizes
+* #168: Added support for mapping parquet physical types to SQL data types
 
 ## Documentation
 
