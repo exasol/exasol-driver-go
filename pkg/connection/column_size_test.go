@@ -8,8 +8,8 @@ import (
 )
 
 var flagtests = []struct {
-    in  int
-    out int
+	in  int
+	out int
 }{
 	{2, 1},
 	{4, 1},
@@ -17,6 +17,7 @@ var flagtests = []struct {
 	{32, decimalSizeInt32},
 	{64, decimalSizeInt64},
 }
+
 func TestColumnSizes(t *testing.T) {
 	for _, tt := range flagtests {
 		name := fmt.Sprintf("digits_%d", tt.in)
