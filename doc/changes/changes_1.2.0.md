@@ -4,6 +4,10 @@ Code name:
 
 ## Summary
 
+## Features
+
+* #165: Added support to compute column sizes
+
 ## Documentation
 
 * #162: Described executing single tests and added file `error_code_config.yml`

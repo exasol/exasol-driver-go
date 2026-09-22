@@ -29,19 +29,32 @@ To force tests to run instead of using cached results, add `-count=1`:
 go test -count=1 ./...
 ```
 
-Integration tests use [exasol-test-setup-abstraction-server](https://github.com/exasol/exasol-test-setup-abstraction-server) and thus indirectly [exasol-testcontainers](https://github.com/exasol/exasol-testcontainers/). To speedup tests during development you need to enable reusing of test containers by creating file `~/.testcontainers.properties` with the following content:
-
-```properties
-testcontainers.reuse.enable=true
-```
-
-### Select Exasol Version for Tests
+### Selecting the Exasol Version for Integration Tests
 
 The default database version is defined by `integrationTesting.defaultExasolDbVersion`.
 
 You can override this version by setting environment variable `DB_VERSION`, e.g.
 ```shell
 export DB_VERSION=8.29.13
+```
+
+Hint: Download the Docker image for Exasol docker-db using pure docker commands, e.g.
+```shell
+docker pull exasol/docker-db:2026.1.1
+```
+
+Benefits:
+* Displays progress
+* Avoids timeout in integration tests
+
+### Reusing the Docker Container
+
+The integration tests use [exasol-test-setup-abstraction-server](https://github.com/exasol/exasol-test-setup-abstraction-server) and thus indirectly [exasol-testcontainers](https://github.com/exasol/exasol-testcontainers/).
+
+To speedup tests during development you need to enable reusing of test containers by creating file `~/.testcontainers.properties` with the following content:
+
+```properties
+testcontainers.reuse.enable=true
 ```
 
 ### Run Selected Tests
