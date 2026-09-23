@@ -33,7 +33,7 @@ var mapPhysicalTypeTests = []struct {
 	physical      parquet.Kind
 	size          int64
 	expectedType  string
-    expectedError string
+	expectedError string
 }{
 	{parquet.Int32, 0, intColumn(decimalPrecisionInt32), ""},
 	{parquet.Int32, 1, intColumn(decimalPrecisionInt32), ""},

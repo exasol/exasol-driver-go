@@ -27,7 +27,7 @@ func numberOfDigits(bitCount int) (digits int) {
 	return int(math.Ceil(float64(n) * math.Ln2 / math.Ln10))
 }
 
-func intColumn(precision int64) (string) {
+func intColumn(precision int64) string {
 	return fmt.Sprintf("DECIMAL(%d,0)", precision)
 }
 
