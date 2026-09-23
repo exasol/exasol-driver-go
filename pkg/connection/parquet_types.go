@@ -11,6 +11,7 @@ const (
 	decimalPrecisionInt32 = 10
 	decimalPrecisionInt64 = 19
 	maxVarcharLength      = 2000000
+	doublePrecisionColumn = "DOUBLE PRECISION"
 )
 
 // numberOfDigits returns the number of decimal digits required to represent a
@@ -26,8 +27,8 @@ func numberOfDigits(bitCount int) (digits int) {
 	return int(math.Ceil(float64(n) * math.Ln2 / math.Ln10))
 }
 
-func intColumn(scale int64) (result string) {
-	return fmt.Sprintf("DECIMAL(%d,0)", scale)
+func intColumn(precision int64) (result string) {
+	return fmt.Sprintf("DECIMAL(%d,0)", precision)
 }
 
 func varcharColumn(length int64) (result string) {
@@ -62,7 +63,7 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result string, err erro
 	case parquet.Float:
 		fallthrough
 	case parquet.Double:
-		result = "DOUBLE PRECISION"
+		result = doublePrecisionColumn
 	default:
 		err = fmt.Errorf("unsupported Parquet physical data type %s", physical)
 	}

@@ -48,10 +48,10 @@ var mapPhysicalTypeTests = []struct {
 	{parquet.FixedLenByteArray, 1, varcharColumn(1), ""},
 	{parquet.FixedLenByteArray, 123, varcharColumn(123), ""},
 	{parquet.FixedLenByteArray, maxVarcharLength + 1, "", "exceeds supported maxiumum"},
-	{parquet.Float, 0, "DOUBLE PRECISION", ""},
-	{parquet.Float, 1, "DOUBLE PRECISION", ""},
-	{parquet.Double, 0, "DOUBLE PRECISION", ""},
-	{parquet.Double, 1, "DOUBLE PRECISION", ""},
+	{parquet.Float, 0, doublePrecisionColumn, ""},
+	{parquet.Float, 1, doublePrecisionColumn, ""},
+	{parquet.Double, 0, doublePrecisionColumn, ""},
+	{parquet.Double, 1, doublePrecisionColumn, ""},
 	{33, 0, "", "unsupported Parquet physical data type"},
 }
 
