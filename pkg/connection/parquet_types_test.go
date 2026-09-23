@@ -70,3 +70,67 @@ func TestMapPhysicalType(t *testing.T) {
 		})
 	}
 }
+
+var createTableStatementTests = []struct {
+	name          string
+	columns       []parquetColumn
+	expected      string
+	expectedError string
+}{
+	{
+		"decimal_10", []parquetColumn{parquetColumn{[]string{"d1"}, parquet.Int32, 0}},
+		"(\"d1\" DECIMAL(10,0))", "",
+	},
+	{
+		"decimal_19", []parquetColumn{parquetColumn{[]string{"d2"}, parquet.Int64, 0}},
+		"(\"d2\" DECIMAL(19,0))", "",
+	},
+	{
+		"timestamp", []parquetColumn{parquetColumn{[]string{"ts"}, parquet.Int96, 0}},
+		"(\"ts\" TIMESTAMP(9))", "",
+	},
+	{
+		"boolean", []parquetColumn{parquetColumn{[]string{"b"}, parquet.Boolean, 0}},
+		"(\"b\" BOOLEAN)", "",
+	},
+	{
+		"varchar_max", []parquetColumn{parquetColumn{[]string{"v1"}, parquet.ByteArray, 0}},
+		"(\"v1\" VARCHAR(2000000) CHARACTER SET UTF8)", "",
+	},
+	{
+		"varchar_flex", []parquetColumn{parquetColumn{[]string{"v2"}, parquet.FixedLenByteArray, 123}},
+		"(\"v2\" VARCHAR(123) CHARACTER SET UTF8)", "",
+	},
+	{
+		"error_1", []parquetColumn{parquetColumn{[]string{"e1"}, parquet.FixedLenByteArray, maxVarcharLength+1}},
+		"", "exceeds supported maximum",
+	},
+	{
+		"double_float", []parquetColumn{parquetColumn{[]string{"dp1"}, parquet.Float, 0}},
+		"(\"dp1\" DOUBLE PRECISION)", "",
+	},
+	{
+		"double_double", []parquetColumn{parquetColumn{[]string{"dp2"}, parquet.Double, 0}},
+		"(\"dp2\" DOUBLE PRECISION)", "",
+	},
+	{
+		"error_2", []parquetColumn{parquetColumn{[]string{"e1"}, 33, 0}},
+		"", "unsupported Parquet physical data type",
+	},
+}
+
+func TestCreateTableStatement(t *testing.T) {
+	for _, tt := range createTableStatementTests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := CreateTableStatement("S.T", tt.columns)
+			if tt.expectedError == "" {
+				assert.NoError(t, err, "CreateTableStatement failed unexpectedly")
+				expected := fmt.Sprintf("CREATE TABLE S.T %s", tt.expected)
+				assert.Equal(t, result, expected)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			}
+		})
+	}
+}
