@@ -12,3 +12,7 @@ Code name:
 ## Documentation
 
 * #162: Described executing single tests and added file `error_code_config.yml`
+
+## Refactorings
+
+* #170: Refactored `mapPhysicalType` to return data type `string`

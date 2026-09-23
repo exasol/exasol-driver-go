@@ -32,21 +32,27 @@ func TestColumnSizes(t *testing.T) {
 var mapPhysicalTypeTests = []struct {
 	physical parquet.Kind
 	size     int64
+	expected string
 	err      string
-	expected columnType
 }{
-	{parquet.Int32, 0, "", intColumn(decimalPrecisionInt32)},
-	{parquet.Int64, 0, "", intColumn(decimalPrecisionInt64)},
-	{parquet.Int96, 0, "", columnType{Name: "TIMESTAMP"}},
-	{parquet.Boolean, 0, "", columnType{Name: "BOOLEAN"}},
-	{parquet.ByteArray, 0, "", varcharColumn(maxVarcharLength)},
-	{parquet.FixedLenByteArray, 1, "", varcharColumn(1)},
-	{parquet.FixedLenByteArray, 123, "", varcharColumn(123)},
-	{parquet.FixedLenByteArray, maxVarcharLength + 1,
-		"exceeds supported maxiumum", columnType{}},
-	{parquet.Float, 0, "", columnType{Name: "DOUBLE PRECISION"}},
-	{parquet.Double, 0, "", columnType{Name: "DOUBLE PRECISION"}},
-	{33, 0, "unsupported Parquet physical data type", columnType{}},
+	{parquet.Int32, 0, intColumn(decimalPrecisionInt32), ""},
+	{parquet.Int32, 1, intColumn(decimalPrecisionInt32), ""},
+	{parquet.Int64, 0, intColumn(decimalPrecisionInt64), ""},
+	{parquet.Int64, 1, intColumn(decimalPrecisionInt64), ""},
+	{parquet.Int96, 0, "TIMESTAMP(3)", ""},
+	{parquet.Int96, 1, "TIMESTAMP(3)", ""},
+	{parquet.Boolean, 0, "BOOLEAN", ""},
+	{parquet.Boolean, 1, "BOOLEAN", ""},
+	{parquet.ByteArray, 0, varcharColumn(maxVarcharLength), ""},
+	{parquet.ByteArray, 1, varcharColumn(maxVarcharLength), ""},
+	{parquet.FixedLenByteArray, 1, varcharColumn(1), ""},
+	{parquet.FixedLenByteArray, 123, varcharColumn(123), ""},
+	{parquet.FixedLenByteArray, maxVarcharLength + 1, "", "exceeds supported maxiumum"},
+	{parquet.Float, 0, "DOUBLE PRECISION", ""},
+	{parquet.Float, 1, "DOUBLE PRECISION", ""},
+	{parquet.Double, 0, "DOUBLE PRECISION", ""},
+	{parquet.Double, 1, "DOUBLE PRECISION", ""},
+	{33, 0, "", "unsupported Parquet physical data type"},
 }
 
 func TestMapPhysicalType(t *testing.T) {

@@ -26,40 +26,29 @@ func numberOfDigits(bitCount int) (digits int) {
 	return int(math.Ceil(float64(n) * math.Ln2 / math.Ln10))
 }
 
-type columnType struct {
-	Name string
-	Size int64
+func intColumn(scale int64) (result string) {
+	return fmt.Sprintf("DECIMAL(%d,0)", scale)
 }
 
-func intColumn(scale int64) (result columnType) {
-	return columnType{
-		Name: "DECIMAL",
-		Size: scale,
-	}
-}
-
-func varcharColumn(length int64) (result columnType) {
-	return columnType{
-		Name: "VARCHAR",
-		Size: length,
-	}
+func varcharColumn(length int64) (result string) {
+	return fmt.Sprintf("VARCHAR(%d) CHARACTER SET UTF8", length)
 }
 
 // mapPhysicalType maps the physical parquet.Kind and size as optained by
-// leaf.Node.Type().Length() from the Parquet file schema columns to the
-// resp. Exasol SQL data type.
+// leaf.Node.Type().Length() from the Parquet file schema columns to a string
+// containing the resp. Exasol SQL data type declaration.
 //
 // See also https://parquet.apache.org/docs/file-format/types/
-func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err error) {
+func mapPhysicalType(physical parquet.Kind, size int64) (result string, err error) {
 	switch physical {
 	case parquet.Int32:
 		result = intColumn(decimalPrecisionInt32)
 	case parquet.Int64:
 		result = intColumn(decimalPrecisionInt64)
 	case parquet.Int96:
-		result = columnType{Name: "TIMESTAMP"}
+		result = "TIMESTAMP(3)"
 	case parquet.Boolean:
-		result = columnType{Name: "BOOLEAN"}
+		result = "BOOLEAN"
 	case parquet.ByteArray:
 		result = varcharColumn(maxVarcharLength)
 	case parquet.FixedLenByteArray:
@@ -73,7 +62,7 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result columnType, err 
 	case parquet.Float:
 		fallthrough
 	case parquet.Double:
-		result = columnType{Name: "DOUBLE PRECISION"}
+		result = "DOUBLE PRECISION"
 	default:
 		err = fmt.Errorf("unsupported Parquet physical data type %s", physical)
 	}
