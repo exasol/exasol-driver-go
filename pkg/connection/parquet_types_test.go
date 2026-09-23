@@ -102,7 +102,7 @@ var createTableStatementTests = []struct {
 		"(\"v2\" VARCHAR(123) CHARACTER SET UTF8)", "",
 	},
 	{
-		"error_1", []parquetColumn{parquetColumn{[]string{"e1"}, parquet.FixedLenByteArray, maxVarcharLength+1}},
+		"error_1", []parquetColumn{parquetColumn{[]string{"e1"}, parquet.FixedLenByteArray, maxVarcharLength + 1}},
 		"", "exceeds supported maximum",
 	},
 	{
