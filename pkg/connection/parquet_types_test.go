@@ -32,8 +32,8 @@ func TestColumnSizes(t *testing.T) {
 var mapPhysicalTypeTests = []struct {
 	physical parquet.Kind
 	size     int64
-	expected string
-	err      string
+	expectedType string
+    expectedError      string
 }{
 	{parquet.Int32, 0, intColumn(decimalPrecisionInt32), ""},
 	{parquet.Int32, 1, intColumn(decimalPrecisionInt32), ""},

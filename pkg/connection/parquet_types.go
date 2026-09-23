@@ -27,7 +27,7 @@ func numberOfDigits(bitCount int) (digits int) {
 	return int(math.Ceil(float64(n) * math.Ln2 / math.Ln10))
 }
 
-func intColumn(precision int64) (result string) {
+func intColumn(precision int64) (string) {
 	return fmt.Sprintf("DECIMAL(%d,0)", precision)
 }
 
@@ -47,7 +47,7 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result string, err erro
 	case parquet.Int64:
 		result = intColumn(decimalPrecisionInt64)
 	case parquet.Int96:
-		result = "TIMESTAMP(3)"
+		result = "TIMESTAMP(9)"
 	case parquet.Boolean:
 		result = "BOOLEAN"
 	case parquet.ByteArray:
