@@ -78,43 +78,43 @@ var createTableStatementTests = []struct {
 	expectedError string
 }{
 	{
-		"decimal_10", []parquetColumn{parquetColumn{[]string{"d1"}, parquet.Int32, 0}},
+		"decimal_10", []parquetColumn{{[]string{"d1"}, parquet.Int32, 0}},
 		"(\"d1\" DECIMAL(10,0))", "",
 	},
 	{
-		"decimal_19", []parquetColumn{parquetColumn{[]string{"d2"}, parquet.Int64, 0}},
+		"decimal_19", []parquetColumn{{[]string{"d2"}, parquet.Int64, 0}},
 		"(\"d2\" DECIMAL(19,0))", "",
 	},
 	{
-		"timestamp", []parquetColumn{parquetColumn{[]string{"ts"}, parquet.Int96, 0}},
+		"timestamp", []parquetColumn{{[]string{"ts"}, parquet.Int96, 0}},
 		"(\"ts\" TIMESTAMP(9))", "",
 	},
 	{
-		"boolean", []parquetColumn{parquetColumn{[]string{"b"}, parquet.Boolean, 0}},
+		"boolean", []parquetColumn{{[]string{"b"}, parquet.Boolean, 0}},
 		"(\"b\" BOOLEAN)", "",
 	},
 	{
-		"varchar_max", []parquetColumn{parquetColumn{[]string{"v1"}, parquet.ByteArray, 0}},
+		"varchar_max", []parquetColumn{{[]string{"v1"}, parquet.ByteArray, 0}},
 		"(\"v1\" VARCHAR(2000000) CHARACTER SET UTF8)", "",
 	},
 	{
-		"varchar_flex", []parquetColumn{parquetColumn{[]string{"v2"}, parquet.FixedLenByteArray, 123}},
+		"varchar_flex", []parquetColumn{{[]string{"v2"}, parquet.FixedLenByteArray, 123}},
 		"(\"v2\" VARCHAR(123) CHARACTER SET UTF8)", "",
 	},
 	{
-		"error_1", []parquetColumn{parquetColumn{[]string{"e1"}, parquet.FixedLenByteArray, maxVarcharLength + 1}},
+		"error_1", []parquetColumn{{[]string{"e1"}, parquet.FixedLenByteArray, maxVarcharLength + 1}},
 		"", "exceeds supported maximum",
 	},
 	{
-		"double_float", []parquetColumn{parquetColumn{[]string{"dp1"}, parquet.Float, 0}},
+		"double_float", []parquetColumn{{[]string{"dp1"}, parquet.Float, 0}},
 		"(\"dp1\" DOUBLE PRECISION)", "",
 	},
 	{
-		"double_double", []parquetColumn{parquetColumn{[]string{"dp2"}, parquet.Double, 0}},
+		"double_double", []parquetColumn{{[]string{"dp2"}, parquet.Double, 0}},
 		"(\"dp2\" DOUBLE PRECISION)", "",
 	},
 	{
-		"error_2", []parquetColumn{parquetColumn{[]string{"e1"}, 33, 0}},
+		"error_2", []parquetColumn{{[]string{"e1"}, 33, 0}},
 		"", "unsupported Parquet physical data type",
 	},
 }
