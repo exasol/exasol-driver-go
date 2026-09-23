@@ -30,17 +30,17 @@ func TestColumnSizes(t *testing.T) {
 }
 
 var mapPhysicalTypeTests = []struct {
-	physical parquet.Kind
-	size     int64
-	expectedType string
-    expectedError      string
+	physical      parquet.Kind
+	size          int64
+	expectedType  string
+    expectedError string
 }{
 	{parquet.Int32, 0, intColumn(decimalPrecisionInt32), ""},
 	{parquet.Int32, 1, intColumn(decimalPrecisionInt32), ""},
 	{parquet.Int64, 0, intColumn(decimalPrecisionInt64), ""},
 	{parquet.Int64, 1, intColumn(decimalPrecisionInt64), ""},
-	{parquet.Int96, 0, "TIMESTAMP(3)", ""},
-	{parquet.Int96, 1, "TIMESTAMP(3)", ""},
+	{parquet.Int96, 0, "TIMESTAMP(9)", ""},
+	{parquet.Int96, 1, "TIMESTAMP(9)", ""},
 	{parquet.Boolean, 0, "BOOLEAN", ""},
 	{parquet.Boolean, 1, "BOOLEAN", ""},
 	{parquet.ByteArray, 0, varcharColumn(maxVarcharLength), ""},
@@ -60,12 +60,12 @@ func TestMapPhysicalType(t *testing.T) {
 		name := fmt.Sprintf("%s_%d", tt.physical, tt.size)
 		t.Run(name, func(t *testing.T) {
 			result, err := mapPhysicalType(tt.physical, tt.size)
-			if tt.err == "" {
+			if tt.expectedError == "" {
 				assert.NoError(t, err, "mapPhysicalType failed unexpectedly")
-				assert.Equal(t, result, tt.expected)
+				assert.Equal(t, result, tt.expectedType)
 			} else {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.err)
+				assert.Contains(t, err.Error(), tt.expectedError)
 			}
 		})
 	}
