@@ -47,7 +47,7 @@ var mapPhysicalTypeTests = []struct {
 	{parquet.ByteArray, 1, varcharColumn(maxVarcharLength), ""},
 	{parquet.FixedLenByteArray, 1, varcharColumn(1), ""},
 	{parquet.FixedLenByteArray, 123, varcharColumn(123), ""},
-	{parquet.FixedLenByteArray, maxVarcharLength + 1, "", "exceeds supported maxiumum"},
+	{parquet.FixedLenByteArray, maxVarcharLength + 1, "", "exceeds supported maximum"},
 	{parquet.Float, 0, doublePrecisionColumn, ""},
 	{parquet.Float, 1, doublePrecisionColumn, ""},
 	{parquet.Double, 0, doublePrecisionColumn, ""},
