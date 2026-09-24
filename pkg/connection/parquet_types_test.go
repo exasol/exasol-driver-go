@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/parquet-go/parquet-go"
+	"github.com/parquet-go/parquet-go/format"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,6 +32,38 @@ func TestColumnSizes(t *testing.T) {
 		})
 	}
 	assert.Equal(t, 2000000, maxVarcharLength)
+}
+
+var mapLogicalTypeTests = []struct{
+	logical       format.LogicalTypeValue
+	expected      string
+	expectedError string
+}{
+	{&format.StringType{}, "STRING", ""},
+	{&format.UUIDType{}, "STRING", ""},
+	{&format.DecimalType{Precision: 1, Scale: 2}, "DECIMAL(1,2)", ""},
+	{&format.IntType{BitWidth: 8, IsSigned: true}, "DECIMAL(3,0)", ""},
+	{&format.DateType{}, "TIMESTAMP(9)", ""},
+	{&format.TimeType{}, "TIMESTAMP(9)", ""},
+	{&format.TimestampType{}, "TIMESTAMP(9)", ""},
+	{&format.Float16Type{}, "DOUBLE PRECISION", ""},
+	{&format.NullType{}, "", "unsupported logical type"},
+}
+
+func TestMapLogicalType(t *testing.T) {
+	for _, tt := range mapLogicalTypeTests {
+		name := fmt.Sprintf("%T", tt.logical)
+		t.Run(name, func(t *testing.T) {
+			result, err := mapLogicalType(tt.logical)
+			if tt.expectedError == "" {
+				assert.NoError(t, err, "mapLogicalType failed unexpectedly")
+				assert.Equal(t, result, tt.expected)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			}
+		})
+	}
 }
 
 const invalidPhysicalDataType = 33
