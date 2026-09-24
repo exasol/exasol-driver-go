@@ -83,6 +83,9 @@ type parquetColumn struct {
 // CreateTableStatement returns the SQL statement to create a table based on
 // the column definitions in parameter columns.
 func createTableStatement(tableFqn string, columns []parquetColumn) (result string, err error) {
+	if len(columns) < 1 {
+		return "", fmt.Errorf("empty list of columns is not supported")
+	}
 	sql := make([]string, 0, len(columns))
 	for _, col := range columns {
 		sqlType, err := mapPhysicalType(col.kind, int64(col.length))

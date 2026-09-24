@@ -29,6 +29,8 @@ func TestColumnSizes(t *testing.T) {
 	assert.Equal(t, 2000000, maxVarcharLength)
 }
 
+const invalidPhysicalDataType = 33
+
 var mapPhysicalTypeTests = []struct {
 	physical      parquet.Kind
 	size          int64
@@ -52,7 +54,7 @@ var mapPhysicalTypeTests = []struct {
 	{parquet.Float, 1, doublePrecisionColumn, ""},
 	{parquet.Double, 0, doublePrecisionColumn, ""},
 	{parquet.Double, 1, doublePrecisionColumn, ""},
-	{33, 0, "", "unsupported Parquet physical data type"},
+	{invalidPhysicalDataType, 0, "", "unsupported Parquet physical data type"},
 }
 
 func TestMapPhysicalType(t *testing.T) {
@@ -77,6 +79,7 @@ var createTableStatementTests = []struct {
 	expected      string
 	expectedError string
 }{
+	{"empty_list", make([]parquetColumn, 0), "", "empty list of columns"},
 	{
 		"decimal_10", []parquetColumn{{[]string{"d1"}, parquet.Int32, 0}},
 		"(\"d1\" DECIMAL(10,0))", "",
@@ -114,8 +117,24 @@ var createTableStatementTests = []struct {
 		"(\"dp2\" DOUBLE PRECISION)", "",
 	},
 	{
-		"error_2", []parquetColumn{{[]string{"e1"}, 33, 0}},
+		"error_2", []parquetColumn{{[]string{"e1"}, invalidPhysicalDataType, 0}},
 		"", "unsupported Parquet physical data type",
+	},
+	{
+		"multiple_valid", []parquetColumn{
+			{[]string{"d1"}, parquet.Int64, 0},
+			{[]string{"v1"}, parquet.FixedLenByteArray, 345},
+		},
+		"(\"d1\" DECIMAL(19,0), \"v1\" VARCHAR(345) CHARACTER SET UTF8)",
+		"",
+	},
+	{
+		"multiple_2nd_invalid", []parquetColumn{
+			{[]string{"d1"}, parquet.Int64, 0},
+			{[]string{"e1"}, invalidPhysicalDataType, 0},
+		},
+		"",
+		"unsupported",
 	},
 }
 
