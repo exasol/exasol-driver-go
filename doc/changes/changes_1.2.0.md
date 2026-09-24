@@ -9,6 +9,7 @@ Code name:
 * #165: Added support to compute column sizes
 * #168: Added support for mapping parquet physical types to SQL data types
 * #172: Added support to build a `CREATE TABLE` SQL statement
+* #174: Added support to map Parquet logical types
 
 ## Documentation
 

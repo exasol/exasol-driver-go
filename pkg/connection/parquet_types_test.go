@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/parquet-go/parquet-go"
+	"github.com/parquet-go/parquet-go/format"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,21 +13,63 @@ var columnSizeTests = []struct {
 	in  int
 	out int
 }{
+	{0, 0},
+	{1, 0},
 	{2, 1},
 	{4, 1},
 	{5, 2},
 	{32, decimalPrecisionInt32},
 	{64, decimalPrecisionInt64},
+	{117, 35},
+	{120, 36},
 }
 
 func TestColumnSizes(t *testing.T) {
 	for _, tt := range columnSizeTests {
 		name := fmt.Sprintf("digits_%d", tt.in)
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, numberOfDigits(tt.in), tt.out)
+			assert.Equal(t, tt.out, numberOfDigitsSigned(tt.in))
 		})
 	}
 	assert.Equal(t, 2000000, maxVarcharLength)
+}
+
+var mapLogicalTypeTests = []struct {
+	logical       format.LogicalTypeValue
+	expected      string
+	expectedError string
+}{
+	{&format.StringType{}, "STRING", ""},
+	{&format.UUIDType{}, "STRING", ""},
+	{&format.DecimalType{Precision: 2, Scale: 1}, "DECIMAL(2,1)", ""},
+	{&format.DecimalType{Precision: 1, Scale: 2}, "", "unsupported scale 2 > precision 1"},
+	{&format.DecimalType{Precision: 37}, "", "unsupported precision 37"},
+	{&format.DecimalType{Precision: 0}, "", "unsupported precision 0"},
+	{&format.IntType{BitWidth: 8, IsSigned: true}, "DECIMAL(3,0)", ""},
+	{&format.IntType{BitWidth: 123, IsSigned: true}, "",
+		"IntType with 123 bits requires DECIMAL precision of 37," +
+			" exceeding the supported maximum of 36"},
+	{&format.DateType{}, timestamp9Column, ""},
+	{&format.TimeType{}, timestamp9Column, ""},
+	{&format.TimestampType{}, timestamp9Column, ""},
+	{&format.Float16Type{}, "DOUBLE PRECISION", ""},
+	{&format.NullType{}, "", "unsupported logical type"},
+}
+
+func TestMapLogicalType(t *testing.T) {
+	for _, tt := range mapLogicalTypeTests {
+		name := fmt.Sprintf("%T", tt.logical)
+		t.Run(name, func(t *testing.T) {
+			result, err := mapLogicalType(tt.logical)
+			if tt.expectedError == "" {
+				assert.NoError(t, err, "mapLogicalType failed unexpectedly")
+				assert.Equal(t, result, tt.expected)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			}
+		})
+	}
 }
 
 const invalidPhysicalDataType = 33
@@ -41,8 +84,8 @@ var mapPhysicalTypeTests = []struct {
 	{parquet.Int32, 1, intColumn(decimalPrecisionInt32), ""},
 	{parquet.Int64, 0, intColumn(decimalPrecisionInt64), ""},
 	{parquet.Int64, 1, intColumn(decimalPrecisionInt64), ""},
-	{parquet.Int96, 0, "TIMESTAMP(9)", ""},
-	{parquet.Int96, 1, "TIMESTAMP(9)", ""},
+	{parquet.Int96, 0, timestamp9Column, ""},
+	{parquet.Int96, 1, timestamp9Column, ""},
 	{parquet.Boolean, 0, "BOOLEAN", ""},
 	{parquet.Boolean, 1, "BOOLEAN", ""},
 	{parquet.ByteArray, 0, varcharColumn(maxVarcharLength), ""},
