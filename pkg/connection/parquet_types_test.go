@@ -122,7 +122,7 @@ var createTableStatementTests = []struct {
 func TestCreateTableStatement(t *testing.T) {
 	for _, tt := range createTableStatementTests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := CreateTableStatement("S.T", tt.columns)
+			result, err := createTableStatement("S.T", tt.columns)
 			if tt.expectedError == "" {
 				assert.NoError(t, err, "CreateTableStatement failed unexpectedly")
 				expected := fmt.Sprintf("CREATE TABLE S.T %s", tt.expected)

@@ -82,7 +82,7 @@ type parquetColumn struct {
 
 // CreateTableStatement returns the SQL statement to create a table based on
 // the column definitions in parameter columns.
-func CreateTableStatement(tableFqn string, columns []parquetColumn) (result string, err error) {
+func createTableStatement(tableFqn string, columns []parquetColumn) (result string, err error) {
 	sql := make([]string, 0, len(columns))
 	for _, col := range columns {
 		sqlType, err := mapPhysicalType(col.kind, int64(col.length))
