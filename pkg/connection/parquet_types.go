@@ -15,6 +15,7 @@ const (
 	maxVarcharLength      = 2000000
 	doublePrecisionColumn = "DOUBLE PRECISION"
 	maxDecimalPrecision   = 36
+	timestamp9Column      = "TIMESTAMP(9)"
 )
 
 // numberOfDigits returns the number of decimal digits required to represent
@@ -94,11 +95,11 @@ func mapLogicalType(logical format.LogicalTypeValue) (result string, err error) 
 		}
 		result = fmt.Sprintf("DECIMAL(%d,%d)", precision, 0)
 	case *format.DateType:
-		result = "TIMESTAMP(9)"
+		result = timestamp9Column
 	case *format.TimeType:
-		result = "TIMESTAMP(9)"
+		result = timestamp9Column
 	case *format.TimestampType:
-		result = "TIMESTAMP(9)"
+		result = timestamp9Column
 	case *format.Float16Type:
 		result = "DOUBLE PRECISION"
 	// logical types known to be unsupported:
@@ -129,7 +130,7 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result string, err erro
 	case parquet.Int64:
 		result = intColumn(decimalPrecisionInt64)
 	case parquet.Int96:
-		result = "TIMESTAMP(9)"
+		result = timestamp9Column
 	case parquet.Boolean:
 		result = "BOOLEAN"
 	case parquet.ByteArray:

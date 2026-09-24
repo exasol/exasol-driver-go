@@ -48,9 +48,9 @@ var mapLogicalTypeTests = []struct {
 	{&format.IntType{BitWidth: 123, IsSigned: true}, "",
 		"IntType with 123 bits requires DECIMAL precision of 37," +
 			" exceeding the supported maximum of 36"},
-	{&format.DateType{}, "TIMESTAMP(9)", ""},
-	{&format.TimeType{}, "TIMESTAMP(9)", ""},
-	{&format.TimestampType{}, "TIMESTAMP(9)", ""},
+	{&format.DateType{}, timestamp9Column, ""},
+	{&format.TimeType{}, timestamp9Column, ""},
+	{&format.TimestampType{}, timestamp9Column, ""},
 	{&format.Float16Type{}, "DOUBLE PRECISION", ""},
 	{&format.NullType{}, "", "unsupported logical type"},
 }
@@ -83,8 +83,8 @@ var mapPhysicalTypeTests = []struct {
 	{parquet.Int32, 1, intColumn(decimalPrecisionInt32), ""},
 	{parquet.Int64, 0, intColumn(decimalPrecisionInt64), ""},
 	{parquet.Int64, 1, intColumn(decimalPrecisionInt64), ""},
-	{parquet.Int96, 0, "TIMESTAMP(9)", ""},
-	{parquet.Int96, 1, "TIMESTAMP(9)", ""},
+	{parquet.Int96, 0, timestamp9Column, ""},
+	{parquet.Int96, 1, timestamp9Column, ""},
 	{parquet.Boolean, 0, "BOOLEAN", ""},
 	{parquet.Boolean, 1, "BOOLEAN", ""},
 	{parquet.ByteArray, 0, varcharColumn(maxVarcharLength), ""},
