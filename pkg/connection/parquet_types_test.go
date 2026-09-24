@@ -34,15 +34,20 @@ func TestColumnSizes(t *testing.T) {
 	assert.Equal(t, 2000000, maxVarcharLength)
 }
 
-var mapLogicalTypeTests = []struct{
+var mapLogicalTypeTests = []struct {
 	logical       format.LogicalTypeValue
 	expected      string
 	expectedError string
 }{
 	{&format.StringType{}, "STRING", ""},
 	{&format.UUIDType{}, "STRING", ""},
-	{&format.DecimalType{Precision: 1, Scale: 2}, "DECIMAL(1,2)", ""},
+	{&format.DecimalType{Precision: 2, Scale: 1}, "DECIMAL(2,1)", ""},
+	{&format.DecimalType{Precision: 1, Scale: 2}, "", "unsupported scale 2 > precision 1"},
+	{&format.DecimalType{Precision: 37}, "", "unsupported precision 37"},
 	{&format.IntType{BitWidth: 8, IsSigned: true}, "DECIMAL(3,0)", ""},
+	{&format.IntType{BitWidth: 123, IsSigned: true}, "",
+		"IntType with 123 bits requires DECIMAL precision of 37," +
+			" exceeding the supported maximum of 36"},
 	{&format.DateType{}, "TIMESTAMP(9)", ""},
 	{&format.TimeType{}, "TIMESTAMP(9)", ""},
 	{&format.TimestampType{}, "TIMESTAMP(9)", ""},

@@ -50,52 +50,49 @@ func varcharColumn(length int64) (result string) {
 // not comply to the constraints of Exasol's DECIMAL data type.
 func precisionAndScale(decimal *format.DecimalType) (precision int, scale int, err error) {
 	var msg string
-	p := int(decimal.Precision)
-	s := int(decimal.Scale)
+	precision = int(decimal.Precision)
+	scale = int(decimal.Scale)
+	p, s := precision, scale
 	if p > maxDecimalPrecision {
 		msg = fmt.Sprintf("precision %d", p)
-	} else if p > s {
-		msg = fmt.Sprintf("precision %d > scale %d", p, s)
+	} else if s > p {
+		msg = fmt.Sprintf("scale %d > precision %d", s, p)
 	} else if s > maxDecimalPrecision {
 		msg = fmt.Sprintf("scale %d", s)
 	}
 	if msg != "" {
 		err = fmt.Errorf("unsupported %s for logical DecimalType", msg)
 	}
-	return p, s, err
+	return
 }
 
-// mapLogicalType returns ....
-//
-// LogicalType() returns type *format.LogicalType.
-// If return value is nil, then use physical type
+// mapLogicalType maps the specified Parquet logical type to a string
+// containing the resp. Exasol SQL data type declaration.
 func mapLogicalType(logical format.LogicalTypeValue) (result string, err error) {
-	switch logical.(type) {
+	switch casted := logical.(type) {
 	case *format.UUIDType:
 		result = "STRING"
 	case *format.StringType:
 		result = "STRING"
 	case *format.DecimalType:
-		casted, _ := logical.(*format.DecimalType)
 		p, s, err := precisionAndScale(casted)
-		if err == nil {
-			result = fmt.Sprintf("DECIMAL(%d,%d)", p, s)
+		if err != nil {
+			return "", err
 		}
+		result = fmt.Sprintf("DECIMAL(%d,%d)", p, s)
 	case *format.IntType:
-		casted, _ := logical.(*format.IntType)
 		bitCount := int(casted.BitWidth)
 		if casted.IsSigned {
 			bitCount -= 1
 		}
 		precision := numberOfDigits(bitCount)
 		if precision > maxDecimalPrecision {
-			err = fmt.Errorf("logical IntType with %d bits "+
+			return "", fmt.Errorf("logical IntType with %d bits "+
 				"requires DECIMAL precision of %d, "+
 				"exceeding the supported maximum of %d",
 				casted.BitWidth, precision, maxDecimalPrecision)
-		} else {
-			result = fmt.Sprintf("DECIMAL(%d,%d)", precision, 0)
 		}
+		result = fmt.Sprintf("DECIMAL(%d,%d)", precision, 0)
 	case *format.DateType:
 		result = "TIMESTAMP(9)"
 	case *format.TimeType:
@@ -115,7 +112,7 @@ func mapLogicalType(logical format.LogicalTypeValue) (result string, err error) 
 	// - GeometryType
 	// - GeographyType
 	default:
-		err = fmt.Errorf("unsupported logical type %T", logical)
+		return "", fmt.Errorf("unsupported logical type %T", logical)
 	}
 	return
 }
