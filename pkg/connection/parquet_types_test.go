@@ -44,6 +44,7 @@ var mapLogicalTypeTests = []struct {
 	{&format.DecimalType{Precision: 2, Scale: 1}, "DECIMAL(2,1)", ""},
 	{&format.DecimalType{Precision: 1, Scale: 2}, "", "unsupported scale 2 > precision 1"},
 	{&format.DecimalType{Precision: 37}, "", "unsupported precision 37"},
+	{&format.DecimalType{Precision: 0}, "", "unsupported precision 0"},
 	{&format.IntType{BitWidth: 8, IsSigned: true}, "DECIMAL(3,0)", ""},
 	{&format.IntType{BitWidth: 123, IsSigned: true}, "",
 		"IntType with 123 bits requires DECIMAL precision of 37," +

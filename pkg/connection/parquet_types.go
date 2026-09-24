@@ -54,7 +54,7 @@ func precisionAndScale(decimal *format.DecimalType) (precision int, scale int, e
 	precision = int(decimal.Precision)
 	scale = int(decimal.Scale)
 	p, s := precision, scale
-	if p > maxDecimalPrecision {
+	if p > maxDecimalPrecision || p < 1 {
 		msg = fmt.Sprintf("precision %d", p)
 	} else if s > p {
 		msg = fmt.Sprintf("scale %d > precision %d", s, p)
