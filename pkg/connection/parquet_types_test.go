@@ -12,18 +12,22 @@ var columnSizeTests = []struct {
 	in  int
 	out int
 }{
+	{0, 0},
+	{1, 0},
 	{2, 1},
 	{4, 1},
 	{5, 2},
 	{32, decimalPrecisionInt32},
 	{64, decimalPrecisionInt64},
+	{117, 35},
+	{120, 36},
 }
 
 func TestColumnSizes(t *testing.T) {
 	for _, tt := range columnSizeTests {
 		name := fmt.Sprintf("digits_%d", tt.in)
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, numberOfDigits(tt.in), tt.out)
+			assert.Equal(t, tt.out, numberOfDigitsSigned(tt.in))
 		})
 	}
 	assert.Equal(t, 2000000, maxVarcharLength)
