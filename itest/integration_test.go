@@ -1157,36 +1157,6 @@ type exampleParquetRow struct {
 	B string `parquet:"b"`
 }
 
-type sampleRows[T any] struct {
-	rows []T
-}
-
-// func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.File, error) {
-// 	filePath := parquetFixtureName
-// 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	fileName := filePath
-// 	if err := file.Close(); err != nil {
-// 		_ = os.Remove(fileName)
-// 		return nil, err
-// 	}
-//
-// 	rows := make([]exampleParquetRow, 0, amount)
-// 	for i := 0; i < amount; i++ {
-// 		rows = append(rows, exampleParquetRow{
-// 			A: int64(i + 11),
-// 			B: fmt.Sprintf("test%d", i+1),
-// 		})
-// 	}
-// 	if err := parquet.WriteFile(fileName, rows); err != nil {
-// 		_ = os.Remove(fileName)
-// 		return nil, err
-// 	}
-// 	return os.Open(fileName)
-// }
-
 func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.File, error) {
 	rows := make([]exampleParquetRow, 0, amount)
 	for i := 0; i < amount; i++ {
