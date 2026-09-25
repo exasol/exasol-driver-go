@@ -41,8 +41,5 @@ pom.xml.versionsBackup
 __debug_bin*
 /.serena/
 
-# integration tests
-/testData/data.parquet
-
 # Emacs
 /TAGS
