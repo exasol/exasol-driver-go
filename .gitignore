@@ -42,7 +42,7 @@ __debug_bin*
 /.serena/
 
 # integration tests
-/testData/data.parquet
+/tmp/
 
 # Emacs
 /TAGS

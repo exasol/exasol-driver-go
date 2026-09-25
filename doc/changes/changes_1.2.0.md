@@ -18,3 +18,4 @@ Code name:
 ## Refactorings
 
 * #170: Refactored `mapPhysicalType` to return data type `string`
+* #176: Enabled creating multiple sample files for integration tests

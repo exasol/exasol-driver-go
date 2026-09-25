@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -55,7 +56,10 @@ type IntegrationTestSuite struct {
 	host   string
 }
 
-const parquetFixtureName = "../testData/data.parquet"
+const (
+	tmpDir            = "../tmp"
+	sampleParquetFile = "sample.parquet"
+)
 
 func TestIntegrationSuite(t *testing.T) {
 	if testing.Short() {
@@ -1153,18 +1157,37 @@ type exampleParquetRow struct {
 	B string `parquet:"b"`
 }
 
-func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.File, error) {
-	filePath := parquetFixtureName
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return nil, err
-	}
-	fileName := filePath
-	if err := file.Close(); err != nil {
-		_ = os.Remove(fileName)
-		return nil, err
-	}
+type sampleRows[T any] struct {
+	rows []T
+}
 
+// func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.File, error) {
+// 	filePath := parquetFixtureName
+// 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fileName := filePath
+// 	if err := file.Close(); err != nil {
+// 		_ = os.Remove(fileName)
+// 		return nil, err
+// 	}
+//
+// 	rows := make([]exampleParquetRow, 0, amount)
+// 	for i := 0; i < amount; i++ {
+// 		rows = append(rows, exampleParquetRow{
+// 			A: int64(i + 11),
+// 			B: fmt.Sprintf("test%d", i+1),
+// 		})
+// 	}
+// 	if err := parquet.WriteFile(fileName, rows); err != nil {
+// 		_ = os.Remove(fileName)
+// 		return nil, err
+// 	}
+// 	return os.Open(fileName)
+// }
+
+func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.File, error) {
 	rows := make([]exampleParquetRow, 0, amount)
 	for i := 0; i < amount; i++ {
 		rows = append(rows, exampleParquetRow{
@@ -1172,11 +1195,21 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.F
 			B: fmt.Sprintf("test%d", i+1),
 		})
 	}
-	if err := parquet.WriteFile(fileName, rows); err != nil {
-		_ = os.Remove(fileName)
-		return nil, err
-	}
-	return os.Open(fileName)
+	return writeSampleParquetFile(suite, rows)
+}
+
+// Cannot use a method, as methods do not allow type parameters in go.
+func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) (*os.File, error) {
+	err := os.MkdirAll(tmpDir, 0750)
+	suite.NoError(err, "failed to create temp directory "+tmpDir)
+	path := filepath.Join(tmpDir, sampleParquetFile)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
+	suite.NoError(err, "failed to truncate file "+path)
+	err = file.Close()
+	suite.NoError(err, "failed to close file "+path)
+	err = parquet.WriteFile(path, rows)
+	suite.NoError(err, "failed to write sample parquet file "+path)
+	return os.Open(path)
 }
 
 func (suite *IntegrationTestSuite) TestMultiImportStatement() {
