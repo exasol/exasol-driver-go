@@ -42,8 +42,6 @@ const (
 	smallParquetRowCount            = 3
 	largeParquetRowCount            = 20000
 	aIntBVarchar20                  = "a int, b VARCHAR(20)"
-	createSchema                    = "CREATE SCHEMA "
-	failedScan                      = "failed to scan rows"
 	multipleColumns                 = "a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)"
 )
 
@@ -197,7 +195,7 @@ func (t *tableSpec) create() string {
 }
 
 func (t *tableSpec) insert(value any) string {
-	return fmt.Sprintf("%s VALUES (%s)", insertInto(t.fqn()), value)
+	return fmt.Sprintf("%s VALUES (%v)", insertInto(t.fqn()), value)
 }
 
 func (t *tableSpec) selectX(where any) string {
@@ -386,7 +384,7 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 			defer rows.Close()
 			suite.True(rows.Next(), "should have one row")
 			err = rows.Scan(testCase.scanDest)
-			suite.NoError(err, failedScan)
+			suite.NoError(err, "failed to scan rows")
 			val := testCase.scanDest
 			suite.Equal(testCase.expectedValue, testCase.dereference(val))
 		})
@@ -497,7 +495,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 			defer rows.Close()
 			suite.True(rows.Next(), "should have at least one row")
 			err = rows.Scan(testCase.scanDest)
-			suite.NoError(err, failedScan)
+			suite.NoError(err, "failed to scan rows")
 			suite.False(rows.Next(), "should have at most one row")
 			val := testCase.scanDest
 			suite.Equal(testCase.expectedValue, testCase.dereference(val))
@@ -597,7 +595,7 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := database.Begin()
-	_, _ = transaction.Exec(createSchema + schemaName)
+	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
 	defer suite.cleanup(database, schemaName)
 	table := createXIntTable(transaction, schemaName)
 	_ = transaction.Commit()
@@ -630,7 +628,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
-	_, _ = database.ExecContext(ctx, createSchema+schemaName)
+	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
 	table := xIntTable(schemaName)
 	_, _ = database.ExecContext(ctx, table.create())
@@ -645,7 +643,7 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_7"
 	transaction, _ := database.BeginTx(ctx, nil)
-	_, _ = transaction.ExecContext(ctx, createSchema+schemaName)
+	_, _ = transaction.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
 	defer suite.cleanup(database, schemaName)
 	cancel()
 	table := xIntTable(schemaName)
@@ -1268,7 +1266,7 @@ func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCol
 			columnPointers[i] = &columns[i]
 		}
 		err := rows.Scan(columnPointers...)
-		suite.NoError(err, failedScan)
+		suite.NoError(err, "failed to scan rows")
 		suite.Equal(expectedRows[i], columns)
 		i = i + 1
 	}
@@ -1342,7 +1340,7 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 	rows.Next()
 	var testValue string
 	err := rows.Scan(&testValue)
-	suite.NoError(err, failedScan)
+	suite.NoError(err, "failed to scan rows")
 	suite.Equal(expected, testValue)
 }
 
