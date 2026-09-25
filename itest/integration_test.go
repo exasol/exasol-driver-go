@@ -958,10 +958,14 @@ func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "text VARCHAR(200)")
 	defer suite.cleanup(database, schemaName)
 
-	result, err := database.ExecContext(suite.ctx, `insert into `+fqn+` values ('import into {{dest.schema}}.{{dest.table}} ) from local csv file ''{{file.path}}'' ');`)
+	result, err := database.ExecContext(
+		suite.ctx,
+		`insert into `+fqn+` values ('import into {{dest.schema}}.{{dest.table}} )`+
+			` from local csv file ''{{file.path}}'' ');`,
+	)
 	suite.NoError(err, "insert should be successful")
 	affectedRows, _ := result.RowsAffected()
 	suite.Equal(int64(1), affectedRows)
@@ -969,7 +973,8 @@ func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s", fqn))
 	suite.assertTableResult(rows,
 		[]string{"TEXT"},
-		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) from local csv file '{{file.path}}' "}},
+		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) "+
+			"from local csv file '{{file.path}}' "}},
 	)
 }
 
@@ -1292,9 +1297,11 @@ func (suite *IntegrationTestSuite) createDbSchema(
 ) string {
 	_, err := db.ExecContext(suite.ctx, "CREATE SCHEMA IF NOT EXISTS "+schema)
 	suite.NoError(err, "Failed to create database schema "+schema)
-	statement := fmt.Sprintf("CREATE TABLE %q.%q (%s)", schema, table, columns)
-	_, err = db.ExecContext(suite.ctx, statement)
-	suite.NoError(err, "Failed to create database table "+table)
+	if table != "" {
+		statement := fmt.Sprintf("CREATE TABLE %q.%q (%s)", schema, table, columns)
+		_, err = db.ExecContext(suite.ctx, statement)
+		suite.NoError(err, "Failed to create database table "+table)
+	}
 	return fmt.Sprintf("%q.%q", schema, table)
 }
 
