@@ -70,14 +70,14 @@ func TestIntegrationSuite(t *testing.T) {
 
 func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.ctx = context.Background()
-	var err error
-	suite.exasol = integrationTesting.StartDbSetup(&suite.Suite)
-	connectionInfo := suite.exasol.ConnectionInfo
-	if err != nil {
-		suite.FailNowf("setup failed", "failed to get connection info: %v", err)
-	}
-	suite.port = connectionInfo.Port
-	suite.host = connectionInfo.Host
+	// var err error
+	// suite.exasol = integrationTesting.StartDbSetup(&suite.Suite)
+	// connectionInfo := suite.exasol.ConnectionInfo
+	// if err != nil {
+	// 	suite.FailNowf("setup failed", "failed to get connection info: %v", err)
+	// }
+	// suite.port = connectionInfo.Port
+	// suite.host = connectionInfo.Host
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithDsn() {
@@ -1174,16 +1174,34 @@ type enhancedParquetRow struct {
 	Timestamp time.Time `parquet:"timestamp"`
 	Boolean bool `parquet:"boolean"`
 	ByteArray string `parquet:"bytearray"`
-	FixedLenByteArray string  `parquet:"name=fixedlenbytearray, type=FIXED_LEN_BYTE_ARRAY, length=50"`
+	FixedLenByteArray [30]byte `parquet:"fixedlenbytearray"`
 	Float float32 `parquet:"float"`
 	Double float64 `parquet:"double"`
 }
 
+func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() () {
+	file, err := suite.createEnhancedParquetSampleFile()
+	suite.NoError(err, generateParquetFileErrorMessage)
+	defer file.Close()
+	defer os.Remove(file.Name())
+}
+
 // see https://github.com/xitongsys/parquet-go/blob/master/example/type.go
-// time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC)
-// parquet.ByteArray([]byte("example data"))
-func (suite *IntegrationTestSuite) createEnhanceParquetSampleFile() (*os.File, error) {
-	return nil, nil
+func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() (*os.File, error) {
+	timestamp := time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC)
+	var array [30]byte
+	_ = copy(array[:], "fixed length byte array")
+	rows := []enhancedParquetRow{{
+		Int32: 33,
+		Int64: 65,
+		Timestamp: timestamp,
+		Boolean: true,
+		ByteArray: "A byte array of variable length",
+		FixedLenByteArray: array,
+		Float: 1.123,
+		Double: 123456789.987654321,
+	}}
+	return writeSampleParquetFile(suite, rows)
 }
 
 // Cannot use a method, as methods do not allow type parameters in go.
