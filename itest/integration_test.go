@@ -1169,17 +1169,17 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.F
 }
 
 type enhancedParquetRow struct {
-	Int32 int32  `parquet:"int32"`
-	Int64 int64  `parquet:"int64"`
-	Timestamp time.Time `parquet:"timestamp"`
-	Boolean bool `parquet:"boolean"`
-	ByteArray string `parquet:"bytearray"`
-	FixedLenByteArray [30]byte `parquet:"fixedlenbytearray"`
-	Float float32 `parquet:"float"`
-	Double float64 `parquet:"double"`
+	Int32             int32     `parquet:"int32"`
+	Int64             int64     `parquet:"int64"`
+	Timestamp         time.Time `parquet:"timestamp"`
+	Boolean           bool      `parquet:"boolean"`
+	ByteArray         string    `parquet:"bytearray"`
+	FixedLenByteArray [30]byte  `parquet:"fixedlenbytearray"`
+	Float             float32   `parquet:"float"`
+	Double            float64   `parquet:"double"`
 }
 
-func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() () {
+func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() {
 	file, err := suite.createEnhancedParquetSampleFile()
 	suite.NoError(err, generateParquetFileErrorMessage)
 	defer file.Close()
@@ -1192,14 +1192,14 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() (*os.File, 
 	var array [30]byte
 	_ = copy(array[:], "fixed length byte array")
 	rows := []enhancedParquetRow{{
-		Int32: 33,
-		Int64: 65,
-		Timestamp: timestamp,
-		Boolean: true,
-		ByteArray: "A byte array of variable length",
+		Int32:             33,
+		Int64:             65,
+		Timestamp:         timestamp,
+		Boolean:           true,
+		ByteArray:         "A byte array of variable length",
 		FixedLenByteArray: array,
-		Float: 1.123,
-		Double: 123456789.987654321,
+		Float:             1.123,
+		Double:            123456789.987654321,
 	}}
 	return writeSampleParquetFile(suite, rows)
 }
