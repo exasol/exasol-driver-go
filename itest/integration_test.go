@@ -1168,6 +1168,24 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) (*os.F
 	return writeSampleParquetFile(suite, rows)
 }
 
+type enhancedParquetRow struct {
+	Int32 int32  `parquet:"int32"`
+	Int64 int64  `parquet:"int64"`
+	Timestamp time.Time `parquet:"timestamp"`
+	Boolean bool `parquet:"boolean"`
+	ByteArray string `parquet:"bytearray"`
+	FixedLenByteArray string  `parquet:"name=fixedlenbytearray, type=FIXED_LEN_BYTE_ARRAY, length=50"`
+	Float float32 `parquet:"float"`
+	Double float64 `parquet:"double"`
+}
+
+// see https://github.com/xitongsys/parquet-go/blob/master/example/type.go
+// time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC)
+// parquet.ByteArray([]byte("example data"))
+func (suite *IntegrationTestSuite) createEnhanceParquetSampleFile() (*os.File, error) {
+	return nil, nil
+}
+
 // Cannot use a method, as methods do not allow type parameters in go.
 func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) (*os.File, error) {
 	err := os.MkdirAll(tmpDir, 0750)
