@@ -41,6 +41,8 @@ const (
 	generateCSVFileErrorMessage     = "should generate csv file"
 	smallParquetRowCount            = 3
 	largeParquetRowCount            = 20000
+	aIntBVarchar20                  = "a int, b VARCHAR(20)"
+	createSchema                    = "CREATE SCHEMA "
 )
 
 func parquetVersionErrorMessage(serverVersion string) string {
@@ -172,27 +174,59 @@ func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
 	return submatches[1]
 }
 
+func unquoted(value string) string {
+	return strings.Replace(value, "\"", "", -1)
+}
+
+type tableSpec struct {
+	fqn     string
+	create  string
+	insert  string
+	selectX string
+}
+
+func xIntTable(schema string) tableSpec {
+	fqn := fmt.Sprintf("%q.%q", schema, "TEST_TABLE")
+	return tableSpec{
+		fqn:     fqn,
+		create:  "CREATE TABLE " + fqn + " (x INT)",
+		insert:  "INSERT INTO " + fqn + " VALUES (15)",
+		selectX: "SELECT x FROM " + fqn,
+	}
+}
+
+func createXIntTable(transaction *sql.Tx, schema string) tableSpec {
+	table := xIntTable(schema)
+	_, _ = transaction.Exec(table.create)
+	_, _ = transaction.Exec(table.insert)
+	return table
+}
+
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_1"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	_ = suite.createDbSchema(database, schemaName, "", "")
+	table := xIntTable(schemaName)
+	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	_, _ = database.Exec("INSERT INTO " + fqn + " VALUES (15)")
-	rows, _ := database.Query("SELECT x FROM " + fqn)
+	database.ExecContext(suite.ctx, table.insert)
+	rows, _ := database.Query(table.selectX)
 	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestFetch() {
 	database := suite.openConnection(suite.createDefaultConfig().FetchSize(20))
 	schemaName := "TEST_SCHEMA_FETCH"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	_ = suite.createDbSchema(database, schemaName, "", "")
+	table := xIntTable(schemaName)
+	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
 	data := make([]string, 0)
 	for i := 0; i < 10000; i++ {
 		data = append(data, fmt.Sprintf("(%d)", i))
 	}
-	_, _ = database.Exec("INSERT INTO " + fqn + " VALUES " + strings.Join(data, ","))
-	rows, _ := database.Query("SELECT x FROM " + fqn + " GROUP BY x ORDER BY x")
+	_, _ = database.Exec("INSERT INTO " + table.fqn + " VALUES " + strings.Join(data, ","))
+	rows, _ := database.Query(selectX + table.fqn + " GROUP BY x ORDER BY x")
 	result := make([]int, 0)
 	counter := 0
 	for rows.Next() {
@@ -237,9 +271,10 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	schemaName := "TEST_SCHEMA_2"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	defer suite.cleanup(database, schemaName)
-	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	fqn := schemaName + ".NON_EXISTING_TABLE"
+	_, err := database.Query(selectX + fqn)
 	suite.Error(err)
-	suite.ErrorContains(err, "object TEST_SCHEMA_2.TEST_TABLE not found")
+	suite.ErrorContains(err, "object "+fqn+" not found")
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
@@ -249,7 +284,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	defer suite.cleanup(database, schemaName)
 	preparedStatement, _ := database.Prepare("INSERT INTO " + fqn + " VALUES (?)")
 	_, _ = preparedStatement.Exec(15)
-	preparedStatement, _ = database.Prepare("SELECT x FROM " + fqn + " WHERE x = ?")
+	preparedStatement, _ = database.Prepare(selectX + fqn + " WHERE x = ?")
 	rows, _ := preparedStatement.Query(15)
 	suite.assertSingleValueResult(rows, "15")
 }
@@ -261,7 +296,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	defer suite.cleanup(database, schemaName)
 	preparedStatement, _ := database.Prepare("INSERT INTO " + fqn + " VALUES (25)")
 	_, _ = preparedStatement.Exec()
-	preparedStatement, _ = database.Prepare("SELECT x FROM " + fqn + " WHERE x = 25")
+	preparedStatement, _ = database.Prepare(selectX + fqn + " WHERE x = 25")
 	rows, _ := preparedStatement.Query()
 	suite.assertSingleValueResult(rows, "25")
 }
@@ -512,7 +547,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	result, _ := database.ExecContext(context.Background(), "INSERT INTO "+fqn+" VALUES (?)", 15)
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
-	rows, _ := database.QueryContext(context.Background(), "SELECT x FROM "+fqn+" WHERE x = ?", 15)
+	rows, _ := database.QueryContext(context.Background(), selectX+fqn+" WHERE x = ?", 15)
 	suite.assertSingleValueResult(rows, "15")
 }
 
@@ -524,7 +559,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	result, _ := database.Exec("INSERT INTO "+fqn+" VALUES (?)", 15)
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
-	rows, _ := database.Query("SELECT x FROM "+fqn+" WHERE x = ?", 15)
+	rows, _ := database.Query(selectX+fqn+" WHERE x = ?", 15)
 	suite.assertSingleValueResult(rows, "15")
 }
 
@@ -532,12 +567,11 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "TEST_SCHEMA_4"
 	transaction, _ := database.Begin()
-	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
+	_, _ = transaction.Exec(createSchema + schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
-	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
+	table := createXIntTable(transaction, schemaName)
 	_ = transaction.Commit()
-	rows, _ := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	rows, _ := database.Query(table.selectX)
 	suite.assertSingleValueResult(rows, "15")
 }
 
@@ -545,14 +579,12 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := database.Begin()
-	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
+	table := createXIntTable(transaction, schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = transaction.Exec("CREATE TABLE " + schemaName + ".TEST_TABLE(x INT)")
-	_, _ = transaction.Exec("INSERT INTO " + schemaName + ".TEST_TABLE VALUES (15)")
 	_ = transaction.Rollback()
-	_, err := database.Query("SELECT x FROM " + schemaName + ".TEST_TABLE")
+	_, err := database.Query(table.selectX)
 	suite.Error(err)
-	suite.ErrorContains(err, "object "+schemaName+".TEST_TABLE not found")
+	suite.ErrorContains(err, "object "+unquoted(table.fqn)+" found")
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
@@ -567,11 +599,12 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_6"
-	_, _ = database.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = database.ExecContext(ctx, createSchema+schemaName)
 	defer suite.cleanup(database, schemaName)
-	_, _ = database.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
-	_, _ = database.ExecContext(ctx, "INSERT INTO "+schemaName+".TEST_TABLE VALUES (15)")
-	rows, _ := database.QueryContext(ctx, "SELECT x FROM "+schemaName+".TEST_TABLE")
+	table := xIntTable(schemaName)
+	_, _ = database.ExecContext(ctx, table.create)
+	_, _ = database.ExecContext(ctx, table.insert)
+	rows, _ := database.QueryContext(ctx, table.selectX)
 	cancel()
 	suite.assertSingleValueResult(rows, "15")
 }
@@ -581,21 +614,25 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	schemaName := "TEST_SCHEMA_7"
 	transaction, _ := database.BeginTx(ctx, nil)
-	_, _ = transaction.ExecContext(ctx, "CREATE SCHEMA "+schemaName)
+	_, _ = transaction.ExecContext(ctx, createSchema+schemaName)
 	defer suite.cleanup(database, schemaName)
 	cancel()
-	_, err := transaction.ExecContext(ctx, "CREATE TABLE "+schemaName+".TEST_TABLE(x INT)")
+	_, err := transaction.ExecContext(ctx, xIntTable(schemaName).create)
 	suite.EqualError(err, "context canceled")
 }
 
 func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_8"
-	tableName := "TEST_TABLE"
-	fqn := suite.createDbSchema(database, schemaName, tableName, "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
-	result, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL CSV FILE '../testData/data.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, fqn))
+	result, err := database.ExecContext(
+		suite.ctx,
+		fmt.Sprintf(`IMPORT INTO %s FROM LOCAL CSV FILE `+
+			`'../testData/data.csv' COLUMN SEPARATOR = ';' `+
+			`ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, fqn),
+	)
 	suite.NoError(err, "import should be successful")
 	affectedRows, _ := result.RowsAffected()
 	suite.Equal(int64(3), affectedRows)
@@ -616,7 +653,7 @@ func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 	file := suite.generateExampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
 	result, err := database.ExecContext(
@@ -654,7 +691,7 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementBigFile() {
 	defer file.Close()
 
 	schemaName := "TEST_SCHEMA_LARGE_PARQUET"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
 	affectedRows, err := suite.execImportWithinDeadline(
@@ -733,7 +770,7 @@ func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	file := suite.generateExampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE '%s' FILE '%s'`, fqn, file.Name(), file.Name()))
@@ -787,7 +824,7 @@ func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	file := suite.generateExampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'`, fqn, file.Name()))
@@ -835,7 +872,7 @@ func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	file := suite.generateExampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_ENCRYPTED_PARQUET"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 	suite.assertImportsAreEncrypted(database)
 
@@ -902,7 +939,7 @@ func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
 
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
 	schemaName := "TEST_SCHEMA_ENCRYPTED_CSV"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 	suite.assertImportsAreEncrypted(database)
 
@@ -1171,7 +1208,7 @@ func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) *os.Fi
 func (suite *IntegrationTestSuite) TestMultiImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_9"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
 	result, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL CSV FILE '../testData/data.csv' `+
@@ -1214,7 +1251,7 @@ func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCol
 func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_10"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
 	defer suite.cleanup(database, schemaName)
 
 	result, err := database.ExecContext(
