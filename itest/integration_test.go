@@ -43,6 +43,8 @@ const (
 	largeParquetRowCount            = 20000
 	aIntBVarchar20                  = "a int, b VARCHAR(20)"
 	createSchema                    = "CREATE SCHEMA "
+	failedScan                      = "failed to scan rows"
+	multipleColumns                 = "a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)"
 )
 
 func parquetVersionErrorMessage(serverVersion string) string {
@@ -56,8 +58,6 @@ type IntegrationTestSuite struct {
 	port   int
 	host   string
 }
-
-const sampleParquetFile = "sample.parquet"
 
 func TestIntegrationSuite(t *testing.T) {
 	if testing.Short() {
@@ -178,12 +178,23 @@ func unquoted(value string) string {
 	return strings.ReplaceAll(value, "\"", "")
 }
 
+func insertInto(table string) string {
+	return "INSERT INTO "+table
+}
+
 type tableSpec struct {
 	fqn            string
 	create         string
-	insert         string
-	insertPrepared string
+	// insert         string
 	selectX        string
+}
+
+func (table *tableSpec) insert(value any) string {
+	return fmt.Sprintf("%s VALUES (%s)", insertInto(table.fqn), value)
+}
+
+func (table *tableSpec) selectWhere(where any) string {
+	return fmt.Sprintf("%s WHERE x = %s", table.selectX, where)
 }
 
 func xIntTable(schema string) tableSpec {
@@ -191,8 +202,8 @@ func xIntTable(schema string) tableSpec {
 	return tableSpec{
 		fqn:            fqn,
 		create:         "CREATE TABLE " + fqn + " (x INT)",
-		insert:         "INSERT INTO " + fqn + " VALUES (15)",
-		insertPrepared: "INSERT INTO " + fqn + " VALUES (?)",
+		// insert:         insertInto(fqn) + " VALUES (15)",
+		// insertPrepared: insertInto(fqn) + " VALUES (?)",
 		selectX:        "SELECT x FROM " + fqn,
 	}
 }
@@ -200,7 +211,7 @@ func xIntTable(schema string) tableSpec {
 func createXIntTable(transaction *sql.Tx, schema string) tableSpec {
 	table := xIntTable(schema)
 	_, _ = transaction.Exec(table.create)
-	_, _ = transaction.Exec(table.insert)
+	_, _ = transaction.Exec(table.insert(15))
 	return table
 }
 
@@ -211,7 +222,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	table := xIntTable(schemaName)
 	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	database.ExecContext(suite.ctx, table.insert)
+	database.ExecContext(suite.ctx, table.insert(15))
 	rows, _ := database.Query(table.selectX)
 	suite.assertSingleValueResult(rows, "15")
 }
@@ -227,7 +238,7 @@ func (suite *IntegrationTestSuite) TestFetch() {
 	for i := 0; i < 10000; i++ {
 		data = append(data, fmt.Sprintf("(%d)", i))
 	}
-	_, _ = database.Exec("INSERT INTO " + table.fqn + " VALUES " + strings.Join(data, ","))
+	_, _ = database.Exec(insertInto(table.fqn) + " VALUES " + strings.Join(data, ","))
 	rows, _ := database.Query(table.selectX + " GROUP BY x ORDER BY x")
 	result := make([]int, 0)
 	counter := 0
@@ -286,9 +297,9 @@ func (suite *IntegrationTestSuite) TestX1PreparedStatement() {
 	table := xIntTable(schemaName)
 	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	preparedStatement, _ := database.Prepare(table.insertPrepared)
+	preparedStatement, _ := database.Prepare(table.insert("?"))
 	_, _ = preparedStatement.Exec(15)
-	preparedStatement, _ = database.Prepare(table.selectX + " WHERE x = ?")
+	preparedStatement, _ = database.Prepare(table.selectWhere("?"))
 	rows, _ := preparedStatement.Query(15)
 	suite.assertSingleValueResult(rows, "15")
 }
@@ -300,11 +311,11 @@ func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	defer suite.cleanup(database, schemaName)
 	table := xIntTable(schemaName)
 	database.ExecContext(suite.ctx, table.create)
-	preparedStatement, _ := database.Prepare(table.insert)
+	preparedStatement, _ := database.Prepare(table.insert(25))
 	_, _ = preparedStatement.Exec()
-	preparedStatement, _ = database.Prepare(table.selectX + " WHERE x = 15")
+	preparedStatement, _ = database.Prepare(table.selectWhere(25))
 	rows, _ := preparedStatement.Query()
-	suite.assertSingleValueResult(rows, "15")
+	suite.assertSingleValueResult(rows, "25")
 }
 
 var dereferenceString = func(v any) any { return *(v.(*string)) }
@@ -366,7 +377,7 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 			defer rows.Close()
 			suite.True(rows.Next(), "should have one row")
 			err = rows.Scan(testCase.scanDest)
-			suite.NoError(err, "failed to scan rows")
+			suite.NoError(err, failedScan)
 			val := testCase.scanDest
 			suite.Equal(testCase.expectedValue, testCase.dereference(val))
 		})
@@ -468,7 +479,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
 			_, err := database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
 			suite.NoError(err, "failed to create table "+tableName)
-			stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
+			stmt, err := database.Prepare(insertInto(tableName) +" values (?)")
 			suite.NoError(err, "failed to insert into table "+tableName)
 			_, err = stmt.Exec(testCase.sqlValue)
 			suite.NoError(err, "failed to evaluate SQL expression")
@@ -477,7 +488,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 			defer rows.Close()
 			suite.True(rows.Next(), "should have at least one row")
 			err = rows.Scan(testCase.scanDest)
-			suite.NoError(err, "failed to scan rows")
+			suite.NoError(err, failedScan)
 			suite.False(rows.Next(), "should have at most one row")
 			val := testCase.scanDest
 			suite.Equal(testCase.expectedValue, testCase.dereference(val))
@@ -490,7 +501,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
 	schemaName := "DATATYPE_TEST"
 	fqn := suite.createDbSchema(database, schemaName, "TAB", "col TIMESTAMP")
 	defer suite.cleanup(database, schemaName)
-	stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", fqn))
+	stmt, err := database.Prepare(insertInto(fqn)+ " values (?)")
 	suite.NoError(err, "failed to insert into table "+fqn)
 	_, err = stmt.Exec(true)
 	suite.EqualError(err, "E-EGOD-30: cannot convert argument 'true' of type 'bool' to 'TIMESTAMP' type")
@@ -516,7 +527,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
 			_, err := database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
 			suite.NoError(err, "failed to create table "+tableName)
-			stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
+			stmt, err := database.Prepare(insertInto(tableName) + " values (?)")
 			suite.NoError(err, "failed to prepare statement ")
 			_, err = stmt.Exec(testCase.sqlValue)
 			suite.NoError(err, "failed to evaluate SQL expression")
@@ -536,7 +547,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 	schemaName := "TEST_SCHEMA_3"
 	fqn := suite.createDbSchema(database, schemaName, "DUMMY", "a integer, b float")
 	defer suite.cleanup(database, schemaName)
-	stmt, err := database.Prepare(fmt.Sprintf("insert into %s values(?,?)", fqn))
+	stmt, err := database.Prepare(insertInto(fqn) + " values(?,?)")
 	suite.NoError(err, "failed to insert values")
 	_, err = stmt.Exec(1, 2)
 	suite.NoError(err, "failed to execute statement")
@@ -552,11 +563,11 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	table := xIntTable(schemaName)
 	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	result, _ := database.ExecContext(suite.ctx, table.insertPrepared, 15)
+	result, _ := database.ExecContext(suite.ctx, table.insert("?"), 25)
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
-	rows, _ := database.QueryContext(suite.ctx, table.selectX+" WHERE x = ?", 15)
-	suite.assertSingleValueResult(rows, "15")
+	rows, _ := database.QueryContext(suite.ctx, table.selectWhere("?"), 25)
+	suite.assertSingleValueResult(rows, "25")
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
@@ -566,7 +577,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	table := xIntTable(schemaName)
 	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	result, _ := database.Exec(table.insert)
+	result, _ := database.Exec(table.insert(15))
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
 	rows, _ := database.Query(table.selectX+" WHERE x = ?", 15)
@@ -614,7 +625,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	defer suite.cleanup(database, schemaName)
 	table := xIntTable(schemaName)
 	_, _ = database.ExecContext(ctx, table.create)
-	_, _ = database.ExecContext(ctx, table.insert)
+	_, _ = database.ExecContext(ctx, table.insert(15))
 	rows, _ := database.QueryContext(ctx, table.selectX)
 	cancel()
 	suite.assertSingleValueResult(rows, "15")
@@ -764,7 +775,12 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementInString() {
 	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "text VARCHAR(200)")
 	defer suite.cleanup(database, schemaName)
 
-	result, err := database.ExecContext(suite.ctx, `insert into `+fqn+` values ('import into {{dest.schema}}.{{dest.table}} ) from local parquet file ''{{file.path}}'' ');`)
+	result, err := database.ExecContext(
+		suite.ctx,
+		insertInto(fqn)+` values ('import into `+
+			`{{dest.schema}}.{{dest.table}} ) `+
+			`from local parquet file ''{{file.path}}'' ');`,
+	)
 	suite.NoError(err, "insert should be successful")
 	affectedRows, _ := result.RowsAffected()
 	suite.Equal(int64(1), affectedRows)
@@ -1011,7 +1027,7 @@ func (suite *IntegrationTestSuite) TestImportStatementInString() {
 
 	result, err := database.ExecContext(
 		suite.ctx,
-		`insert into `+fqn+` values ('import into {{dest.schema}}.{{dest.table}} )`+
+		insertInto(fqn)+` values ('import into {{dest.schema}}.{{dest.table}} )`+
 			` from local csv file ''{{file.path}}'' ');`,
 	)
 	suite.NoError(err, "insert should be successful")
@@ -1034,10 +1050,7 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	suite.NoError(err, generateCSVFileErrorMessage)
 	defer os.Remove(file.Name())
 
-	fqn := suite.createDbSchema(
-		database, schemaName, "TEST_TABLE_HUGE",
-		"a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)",
-	)
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE_HUGE", multipleColumns)
 	defer suite.cleanup(database, schemaName)
 
 	result, err := database.ExecContext(
@@ -1081,10 +1094,7 @@ func (suite *IntegrationTestSuite) TestCancelRunningImport() {
 	defer database.Close()
 
 	schemaName := "TEST_SCHEMA_CANCEL_IMPORT"
-	fqn := suite.createDbSchema(
-		database, schemaName, "TEST_TABLE",
-		"a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)",
-	)
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", multipleColumns)
 	defer suite.cleanup(database, schemaName)
 
 	file, err := suite.generateExampleCSVFile(time.Now().Format(time.RFC3339), 200000)
@@ -1120,12 +1130,7 @@ func (suite *IntegrationTestSuite) TestCancelRunningImport() {
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_LEAK"
-	fqn := suite.createDbSchema(
-		database,
-		schemaName,
-		"TEST_TABLE",
-		"a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)",
-	)
+	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", multipleColumns)
 	defer suite.cleanup(database, schemaName)
 
 	exampleData := time.Now().Format(time.RFC3339)
@@ -1208,7 +1213,7 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 
 // Cannot use a method, as methods do not allow type parameters in go.
 func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) *os.File {
-	path := filepath.Join(suite.T().TempDir(), sampleParquetFile)
+	path := filepath.Join(suite.T().TempDir(), "sample.parquet")
 	err := parquet.WriteFile(path, rows)
 	suite.NoError(err, "failed to write sample parquet file "+path)
 	file, err := os.Open(path)
@@ -1253,7 +1258,7 @@ func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCol
 			columnPointers[i] = &columns[i]
 		}
 		err := rows.Scan(columnPointers...)
-		suite.NoError(err, "failed to scan rows")
+		suite.NoError(err, failedScan)
 		suite.Equal(expectedRows[i], columns)
 		i = i + 1
 	}
@@ -1327,7 +1332,7 @@ func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expec
 	rows.Next()
 	var testValue string
 	err := rows.Scan(&testValue)
-	suite.NoError(err, "failed to scan rows")
+	suite.NoError(err, failedScan)
 	suite.Equal(expected, testValue)
 }
 
