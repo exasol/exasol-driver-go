@@ -203,7 +203,7 @@ func (t *tableSpec) selectX(where any) string {
 	if where == "" {
 		return selectX
 	} else {
-		return fmt.Sprintf("%s WHERE x = %s", selectX, where)
+		return fmt.Sprintf("%s WHERE x = %v", selectX, where)
 	}
 }
 
@@ -224,11 +224,9 @@ func createXIntTable(transaction *sql.Tx, schema string) tableSpec {
 
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_1"
-	_ = suite.createDbSchema(database, schemaName, "", "")
-	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create())
-	defer suite.cleanup(database, schemaName)
+	table := xIntTable("TEST_SCHEMA_1")
+	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	defer suite.cleanup(database, table.schema)
 	database.ExecContext(suite.ctx, table.insert(15))
 	rows, _ := database.Query(table.selectX(""))
 	suite.assertSingleValueResult(rows, "15")
@@ -236,11 +234,9 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 
 func (suite *IntegrationTestSuite) TestFetch() {
 	database := suite.openConnection(suite.createDefaultConfig().FetchSize(20))
-	schemaName := "TEST_SCHEMA_FETCH"
-	_ = suite.createDbSchema(database, schemaName, "", "")
-	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create())
-	defer suite.cleanup(database, schemaName)
+	table := xIntTable("TEST_SCHEMA_FETCH")
+	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	defer suite.cleanup(database, table.schema)
 	data := make([]string, 0)
 	for i := 0; i < 10000; i++ {
 		data = append(data, fmt.Sprintf("(%d)", i))
@@ -289,9 +285,9 @@ func (suite *IntegrationTestSuite) TestExecuteWithError() {
 func (suite *IntegrationTestSuite) TestQueryWithError() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_2"
+	table := xIntTable(schemaName)
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	defer suite.cleanup(database, schemaName)
-	table := xIntTable(schemaName)
 	_, err := database.Query(table.selectX(""))
 	suite.Error(err)
 	suite.ErrorContains(err, "object "+unquoted(table.fqn())+" not found")
@@ -299,11 +295,10 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_3"
-	_ = suite.createDbSchema(database, schemaName, "", "")
-	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create())
-	defer suite.cleanup(database, schemaName)
+	table := xIntTable("TEST_SCHEMA_3")
+	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	defer suite.cleanup(database, table.schema)
+
 	preparedStatement, _ := database.Prepare(table.insert("?"))
 	_, _ = preparedStatement.Exec(15)
 	preparedStatement, _ = database.Prepare(table.selectX("?"))
@@ -313,11 +308,10 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 
 func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_3"
-	_ = suite.createDbSchema(database, schemaName, "", "")
-	defer suite.cleanup(database, schemaName)
-	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create())
+	table := xIntTable("TEST_SCHEMA_3_1")
+	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	defer suite.cleanup(database, table.schema)
+
 	preparedStatement, _ := database.Prepare(table.insert(25))
 	_, _ = preparedStatement.Exec()
 	preparedStatement, _ = database.Prepare(table.selectX(25))
@@ -551,7 +545,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 // https://github.com/exasol/exasol-driver-go/issues/108
 func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_3"
+	schemaName := "TEST_SCHEMA_3_2"
 	fqn := suite.createDbSchema(database, schemaName, "DUMMY", "a integer, b float")
 	defer suite.cleanup(database, schemaName)
 	stmt, err := database.Prepare(insertInto(fqn) + " values(?,?)")
@@ -565,11 +559,10 @@ func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_3_2"
-	_ = suite.createDbSchema(database, schemaName, "", "")
-	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create())
-	defer suite.cleanup(database, schemaName)
+	table := xIntTable("TEST_SCHEMA_3_3")
+	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	defer suite.cleanup(database, table.schema)
+
 	result, _ := database.ExecContext(suite.ctx, table.insert("?"), 25)
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
@@ -579,7 +572,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_3_3"
+	schemaName := "TEST_SCHEMA_3_4"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	table := xIntTable(schemaName)
 	database.ExecContext(suite.ctx, table.create())
