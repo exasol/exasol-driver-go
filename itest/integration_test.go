@@ -589,12 +589,13 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "TEST_SCHEMA_5"
 	transaction, _ := database.Begin()
+	_, _ = transaction.Exec("CREATE SCHEMA " + schemaName)
 	table := createXIntTable(transaction, schemaName)
 	defer suite.cleanup(database, schemaName)
 	_ = transaction.Rollback()
 	_, err := database.Query(table.selectX)
 	suite.Error(err)
-	suite.ErrorContains(err, "object "+unquoted(table.fqn)+" found")
+	suite.ErrorContains(err, "object "+unquoted(table.fqn)+" not found")
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
