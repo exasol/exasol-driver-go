@@ -183,16 +183,25 @@ func insertInto(table string) string {
 }
 
 type tableSpec struct {
-	fqn     string
-	create  string
+	schema  string
+	name    string
+	columns string
 }
 
-func (table *tableSpec) insert(value any) string {
-	return fmt.Sprintf("%s VALUES (%s)", insertInto(table.fqn), value)
+func (t *tableSpec) fqn() string {
+	return fmt.Sprintf("%q.%q", t.schema, t.name)
 }
 
-func (table *tableSpec) selectX(where any) string {
-	selectX := "SELECT x FROM " + table.fqn
+func (t *tableSpec) create() string {
+	return fmt.Sprintf("CREATE TABLE %s (%s)", t.fqn(), t.columns)
+}
+
+func (t *tableSpec) insert(value any) string {
+	return fmt.Sprintf("%s VALUES (%s)", insertInto(t.fqn()), value)
+}
+
+func (t *tableSpec) selectX(where any) string {
+	selectX := "SELECT x FROM " + t.fqn()
 	if where == "" {
 		return selectX
 	} else {
@@ -201,16 +210,16 @@ func (table *tableSpec) selectX(where any) string {
 }
 
 func xIntTable(schema string) tableSpec {
-	fqn := fmt.Sprintf("%q.%q", schema, "TEST_TABLE")
 	return tableSpec{
-		fqn:    fqn,
-		create: "CREATE TABLE " + fqn + " (x INT)",
+		schema:  schema,
+		name:    "TEST_TABLE",
+		columns: "x INT",
 	}
 }
 
 func createXIntTable(transaction *sql.Tx, schema string) tableSpec {
 	table := xIntTable(schema)
-	_, _ = transaction.Exec(table.create)
+	_, _ = transaction.Exec(table.create())
 	_, _ = transaction.Exec(table.insert(15))
 	return table
 }
@@ -220,7 +229,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	schemaName := "TEST_SCHEMA_1"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create)
+	database.ExecContext(suite.ctx, table.create())
 	defer suite.cleanup(database, schemaName)
 	database.ExecContext(suite.ctx, table.insert(15))
 	rows, _ := database.Query(table.selectX(""))
@@ -232,13 +241,13 @@ func (suite *IntegrationTestSuite) TestFetch() {
 	schemaName := "TEST_SCHEMA_FETCH"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create)
+	database.ExecContext(suite.ctx, table.create())
 	defer suite.cleanup(database, schemaName)
 	data := make([]string, 0)
 	for i := 0; i < 10000; i++ {
 		data = append(data, fmt.Sprintf("(%d)", i))
 	}
-	_, _ = database.Exec(insertInto(table.fqn) + " VALUES " + strings.Join(data, ","))
+	_, _ = database.Exec(insertInto(table.fqn()) + " VALUES " + strings.Join(data, ","))
 	rows, _ := database.Query(table.selectX("") + " GROUP BY x ORDER BY x")
 	result := make([]int, 0)
 	counter := 0
@@ -287,7 +296,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	table := xIntTable(schemaName)
 	_, err := database.Query(table.selectX(""))
 	suite.Error(err)
-	suite.ErrorContains(err, "object "+unquoted(table.fqn)+" not found")
+	suite.ErrorContains(err, "object "+unquoted(table.fqn())+" not found")
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
@@ -295,7 +304,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	schemaName := "TEST_SCHEMA_3"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create)
+	database.ExecContext(suite.ctx, table.create())
 	defer suite.cleanup(database, schemaName)
 	preparedStatement, _ := database.Prepare(table.insert("?"))
 	_, _ = preparedStatement.Exec(15)
@@ -310,7 +319,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	defer suite.cleanup(database, schemaName)
 	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create)
+	database.ExecContext(suite.ctx, table.create())
 	preparedStatement, _ := database.Prepare(table.insert(25))
 	_, _ = preparedStatement.Exec()
 	preparedStatement, _ = database.Prepare(table.selectX(25))
@@ -561,7 +570,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	schemaName := "TEST_SCHEMA_3_2"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create)
+	database.ExecContext(suite.ctx, table.create())
 	defer suite.cleanup(database, schemaName)
 	result, _ := database.ExecContext(suite.ctx, table.insert("?"), 25)
 	affectedRow, _ := result.RowsAffected()
@@ -575,7 +584,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	schemaName := "TEST_SCHEMA_3_3"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	table := xIntTable(schemaName)
-	database.ExecContext(suite.ctx, table.create)
+	database.ExecContext(suite.ctx, table.create())
 	defer suite.cleanup(database, schemaName)
 	result, _ := database.Exec(table.insert(15))
 	affectedRow, _ := result.RowsAffected()
@@ -606,7 +615,7 @@ func (suite *IntegrationTestSuite) TestBeginAndRollback() {
 	_ = transaction.Rollback()
 	_, err := database.Query(table.selectX(""))
 	suite.Error(err)
-	suite.ErrorContains(err, "object "+unquoted(table.fqn)+" not found")
+	suite.ErrorContains(err, "object "+unquoted(table.fqn())+" not found")
 }
 
 func (suite *IntegrationTestSuite) TestPingWithContext() {
@@ -624,7 +633,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	_, _ = database.ExecContext(ctx, createSchema+schemaName)
 	defer suite.cleanup(database, schemaName)
 	table := xIntTable(schemaName)
-	_, _ = database.ExecContext(ctx, table.create)
+	_, _ = database.ExecContext(ctx, table.create())
 	_, _ = database.ExecContext(ctx, table.insert(15))
 	rows, _ := database.QueryContext(ctx, table.selectX(""))
 	cancel()
@@ -639,7 +648,8 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 	_, _ = transaction.ExecContext(ctx, createSchema+schemaName)
 	defer suite.cleanup(database, schemaName)
 	cancel()
-	_, err := transaction.ExecContext(ctx, xIntTable(schemaName).create)
+	table := xIntTable(schemaName)
+	_, err := transaction.ExecContext(ctx, table.create())
 	suite.EqualError(err, "context canceled")
 }
 
