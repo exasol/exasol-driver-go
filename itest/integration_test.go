@@ -425,7 +425,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 	} {
 		suite.Run(fmt.Sprintf("%02d Column type %s accepts values of type %T", i, testCase.sqlType, testCase.sqlValue), func() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
-			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
+			_, err := database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
 			suite.NoError(err, "failed to create table "+tableName)
 			stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
 			suite.NoError(err, "failed to insert into table "+tableName)
@@ -473,7 +473,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 	} {
 		suite.Run(fmt.Sprintf("Scan fails %02d %s", i, testCase.sqlType), func() {
 			tableName := fmt.Sprintf("%s.TAB_%d", schemaName, i)
-			_, err = database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
+			_, err := database.Exec(fmt.Sprintf("CREATE TABLE %s (col %s)", tableName, testCase.sqlType))
 			suite.NoError(err, "failed to create table "+tableName)
 			stmt, err := database.Prepare(fmt.Sprintf("insert into %s values (?)", tableName))
 			suite.NoError(err, "failed to prepare statement ")
@@ -767,7 +767,7 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 	file := suite.generateExampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_LEAK_PARQUET"
-	fqn := suite.createDbSchema(database, schemaName, "", "")
+	_ = suite.createDbSchema(database, schemaName, "", "")
 	defer suite.cleanup(database, schemaName)
 
 	_, err := suite.execImportWithinDeadline(
@@ -835,7 +835,6 @@ func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	file := suite.generateExampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_ENCRYPTED_PARQUET"
-	tableName := "TEST_TABLE"
 	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20)")
 	defer suite.cleanup(database, schemaName)
 	suite.assertImportsAreEncrypted(database)
@@ -932,7 +931,6 @@ func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
 func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_8"
-	tableName := "TEST_TABLE"
 	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20), c int")
 	defer suite.cleanup(database, schemaName)
 
@@ -949,7 +947,6 @@ func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
 func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_8"
-	tableName := "TEST_TABLE"
 	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int")
 	defer suite.cleanup(database, schemaName)
 
@@ -961,7 +958,6 @@ func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_8"
-	tableName := "table1"
 	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
 	defer suite.cleanup(database, schemaName)
 
@@ -1071,7 +1067,6 @@ func (suite *IntegrationTestSuite) TestCancelRunningImport() {
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_LEAK"
-	tableName := "TEST_TABLE_HUGE"
 	fqn := suite.createDbSchema(
 		database,
 		schemaName,
@@ -1154,20 +1149,16 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 		FixedLenByteArray: array,
 		Float:             1.123,
 		Double:            123456789.987654321,
-}}
+	}}
 	return writeSampleParquetFile(suite, rows)
 }
 
 // Cannot use a method, as methods do not allow type parameters in go.
 func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) *os.File {
 	path := filepath.Join(suite.T().TempDir(), sampleParquetFile)
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
-	suite.NoError(err, "failed to truncate file "+path)
-	err = file.Close()
-	suite.NoError(err, "failed to close file "+path)
-	err = parquet.WriteFile(path, rows)
+	err := parquet.WriteFile(path, rows)
 	suite.NoError(err, "failed to write sample parquet file "+path)
-	file, err = os.Open(path)
+	file, err := os.Open(path)
 	suite.NoError(err, "failed to open sample parquet file for reading "+path)
 	return file
 }
@@ -1304,7 +1295,7 @@ func (suite *IntegrationTestSuite) createDbSchema(
 	statement := fmt.Sprintf("CREATE TABLE %q.%q (%s)", schema, table, columns)
 	_, err = db.ExecContext(suite.ctx, statement)
 	suite.NoError(err, "Failed to create database table "+table)
-	return fmt.Sprintf("%q.%q", schemaName, table)
+	return fmt.Sprintf("%q.%q", schema, table)
 }
 
 func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
