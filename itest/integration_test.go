@@ -973,7 +973,7 @@ func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	rows, _ := database.Query(fmt.Sprintf("SELECT * FROM %s", fqn))
 	suite.assertTableResult(rows,
 		[]string{"TEXT"},
-		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) "+
+		[][]interface{}{{"import into {{dest.schema}}.{{dest.table}} ) " +
 			"from local csv file '{{file.path}}' "}},
 	)
 }
