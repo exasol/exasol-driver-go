@@ -175,23 +175,25 @@ func (suite *IntegrationTestSuite) getActualCertificateFingerprint() string {
 }
 
 func unquoted(value string) string {
-	return strings.Replace(value, "\"", "", -1)
+	return strings.ReplaceAll(value, "\"", "")
 }
 
 type tableSpec struct {
-	fqn     string
-	create  string
-	insert  string
-	selectX string
+	fqn            string
+	create         string
+	insert         string
+	insertPrepared string
+	selectX        string
 }
 
 func xIntTable(schema string) tableSpec {
 	fqn := fmt.Sprintf("%q.%q", schema, "TEST_TABLE")
 	return tableSpec{
-		fqn:     fqn,
-		create:  "CREATE TABLE " + fqn + " (x INT)",
-		insert:  "INSERT INTO " + fqn + " VALUES (15)",
-		selectX: "SELECT x FROM " + fqn,
+		fqn:            fqn,
+		create:         "CREATE TABLE " + fqn + " (x INT)",
+		insert:         "INSERT INTO " + fqn + " VALUES (15)",
+		insertPrepared: "INSERT INTO " + fqn + " VALUES (?)",
+		selectX:        "SELECT x FROM " + fqn,
 	}
 }
 
@@ -226,7 +228,7 @@ func (suite *IntegrationTestSuite) TestFetch() {
 		data = append(data, fmt.Sprintf("(%d)", i))
 	}
 	_, _ = database.Exec("INSERT INTO " + table.fqn + " VALUES " + strings.Join(data, ","))
-	rows, _ := database.Query(selectX + table.fqn + " GROUP BY x ORDER BY x")
+	rows, _ := database.Query(table.selectX + " GROUP BY x ORDER BY x")
 	result := make([]int, 0)
 	counter := 0
 	for rows.Next() {
@@ -271,20 +273,22 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 	schemaName := "TEST_SCHEMA_2"
 	_ = suite.createDbSchema(database, schemaName, "", "")
 	defer suite.cleanup(database, schemaName)
-	fqn := schemaName + ".NON_EXISTING_TABLE"
-	_, err := database.Query(selectX + fqn)
+	table := xIntTable(schemaName)
+	_, err := database.Query(table.selectX)
 	suite.Error(err)
-	suite.ErrorContains(err, "object "+fqn+" not found")
+	suite.ErrorContains(err, "object "+unquoted(table.fqn)+" not found")
 }
 
-func (suite *IntegrationTestSuite) TestPreparedStatement() {
+func (suite *IntegrationTestSuite) TestX1PreparedStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	_ = suite.createDbSchema(database, schemaName, "", "")
+	table := xIntTable(schemaName)
+	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	preparedStatement, _ := database.Prepare("INSERT INTO " + fqn + " VALUES (?)")
+	preparedStatement, _ := database.Prepare(table.insertPrepared)
 	_, _ = preparedStatement.Exec(15)
-	preparedStatement, _ = database.Prepare(selectX + fqn + " WHERE x = ?")
+	preparedStatement, _ = database.Prepare(table.selectX + " WHERE x = ?")
 	rows, _ := preparedStatement.Query(15)
 	suite.assertSingleValueResult(rows, "15")
 }
@@ -292,13 +296,15 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	_ = suite.createDbSchema(database, schemaName, "", "")
 	defer suite.cleanup(database, schemaName)
-	preparedStatement, _ := database.Prepare("INSERT INTO " + fqn + " VALUES (25)")
+	table := xIntTable(schemaName)
+	database.ExecContext(suite.ctx, table.create)
+	preparedStatement, _ := database.Prepare(table.insert)
 	_, _ = preparedStatement.Exec()
-	preparedStatement, _ = database.Prepare(selectX + fqn + " WHERE x = 25")
+	preparedStatement, _ = database.Prepare(table.selectX + " WHERE x = 15")
 	rows, _ := preparedStatement.Query()
-	suite.assertSingleValueResult(rows, "25")
+	suite.assertSingleValueResult(rows, "15")
 }
 
 var dereferenceString = func(v any) any { return *(v.(*string)) }
@@ -542,24 +548,28 @@ func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3_2"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	_ = suite.createDbSchema(database, schemaName, "", "")
+	table := xIntTable(schemaName)
+	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	result, _ := database.ExecContext(context.Background(), "INSERT INTO "+fqn+" VALUES (?)", 15)
+	result, _ := database.ExecContext(suite.ctx, table.insertPrepared, 15)
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
-	rows, _ := database.QueryContext(context.Background(), selectX+fqn+" WHERE x = ?", 15)
+	rows, _ := database.QueryContext(suite.ctx, table.selectX+" WHERE x = ?", 15)
 	suite.assertSingleValueResult(rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schemaName := "TEST_SCHEMA_3_3"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "x INT")
+	_ = suite.createDbSchema(database, schemaName, "", "")
+	table := xIntTable(schemaName)
+	database.ExecContext(suite.ctx, table.create)
 	defer suite.cleanup(database, schemaName)
-	result, _ := database.Exec("INSERT INTO "+fqn+" VALUES (?)", 15)
+	result, _ := database.Exec(table.insert)
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
-	rows, _ := database.Query(selectX+fqn+" WHERE x = ?", 15)
+	rows, _ := database.Query(table.selectX+" WHERE x = ?", 15)
 	suite.assertSingleValueResult(rows, "15")
 }
 
