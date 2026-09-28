@@ -1,6 +1,8 @@
 package connection
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"testing"
@@ -189,18 +191,44 @@ func TestCreateTableStatement(t *testing.T) {
 	}
 }
 
-func TestRetrieveParquetColumnsNonExistingFile(t *testing.T) {
+func closedFile(t *testing.T) *os.File {
 	f, err := os.CreateTemp(t.TempDir(), "broken")
 	assert.NoError(t, err)
 	f.Close()
-	_, err = retrieveParquetColumns(f)
+	return f
+}
+
+func TestRetrieveParquetColumns_ClosedFile(t *testing.T) {
+	_, err := retrieveParquetColumns(closedFile(t))
 	assert.ErrorContains(t, err, "could not stat Parquet file")
 }
 
-func TestRetrieveParquetColumnsInvalidFileFormat(t *testing.T) {
+func TestRetrieveParquetColumns_InvalidFileFormat(t *testing.T) {
 	f, err := os.CreateTemp(t.TempDir(), "broken")
 	assert.NoError(t, err)
 	defer f.Close()
 	_, err = retrieveParquetColumns(f)
 	assert.ErrorContains(t, err, "could not open file with Parquet reader")
+}
+
+func TestImportParquetWithInferredSchema_InvalidIdentifiers(t *testing.T) {
+	for _, tt := range []struct {
+		schema        string
+		table         string
+		path          string
+		expectedError string
+	}{
+		{"\"S1", "T1", "path", "invalid schema name"},
+		{"S1", ".T1", "path", "invalid table name"},
+		{"S1", "T1", "pa'th", "file path contains illegal character \"'\""},
+	} {
+		t.Run(tt.expectedError, func(t *testing.T) {
+			var ctx context.Context
+			var db *sql.DB
+			options := ParquetImportOptions{}
+			_, err := ImportParquetWithInferredSchema(ctx, db, tt.schema, tt.table, tt.path, options)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedError)
+		})
+	}
 }
