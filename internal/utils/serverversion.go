@@ -13,6 +13,7 @@ const (
 )
 
 const minPublicKeyPinningMajor = 2025
+const minTimestamp9Major = 2025
 
 var leadingDigitsRegex = regexp.MustCompile(`^\d+`)
 
@@ -31,6 +32,14 @@ func SupportsNativeParquetImport(releaseVersion string) bool {
 func SupportsPublicKeyPinning(releaseVersion string) bool {
 	major, _, _, ok := parseServerVersion(releaseVersion)
 	return ok && major >= minPublicKeyPinningMajor
+}
+
+// SupportsTimestamp9 reports whether the server started by this suite
+// supports datatype TIMESTAMP(9). Unparsable release versions are treated as
+// unsupported.
+func SupportsTimestamp9(releaseVersion string) bool {
+	major, _, _, ok := parseServerVersion(releaseVersion)
+	return ok && major >= minTimestamp9Major
 }
 
 func atLeastVersion(releaseVersion string, major int, minor int, patch int) bool {

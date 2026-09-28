@@ -1199,6 +1199,7 @@ func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() {
 	defer file.Close()
 }
 
+// Fails on Exasol 8.29.13 as timestamp(9) is not supported there
 // see https://github.com/xitongsys/parquet-go/blob/master/example/type.go
 func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 	timestamp := time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC)
@@ -1337,6 +1338,11 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 }
 
 func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
+	if !suite.exasol.SupportsTimestamp9() {
+		suite.T().Skipf("Exasol %s does not support TIMESTAMP(9) "+
+			"which is required for ImportParquetWithInferredSchema()",
+			suite.exasol.DbVersion)
+	}
 	database := suite.openConnection(suite.createDefaultConfig())
 	schema := "TEST_SCHEMA_11"
 	table := "TEST_TABLE"

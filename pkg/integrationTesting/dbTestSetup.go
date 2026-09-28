@@ -79,6 +79,12 @@ func (setup *DbTestSetup) SupportsPublicKeyPinning() bool {
 	return utils.SupportsPublicKeyPinning(setup.DbVersion)
 }
 
+// SupportsTimestamp9 reports whether the server started by this suite
+// supports datatype TIMESTAMP(9).
+func (setup *DbTestSetup) SupportsTimestamp9() bool {
+	return utils.SupportsTimestamp9(setup.DbVersion)
+}
+
 func (setup *DbTestSetup) getExasolMajorVersion() (int, error) {
 	db := setup.createConnection()
 	defer db.Close()
