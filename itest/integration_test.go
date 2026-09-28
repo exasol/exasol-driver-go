@@ -1178,15 +1178,20 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) *os.Fi
 	return writeSampleParquetFile(suite, rows)
 }
 
+// EGOD can detect additional data types in Parquet files and create the
+// related SQL table but does not support actual data import, yet:
+// fixedlenbytearray, list, map.
 type enhancedParquetRow struct {
-	Int32             int32     `parquet:"int32"`
-	Int64             int64     `parquet:"int64"`
-	Timestamp         time.Time `parquet:"timestamp"`
-	Boolean           bool      `parquet:"boolean"`
-	ByteArray         string    `parquet:"bytearray"`
-	FixedLenByteArray [30]byte  `parquet:"fixedlenbytearray"`
-	Float             float32   `parquet:"float"`
-	Double            float64   `parquet:"double"`
+	Int32             int32     	   `parquet:"int32"`
+	Int64             int64     	   `parquet:"int64"`
+	Timestamp         time.Time 	   `parquet:"timestamp"`
+	Boolean           bool      	   `parquet:"boolean"`
+	ByteArray         string    	   `parquet:"bytearray"`
+	Float             float32   	   `parquet:"float"`
+	Double            float64   	   `parquet:"double"`
+	// FixedLenByteArray [30]byte  	   `parquet:"fixedlenbytearray"`
+	// List              []string  	   `parquet:"list"`
+	// Map               map[string]int32 `parquet:"map"`
 }
 
 func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() {
@@ -1205,9 +1210,11 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 		Timestamp:         timestamp,
 		Boolean:           true,
 		ByteArray:         "A byte array of variable length",
-		FixedLenByteArray: array,
 		Float:             1.123,
 		Double:            123456789.987654321,
+		// FixedLenByteArray: array,
+		// List:              []string{"a", "b", "c"},
+		// Map:               map[string]int32{"a": 1, "b": 2},
 	}}
 	return writeSampleParquetFile(suite, rows)
 }
@@ -1329,6 +1336,27 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 	suite.Nil(rows)
 }
 
+func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
+	// ###
+	database := suite.openConnection(suite.createDefaultConfig())
+	schema := "TEST_SCHEMA_11"
+	table := "TEST_TABLE"
+	_, _ = database.ExecContext(suite.ctx, "CREATE SCHEMA "+schema)
+	defer suite.cleanup(database, schema)
+	file := suite.createEnhancedParquetSampleFile()
+	file.Close()
+	path := file.Name()
+	_, err := connection.ImportParquetWithInferredSchema(
+		suite.ctx,
+		database,
+		schema,
+		table,
+		path,
+		connection.ParquetImportOptions{},
+	)
+	suite.NoError(err, "Import local Parquet file")
+}
+
 func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
 	rows.Next()
 	var testValue string
@@ -1362,6 +1390,10 @@ func (suite *IntegrationTestSuite) createDbSchema(
 func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
 	_, err := db.Exec("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE")
 	suite.NoError(err, "Failed to drop schema "+schemaName)
+	suite.NoError(db.Close(), "Failed to close driver ")
+}
+
+func (suite *IntegrationTestSuite) closeDB(db *sql.DB, schemaName string) {
 	suite.NoError(db.Close(), "Failed to close driver ")
 }
 

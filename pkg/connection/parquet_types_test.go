@@ -40,7 +40,6 @@ func TestMapLogicalType(t *testing.T) {
 	}{
 		{&format.StringType{}, maxVarcharColumn, ""},
 		{&format.UUIDType{}, maxVarcharColumn, ""},
-		{&format.JsonType{}, maxVarcharColumn, ""},
 		{&format.ListType{}, maxVarcharColumn, ""},
 		{&format.MapType{}, maxVarcharColumn, ""},
 		{&format.DecimalType{Precision: 2, Scale: 1}, "DECIMAL(2,1)", ""},

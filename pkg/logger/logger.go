@@ -8,6 +8,7 @@ import (
 )
 
 var ErrorLogger Logger = log.New(os.Stderr, "[exasol] ", log.LstdFlags|log.Lshortfile)
+var DebugLogger Logger = log.New(os.Stderr, "[DEBUG] ", log.LstdFlags|log.Lshortfile)
 var TraceLogger Logger = noOpLogger{}
 
 // Logger is used to log critical error messages.
