@@ -1182,13 +1182,13 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) *os.Fi
 // related SQL table but does not support actual data import, yet:
 // fixedlenbytearray, list, map.
 type enhancedParquetRow struct {
-	Int32             int32     	   `parquet:"int32"`
-	Int64             int64     	   `parquet:"int64"`
-	Timestamp         time.Time 	   `parquet:"timestamp"`
-	Boolean           bool      	   `parquet:"boolean"`
-	ByteArray         string    	   `parquet:"bytearray"`
-	Float             float32   	   `parquet:"float"`
-	Double            float64   	   `parquet:"double"`
+	Int32     int32     `parquet:"int32"`
+	Int64     int64     `parquet:"int64"`
+	Timestamp time.Time `parquet:"timestamp"`
+	Boolean   bool      `parquet:"boolean"`
+	ByteArray string    `parquet:"bytearray"`
+	Float     float32   `parquet:"float"`
+	Double    float64   `parquet:"double"`
 	// FixedLenByteArray [30]byte  	   `parquet:"fixedlenbytearray"`
 	// List              []string  	   `parquet:"list"`
 	// Map               map[string]int32 `parquet:"map"`
@@ -1205,13 +1205,13 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 	var array [30]byte
 	_ = copy(array[:], "fixed length byte array")
 	rows := []enhancedParquetRow{{
-		Int32:             33,
-		Int64:             65,
-		Timestamp:         timestamp,
-		Boolean:           true,
-		ByteArray:         "A byte array of variable length",
-		Float:             1.123,
-		Double:            123456789.987654321,
+		Int32:     33,
+		Int64:     65,
+		Timestamp: timestamp,
+		Boolean:   true,
+		ByteArray: "A byte array of variable length",
+		Float:     1.123,
+		Double:    123456789.987654321,
 		// FixedLenByteArray: array,
 		// List:              []string{"a", "b", "c"},
 		// Map:               map[string]int32{"a": 1, "b": 2},
@@ -1337,7 +1337,6 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 }
 
 func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
-	// ###
 	database := suite.openConnection(suite.createDefaultConfig())
 	schema := "TEST_SCHEMA_11"
 	table := "TEST_TABLE"
@@ -1393,6 +1392,10 @@ func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
 	suite.NoError(db.Close(), "Failed to close driver ")
 }
 
+// closeDB can be used instead of suite.cleanup() in order to keep the schema
+// for manual inspection.
+//
+//lint:ignore U1000 Ignore unused function
 func (suite *IntegrationTestSuite) closeDB(db *sql.DB, schemaName string) {
 	suite.NoError(db.Close(), "Failed to close driver ")
 }

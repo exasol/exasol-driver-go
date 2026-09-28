@@ -15,6 +15,8 @@ type ParquetImportOptions struct {
 	Name string
 }
 
+// checkIfTableExists checks if the specified table exists by querying
+// EXA_ALL_TABLES.
 func checkIfTableExists(
 	ctx context.Context,
 	database *sql.DB,
@@ -28,10 +30,10 @@ func checkIfTableExists(
 		schema,
 		table,
 	)
-	defer rows.Close()
 	if err != nil {
 		return
 	}
+	defer rows.Close()
 	if !rows.Next() {
 		return false, nil
 	}
@@ -41,6 +43,11 @@ func checkIfTableExists(
 	return x > 0, err
 }
 
+// ImportParquetWithInferredSchema imports a local Parquet file incl.
+// creating the target SQL table based on the column definitions retrieved
+// from the Parquet file.
+//
+// If the SQL table already exists then a warning is sent to the logger.
 func ImportParquetWithInferredSchema(
 	ctx context.Context,
 	database *sql.DB,
@@ -52,22 +59,24 @@ func ImportParquetWithInferredSchema(
 	tableFqn := fmt.Sprintf("%q.%q", schema, table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)
 	if err != nil {
-		return result, fmt.Errorf("Failed to check if table %s exists", tableFqn)
+		return result, fmt.Errorf("failed to check if table %s exists", tableFqn)
 	}
-	if !exists {
+	if exists {
+		logger.WarningLogger.Printf("The specified table %s already exists", tableFqn)
+	} else {
 		file, err := os.Open(filePath)
 		if err != nil {
-			return result, fmt.Errorf("Failed to open Parquet file %s for import %w", filePath, err)
+			return result, fmt.Errorf("failed to open Parquet file %s for import %w", filePath, err)
 		}
 		columns, err := retrieveParquetColumns(file)
 		if err != nil {
 			return result,
-				fmt.Errorf("Failed to retrieve column declarations from Parquet file %s %w", filePath, err)
+				fmt.Errorf("failed to retrieve column declarations from Parquet file %s %w", filePath, err)
 		}
 		statement, err := createTableStatement(tableFqn, columns)
 		if err != nil {
 			return result,
-				fmt.Errorf("Failed to build the CREATE TABLE statement for Parquet file %s %w", filePath, err)
+				fmt.Errorf("failed to build the CREATE TABLE statement for Parquet file %s %w", filePath, err)
 		}
 		LOG.Print(statement)
 		_, err = database.ExecContext(ctx, statement)
@@ -77,5 +86,5 @@ func ImportParquetWithInferredSchema(
 	}
 	statement := fmt.Sprintf("IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'", tableFqn, filePath)
 	LOG.Print(statement)
-	return database.ExecContext(ctx, statement)
+	return database.ExecContext(ctx, statement) // NOSONAR
 }

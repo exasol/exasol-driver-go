@@ -191,19 +191,19 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 	info, err := file.Stat()
 	filePath := file.Name()
 	if err != nil {
-		return empty, fmt.Errorf("Could not stat Parquet file %s", filePath)
+		return empty, fmt.Errorf("could not stat Parquet file %s", filePath)
 	}
 
 	f, err := parquet.OpenFile(file, info.Size())
 	if err != nil {
-		return empty, fmt.Errorf("Could not open file with Parquet reader %s", filePath)
+		return empty, fmt.Errorf("could not open file with Parquet reader %s", filePath)
 	}
 
 	schema := f.Schema()
 	result = make([]parquetColumn, 0, len(schema.Columns()))
 	for _, path := range schema.Columns() {
 		leaf, found := schema.Lookup(path...)
-		if ! found {
+		if !found {
 			return empty, fmt.Errorf(
 				"unexpected error, couldn't find column for path %q in Parquet file %s",
 				path, filePath)
@@ -214,10 +214,10 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 			logical = lType.Value
 		}
 		result = append(result, parquetColumn{
-			path: path,
-			logical: logical,
+			path:     path,
+			logical:  logical,
 			physical: nodeType.Kind(),
-			length: nodeType.Length(),
+			length:   nodeType.Length(),
 		})
 	}
 	return
