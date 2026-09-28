@@ -2,6 +2,7 @@ package connection
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/parquet-go/parquet-go"
@@ -186,4 +187,20 @@ func TestCreateTableStatement(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRetrieveParquetColumnsNonExistingFile(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "broken")
+	assert.NoError(t, err)
+	f.Close()
+	_, err = retrieveParquetColumns(f)
+	assert.ErrorContains(t, err, "could not stat Parquet file")
+}
+
+func TestRetrieveParquetColumnsInvalidFileFormat(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "broken")
+	assert.NoError(t, err)
+	defer f.Close()
+	_, err = retrieveParquetColumns(f)
+	assert.ErrorContains(t, err, "could not open file with Parquet reader")
 }
