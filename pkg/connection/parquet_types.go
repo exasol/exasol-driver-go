@@ -186,6 +186,9 @@ func createTableStatement(tableFqn string, columns []parquetColumn) (result stri
 	result = fmt.Sprintf("CREATE TABLE %s (%s)", tableFqn, strings.Join(sql, ", "))
 	return
 }
+
+// retrieveParquetColumns retrieves the columns described in the meta data
+// schema of a local Parquet file.
 func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 	empty := make([]parquetColumn, 0)
 	info, err := file.Stat()
