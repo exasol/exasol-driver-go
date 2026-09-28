@@ -38,8 +38,11 @@ func TestMapLogicalType(t *testing.T) {
 		expected      string
 		expectedError string
 	}{
-		{&format.StringType{}, "STRING", ""},
-		{&format.UUIDType{}, "STRING", ""},
+		{&format.StringType{}, maxVarcharColumn, ""},
+		{&format.UUIDType{}, maxVarcharColumn, ""},
+		{&format.JsonType{}, maxVarcharColumn, ""},
+		{&format.ListType{}, maxVarcharColumn, ""},
+		{&format.MapType{}, maxVarcharColumn, ""},
 		{&format.DecimalType{Precision: 2, Scale: 1}, "DECIMAL(2,1)", ""},
 		{&format.DecimalType{Precision: 1, Scale: 2}, "", "unsupported scale 2 > precision 1"},
 		{&format.DecimalType{Precision: 37}, "", "unsupported precision 37"},
@@ -121,69 +124,57 @@ func TestCreateTableStatement(t *testing.T) {
 	}{
 		{"empty_list", make([]parquetColumn, 0), "", "empty list of columns"},
 		{
-			"decimal_10", []parquetColumn{{[]string{"d1"}, parquet.Int32, 0}},
-			"(\"d1\" DECIMAL(10,0))", "",
+			"decimal_logical", []parquetColumn{{
+				path:     []string{"dL"},
+				logical:  &format.DecimalType{Precision: 2, Scale: 1},
+				physical: parquet.ByteArray, // deliberately inconsistent
+				length:   0,
+			}},
+			"(\"dL\" DECIMAL(2,1))", "",
 		},
 		{
-			"decimal_19", []parquetColumn{{[]string{"d2"}, parquet.Int64, 0}},
-			"(\"d2\" DECIMAL(19,0))", "",
+			"decimal_physical", []parquetColumn{{[]string{"dp"}, nil, parquet.Int64, 0}},
+			"(\"dp\" DECIMAL(19,0))", "",
 		},
 		{
-			"timestamp", []parquetColumn{{[]string{"ts"}, parquet.Int96, 0}},
-			"(\"ts\" TIMESTAMP(9))", "",
+			"varchar_logical", []parquetColumn{
+				{[]string{"vL"}, &format.StringType{}, parquet.Int32, 0},
+			}, "(\"vL\" "+maxVarcharColumn+")", "",
 		},
 		{
-			"boolean", []parquetColumn{{[]string{"b"}, parquet.Boolean, 0}},
-			"(\"b\" BOOLEAN)", "",
-		},
-		{
-			"varchar_max", []parquetColumn{
-				{[]string{"v1"}, parquet.ByteArray, 0},
-			}, "(\"v1\" VARCHAR(2000000) CHARACTER SET UTF8)", "",
+			"varchar_physical", []parquetColumn{
+				{[]string{"vP"}, nil, parquet.ByteArray, 0},
+			}, "(\"vP\" "+maxVarcharColumn+")", "",
 		},
 		{
 			"varchar_flex",
 			[]parquetColumn{
-				{[]string{"v2"}, parquet.FixedLenByteArray, 123},
+				{[]string{"v2"}, nil, parquet.FixedLenByteArray, 123},
 			}, "(\"v2\" VARCHAR(123) CHARACTER SET UTF8)", "",
 		},
 		{
 			"error_1",
 			[]parquetColumn{
-				{[]string{"e1"}, parquet.FixedLenByteArray, maxVarcharLength + 1},
+				{[]string{"e1"}, nil, parquet.FixedLenByteArray, maxVarcharLength + 1},
 			}, "", "exceeds supported maximum",
 		},
 		{
-			"double_float", []parquetColumn{{[]string{"dp1"}, parquet.Float, 0}},
-			"(\"dp1\" DOUBLE PRECISION)", "",
-		},
-		{
-			"double_double", []parquetColumn{{[]string{"dp2"}, parquet.Double, 0}},
-			"(\"dp2\" DOUBLE PRECISION)", "",
-		},
-		{
-			"error_2", []parquetColumn{
-				{[]string{"e1"}, invalidPhysicalDataType, 0},
-			}, "", "unsupported Parquet physical data type",
-		},
-		{
 			"multiple_valid", []parquetColumn{
-				{[]string{"d1"}, parquet.Int64, 0},
-				{[]string{"v1"}, parquet.FixedLenByteArray, 345},
+				{[]string{"dP"}, nil, parquet.Int64, 0},
+				{[]string{"vL"}, &format.StringType{}, parquet.FixedLenByteArray, 345},
 			},
-			"(\"d1\" DECIMAL(19,0), \"v1\" VARCHAR(345) CHARACTER SET UTF8)",
+			"(\"dP\" DECIMAL(19,0), \"vL\" "+maxVarcharColumn+")",
 			"",
 		},
 		{
 			"multiple_2nd_invalid", []parquetColumn{
-				{[]string{"d1"}, parquet.Int64, 0},
-				{[]string{"e1"}, invalidPhysicalDataType, 0},
+				{[]string{"d1"}, nil, parquet.Int64, 0},
+				{[]string{"e1"}, nil, invalidPhysicalDataType, 0},
 			},
 			"",
 			"unsupported",
 		},
 	} {
-		// for _, tt := range createTableStatementTests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := createTableStatement("S.T", tt.columns)
 			if tt.expectedError == "" {

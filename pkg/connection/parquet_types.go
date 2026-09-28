@@ -16,6 +16,7 @@ const (
 	doublePrecisionColumn = "DOUBLE PRECISION"
 	maxDecimalPrecision   = 36
 	timestamp9Column      = "TIMESTAMP(9)"
+	maxVarcharColumn      = "VARCHAR(2000000) CHARACTER SET UTF8"
 )
 
 // numberOfDigits returns the number of decimal digits required to represent
@@ -72,9 +73,9 @@ func precisionAndScale(decimal *format.DecimalType) (precision int, scale int, e
 func mapLogicalType(logical format.LogicalTypeValue) (result string, err error) {
 	switch casted := logical.(type) {
 	case *format.UUIDType:
-		result = "STRING"
+		result = maxVarcharColumn
 	case *format.StringType:
-		result = "STRING"
+		result = maxVarcharColumn
 	case *format.DecimalType:
 		p, s, err := precisionAndScale(casted)
 		if err != nil {
@@ -102,13 +103,15 @@ func mapLogicalType(logical format.LogicalTypeValue) (result string, err error) 
 		result = timestamp9Column
 	case *format.Float16Type:
 		result = "DOUBLE PRECISION"
+	case *format.JsonType:
+		result = maxVarcharColumn
+	case *format.ListType:
+		result = maxVarcharColumn
+	case *format.MapType:
+		result = maxVarcharColumn
 	// logical types known to be unsupported:
-	//
-	// - MapType
-	// - ListType
 	// - EnumType
 	// - NullType
-	// - JsonType
 	// - BsonType
 	// - GeometryType
 	// - GeographyType
@@ -154,9 +157,10 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result string, err erro
 }
 
 type parquetColumn struct {
-	path   []string
-	kind   parquet.Kind
-	length int
+	path     []string
+	logical  format.LogicalTypeValue
+	physical parquet.Kind
+	length   int
 }
 
 // createTableStatement returns the SQL statement to create a table based on
@@ -167,7 +171,12 @@ func createTableStatement(tableFqn string, columns []parquetColumn) (result stri
 	}
 	sql := make([]string, 0, len(columns))
 	for _, col := range columns {
-		sqlType, err := mapPhysicalType(col.kind, int64(col.length))
+		var sqlType string
+		if col.logical != nil {
+			sqlType, err = mapLogicalType(col.logical)
+		} else {
+			sqlType, err = mapPhysicalType(col.physical, int64(col.length))
+		}
 		if err != nil {
 			return "", err
 		}
