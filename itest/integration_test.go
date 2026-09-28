@@ -88,7 +88,7 @@ func (suite *IntegrationTestSuite) assertQueryWorks(database *sql.DB) {
 	columns, err := rows.Columns()
 	suite.NoError(err)
 	suite.Equal("2", columns[0])
-	suite.assertSingleValueResult(rows, "2")
+	assertSingleValueResult(suite, rows, "2")
 }
 
 func (suite *IntegrationTestSuite) TestConnectWithUrlPath() {
@@ -229,7 +229,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	defer suite.cleanup(database, table.schema)
 	database.ExecContext(suite.ctx, table.insert(15))
 	rows, _ := database.Query(table.selectX(""))
-	suite.assertSingleValueResult(rows, "15")
+	assertSingleValueResult(suite, rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestFetch() {
@@ -303,7 +303,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	_, _ = preparedStatement.Exec(15)
 	preparedStatement, _ = database.Prepare(table.selectX("?"))
 	rows, _ := preparedStatement.Query(15)
-	suite.assertSingleValueResult(rows, "15")
+	assertSingleValueResult(suite, rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
@@ -316,7 +316,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	_, _ = preparedStatement.Exec()
 	preparedStatement, _ = database.Prepare(table.selectX(25))
 	rows, _ := preparedStatement.Query()
-	suite.assertSingleValueResult(rows, "25")
+	assertSingleValueResult(suite, rows, "25")
 }
 
 var dereferenceString = func(v any) any { return *(v.(*string)) }
@@ -554,7 +554,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 	suite.NoError(err, "failed to execute statement")
 	rows, err := database.Query(fmt.Sprintf("select a || ':' || b from %s", fqn))
 	suite.NoError(err, "failed to run query")
-	suite.assertSingleValueResult(rows, "1:2")
+	assertSingleValueResult(suite, rows, "1:2")
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
@@ -567,7 +567,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
 	rows, _ := database.QueryContext(suite.ctx, table.selectX("?"), 25)
-	suite.assertSingleValueResult(rows, "25")
+	assertSingleValueResult(suite, rows, "25")
 }
 
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
@@ -581,7 +581,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	affectedRow, _ := result.RowsAffected()
 	suite.Assert().Equal(int64(1), affectedRow)
 	rows, _ := database.Query(table.selectX("?"), 15)
-	suite.assertSingleValueResult(rows, "15")
+	assertSingleValueResult(suite, rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndCommit() {
@@ -593,7 +593,7 @@ func (suite *IntegrationTestSuite) TestBeginAndCommit() {
 	table := createXIntTable(transaction, schemaName)
 	_ = transaction.Commit()
 	rows, _ := database.Query(table.selectX(""))
-	suite.assertSingleValueResult(rows, "15")
+	assertSingleValueResult(suite, rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestBeginAndRollback() {
@@ -628,7 +628,7 @@ func (suite *IntegrationTestSuite) TestExecuteAndQueryWithContext() {
 	_, _ = database.ExecContext(ctx, table.insert(15))
 	rows, _ := database.QueryContext(ctx, table.selectX(""))
 	cancel()
-	suite.assertSingleValueResult(rows, "15")
+	assertSingleValueResult(suite, rows, "15")
 }
 
 func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
@@ -1360,11 +1360,15 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 		connection.ParquetImportOptions{},
 	)
 	suite.NoError(err, "Import local Parquet file")
+	rows, err := database.QueryContext(
+		suite.ctx, fmt.Sprintf("SELECT count(1) from %q.%q", schema, table))
+	suite.NoError(err)
+	assertSingleValueResult(suite, rows, 1)
 }
 
-func (suite *IntegrationTestSuite) assertSingleValueResult(rows *sql.Rows, expected string) {
+func assertSingleValueResult[T any](suite *IntegrationTestSuite, rows *sql.Rows, expected T) {
 	rows.Next()
-	var testValue string
+	var testValue T
 	err := rows.Scan(&testValue)
 	suite.NoError(err, "failed to scan rows")
 	suite.Equal(expected, testValue)

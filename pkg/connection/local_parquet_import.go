@@ -28,7 +28,7 @@ var regularIdentifier = regexp.MustCompile(
 // illegalPathCharacters defines a regular expression for illegal characters
 // in the path of a file to be imported via ImportParquetWithInferredSchema.
 // EGOD deliberately forbids these characters to avoid SQL injection.
-var illegalPathCharacters = regexp.MustCompile("[;'\\\\]")
+var illegalPathCharacters = regexp.MustCompile(`[;'\\]`)
 
 // checkIfTableExists checks if the specified table exists by querying
 // EXA_ALL_TABLES.

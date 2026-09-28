@@ -198,12 +198,12 @@ func closedFile(t *testing.T) *os.File {
 	return f
 }
 
-func TestRetrieveParquetColumns_ClosedFile(t *testing.T) {
+func TestImportClosedFile(t *testing.T) {
 	_, err := retrieveParquetColumns(closedFile(t))
 	assert.ErrorContains(t, err, "could not stat Parquet file")
 }
 
-func TestRetrieveParquetColumns_InvalidFileFormat(t *testing.T) {
+func TestImportInvalidFileFormat(t *testing.T) {
 	f, err := os.CreateTemp(t.TempDir(), "broken")
 	assert.NoError(t, err)
 	defer f.Close()
@@ -211,7 +211,7 @@ func TestRetrieveParquetColumns_InvalidFileFormat(t *testing.T) {
 	assert.ErrorContains(t, err, "could not open file with Parquet reader")
 }
 
-func TestImportParquetWithInferredSchema_InvalidIdentifiers(t *testing.T) {
+func TestImportIllegalCharacters(t *testing.T) {
 	for _, tt := range []struct {
 		schema        string
 		table         string
