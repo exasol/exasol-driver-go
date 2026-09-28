@@ -139,12 +139,12 @@ func TestCreateTableStatement(t *testing.T) {
 		{
 			"varchar_logical", []parquetColumn{
 				{[]string{"vL"}, &format.StringType{}, parquet.Int32, 0},
-			}, "(\"vL\" "+maxVarcharColumn+")", "",
+			}, "(\"vL\" " + maxVarcharColumn + ")", "",
 		},
 		{
 			"varchar_physical", []parquetColumn{
 				{[]string{"vP"}, nil, parquet.ByteArray, 0},
-			}, "(\"vP\" "+maxVarcharColumn+")", "",
+			}, "(\"vP\" " + maxVarcharColumn + ")", "",
 		},
 		{
 			"varchar_flex",
@@ -163,7 +163,7 @@ func TestCreateTableStatement(t *testing.T) {
 				{[]string{"dP"}, nil, parquet.Int64, 0},
 				{[]string{"vL"}, &format.StringType{}, parquet.FixedLenByteArray, 345},
 			},
-			"(\"dP\" DECIMAL(19,0), \"vL\" "+maxVarcharColumn+")",
+			"(\"dP\" DECIMAL(19,0), \"vL\" " + maxVarcharColumn + ")",
 			"",
 		},
 		{
