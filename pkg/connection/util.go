@@ -32,7 +32,7 @@ func ToResult(result *types.SqlQueriesResponse) (driver.Result, error) {
 // quoteIdentifier escapes double quotes in the specified identifier by
 // duplicating them and returns the result enclosed in additional double quote
 // characters.
-func quoteIdentifier(raw string) string {
+func QuoteIdentifier(raw string) string {
 	escaped := strings.Replace(raw, `"`, `""`, -1)
 	return fmt.Sprintf(`"%s"`, escaped)
 }

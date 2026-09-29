@@ -108,7 +108,7 @@ func ImportParquetWithInferredSchema(
 	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {
 		return result, fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
 	}
-	tableFqn := fmt.Sprintf("%q.%q", schema, table)
+	tableFqn := QuoteIdentifier(schema) + "." + QuoteIdentifier(table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)
 	if err != nil {
 		return result, fmt.Errorf("failed to check if table %s exists", tableFqn)
