@@ -32,12 +32,7 @@ var illegalPathCharacters = regexp.MustCompile(`[;'\\]`)
 
 // checkIfTableExists checks if the specified table exists by querying
 // EXA_ALL_TABLES.
-func checkIfTableExists(
-	ctx context.Context,
-	database *sql.DB,
-	schema string,
-	table string,
-) (result bool, err error) {
+func checkIfTableExists(ctx context.Context, database *sql.DB, schema string, table string) (bool, error) {
 	rows, err := database.QueryContext(
 		ctx,
 		"SELECT count(1) FROM SYS.EXA_ALL_TABLES "+
@@ -46,7 +41,7 @@ func checkIfTableExists(
 		table,
 	)
 	if err != nil {
-		return
+		return false, err
 	}
 	defer rows.Close()
 	if !rows.Next() {
@@ -56,6 +51,37 @@ func checkIfTableExists(
 	var x int
 	err = rows.Scan(&x)
 	return x > 0, err
+}
+
+// createTableForLocalParquetImport creates the SQL table for importing a
+// Parquet file from local using the column descriptions in the Parquet
+// file's metadata.
+func createTableForLocalParquetImport(
+	ctx context.Context,
+	database *sql.DB,
+	tableFqn string,
+	filePath string,
+	options ParquetImportOptions,
+) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open Parquet file %s for import: %w", filePath, err)
+	}
+	defer file.Close()
+	columns, err := retrieveParquetColumns(file)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve column declarations from Parquet file %s: %w", filePath, err)
+	}
+	statement, err := createTableStatement(tableFqn, columns)
+	if err != nil {
+		return fmt.Errorf("failed to build the CREATE TABLE statement for Parquet file %s: %w", filePath, err)
+	}
+	LOG.Print(statement)
+	_, err = database.ExecContext(ctx, statement)
+	if err != nil {
+		return fmt.Errorf("failed to create the SQL table for Parquet file %s: %w", filePath, err)
+	}
+	return nil
 }
 
 // ImportParquetWithInferredSchema imports a local Parquet file incl.
@@ -88,25 +114,11 @@ func ImportParquetWithInferredSchema(
 		return result, fmt.Errorf("failed to check if table %s exists", tableFqn)
 	}
 	if exists {
-		logger.WarningLogger.Printf("The specified table %s already exists. Import may fail if schemas do not match.", tableFqn)
+		logger.WarningLogger.Printf(
+			"The specified table %s already exists. Import may fail if columns do not match.",
+			tableFqn)
 	} else {
-		file, err := os.Open(filePath)
-		if err != nil {
-			return result, fmt.Errorf("failed to open Parquet file %s for import %w", filePath, err)
-		}
-		defer file.Close()
-		columns, err := retrieveParquetColumns(file)
-		if err != nil {
-			return result,
-				fmt.Errorf("failed to retrieve column declarations from Parquet file %s %w", filePath, err)
-		}
-		statement, err := createTableStatement(tableFqn, columns)
-		if err != nil {
-			return result,
-				fmt.Errorf("failed to build the CREATE TABLE statement for Parquet file %s %w", filePath, err)
-		}
-		LOG.Print(statement)
-		_, err = database.ExecContext(ctx, statement)
+		err = createTableForLocalParquetImport(ctx, database, tableFqn, filePath, options)
 		if err != nil {
 			return result, err
 		}
@@ -114,5 +126,7 @@ func ImportParquetWithInferredSchema(
 	statement := fmt.Sprintf("IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'", tableFqn, filePath)
 	LOG.Print(statement)
 	// suppress sonar findings as values are sanitized at the beginning of the function
+	// result, err = database.ExecContext(ctx, statement) // NOSONAR
+	// rowsCount, err := result.RowsAffected()
 	return database.ExecContext(ctx, statement) // NOSONAR
 }
