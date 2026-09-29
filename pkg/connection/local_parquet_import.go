@@ -84,7 +84,7 @@ func createTableForLocalParquetImport(
 	return nil
 }
 
-func verifyInputParameters(schema string, table string, filePath string) error {
+func verifyInputParameters(schema, table, filePath string) error {
 	if !regularIdentifier.MatchString(schema) {
 		return fmt.Errorf("invalid schema name %q", schema)
 	}
