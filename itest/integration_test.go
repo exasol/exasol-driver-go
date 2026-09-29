@@ -1339,8 +1339,8 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 			suite.exasol.DbVersion)
 	}
 	database := suite.openConnection(suite.createDefaultConfig())
-	// update test to include upper and lower case
-	// characters in the name of schema and table
+	// This test deliberately uses mixed case names for schema and table to
+	// verify proper quoting.
 	table := tableSpec{schema: "test_SCHEMA_11", name: "TEST_table"}
 	_, err := database.ExecContext(suite.ctx, table.createSchema())
 	suite.NoError(err)
@@ -1348,7 +1348,7 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 	file := suite.createEnhancedParquetSampleFile()
 	file.Close()
 	path := file.Name()
-	_, err = connection.ImportParquetWithInferredSchema(
+	rowsCount, err := connection.ImportParquetWithInferredSchema(
 		suite.ctx,
 		database,
 		table.schema,
@@ -1357,6 +1357,7 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 		connection.ParquetImportOptions{},
 	)
 	suite.NoError(err, "Import local Parquet file")
+	suite.Equal(int64(1), rowsCount)
 	rows, err := database.QueryContext(
 		suite.ctx, fmt.Sprintf("SELECT count(1) from %s", table.fqn()))
 	suite.NoError(err)

@@ -88,6 +88,8 @@ func createTableForLocalParquetImport(
 // creating the target SQL table based on the column definitions retrieved
 // from the Parquet file.
 //
+// The function returns the number of affected rows.
+//
 // If the SQL table already exists then a warning is sent to the logger.
 // Import may fail if the schema of the existing table differs from the
 // Parquet file.
@@ -98,20 +100,20 @@ func ImportParquetWithInferredSchema(
 	table string,
 	filePath string,
 	options ParquetImportOptions,
-) (result sql.Result, err error) {
+) (rowsCount int64, err error) {
 	if !regularIdentifier.MatchString(schema) {
-		return result, fmt.Errorf("invalid schema name %q", schema)
+		return 0, fmt.Errorf("invalid schema name %q", schema)
 	}
 	if !regularIdentifier.MatchString(table) {
-		return result, fmt.Errorf("invalid table name %q", table)
+		return 0, fmt.Errorf("invalid table name %q", table)
 	}
 	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {
-		return result, fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
+		return 0, fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
 	}
 	tableFqn := QuoteIdentifier(schema) + "." + QuoteIdentifier(table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)
 	if err != nil {
-		return result, fmt.Errorf("failed to check if table %s exists", tableFqn)
+		return 0, fmt.Errorf("failed to check if table %s exists", tableFqn)
 	}
 	if exists {
 		logger.WarningLogger.Printf(
@@ -120,16 +122,16 @@ func ImportParquetWithInferredSchema(
 	} else {
 		err = createTableForLocalParquetImport(ctx, database, tableFqn, filePath, options)
 		if err != nil {
-			return result, err
+			return 0, err
 		}
 	}
 	statement := fmt.Sprintf("IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'", tableFqn, filePath)
 	LOG.Print(statement)
 	// suppress sonar findings as values are sanitized at the beginning of the function
-	// result, err = database.ExecContext(ctx, statement) // NOSONAR
-	// rowsCount, err := result.RowsAffected()
-	// if err != nil {
-	// 	return 0, fmt.Errorf("failed to retrieve number of affected rows: %w", err)
-	// }
-	return database.ExecContext(ctx, statement) // NOSONAR
+	result, err := database.ExecContext(ctx, statement) // NOSONAR
+	rowsCount, err = result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to retrieve number of affected rows: %w", err)
+	}
+	return rowsCount, nil
 }
