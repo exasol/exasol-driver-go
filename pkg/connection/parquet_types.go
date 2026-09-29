@@ -3,6 +3,7 @@ package connection
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/parquet-go/parquet-go"
@@ -103,13 +104,12 @@ func mapLogicalType(logical format.LogicalTypeValue) (result string, err error) 
 		result = timestamp9Column
 	case *format.Float16Type:
 		result = "DOUBLE PRECISION"
-	case *format.JsonType:
-		result = maxVarcharColumn
 	case *format.ListType:
 		result = maxVarcharColumn
 	case *format.MapType:
 		result = maxVarcharColumn
 	// logical types known to be unsupported:
+	// - JsonType
 	// - EnumType
 	// - NullType
 	// - BsonType
@@ -180,9 +180,49 @@ func createTableStatement(tableFqn string, columns []parquetColumn) (result stri
 		if err != nil {
 			return "", err
 		}
-		decl := fmt.Sprintf("%q %s", strings.Join(col.path, "_"), sqlType)
+		colname := QuoteIdentifier(strings.Join(col.path, "_"))
+		decl := fmt.Sprintf("%s %s", colname, sqlType)
 		sql = append(sql, decl)
 	}
 	result = fmt.Sprintf("CREATE TABLE %s (%s)", tableFqn, strings.Join(sql, ", "))
+	return
+}
+
+// retrieveParquetColumns retrieves the columns described in the meta data
+// schema of a local Parquet file.
+func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
+	empty := make([]parquetColumn, 0)
+	info, err := file.Stat()
+	filePath := file.Name()
+	if err != nil {
+		return empty, fmt.Errorf("could not stat Parquet file %s", filePath)
+	}
+
+	f, err := parquet.OpenFile(file, info.Size())
+	if err != nil {
+		return empty, fmt.Errorf("could not open file with Parquet reader %s", filePath)
+	}
+
+	schema := f.Schema()
+	result = make([]parquetColumn, 0, len(schema.Columns()))
+	for _, path := range schema.Columns() {
+		leaf, found := schema.Lookup(path...)
+		if !found {
+			return empty, fmt.Errorf(
+				"unexpected error, couldn't find column for path %q in Parquet file %s",
+				path, filePath)
+		}
+		nodeType := leaf.Node.Type()
+		var logical format.LogicalTypeValue
+		if lType := nodeType.LogicalType(); lType != nil {
+			logical = lType.Value
+		}
+		result = append(result, parquetColumn{
+			path:     path,
+			logical:  logical,
+			physical: nodeType.Kind(),
+			length:   nodeType.Length(),
+		})
+	}
 	return
 }
