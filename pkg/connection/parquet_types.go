@@ -157,10 +157,10 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result string, err erro
 }
 
 type parquetColumn struct {
-	path	 []string
-	logical	 format.LogicalTypeValue
+	path     []string
+	logical  format.LogicalTypeValue
 	physical parquet.Kind
-	length	 int
+	length   int
 }
 
 // createTableStatement returns the SQL statement to create a table based on
@@ -217,10 +217,10 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 			logical = lType.Value
 		}
 		result = append(result, parquetColumn{
-			path:	  path,
+			path:     path,
 			logical:  logical,
 			physical: nodeType.Kind(),
-			length:	  nodeType.Length(),
+			length:   nodeType.Length(),
 		})
 	}
 	return
