@@ -11,6 +11,7 @@ Code name:
 * #172: Added support to build a `CREATE TABLE` SQL statement
 * #174: Added support to map Parquet logical types
 * #178: Combined logical and physical types of Parquet columns
+* #180: Added top-level function `ImportParquetWithInferredSchema` incl. integration test
 
 ## Documentation
 
