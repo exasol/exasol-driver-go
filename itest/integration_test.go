@@ -1333,7 +1333,7 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 }
 
 func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
-	if !suite.exasol.SupportsTimestamp9() {
+	if !suite.exasol.SupportsNativeParquetImport() {
 		suite.T().Skipf("Exasol %s does not support TIMESTAMP(9) "+
 			"which is required for ImportParquetWithInferredSchema()",
 			suite.exasol.DbVersion)
