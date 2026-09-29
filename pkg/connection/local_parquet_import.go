@@ -63,6 +63,8 @@ func checkIfTableExists(
 // from the Parquet file.
 //
 // If the SQL table already exists then a warning is sent to the logger.
+// Import may fail if the schema of the existing table differs from the
+// Parquet file.
 func ImportParquetWithInferredSchema(
 	ctx context.Context,
 	database *sql.DB,
@@ -86,7 +88,7 @@ func ImportParquetWithInferredSchema(
 		return result, fmt.Errorf("failed to check if table %s exists", tableFqn)
 	}
 	if exists {
-		logger.WarningLogger.Printf("The specified table %s already exists", tableFqn)
+		logger.WarningLogger.Printf("The specified table %s already exists. Import may fail if schemas do not match.", tableFqn)
 	} else {
 		file, err := os.Open(filePath)
 		if err != nil {
