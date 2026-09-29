@@ -15,6 +15,7 @@ Code name:
 ## Documentation
 
 * #162: Described executing single tests and added file `error_code_config.yml`
+* #182: Described `ImportParquetWithInferredSchema` in the User Guide
 
 ## Refactorings
 

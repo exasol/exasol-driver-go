@@ -142,8 +142,8 @@ Use the sql driver to load data from one or more CSV files into your Exasol Data
 ```go
 result, err := exasol.Exec(`
 IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv'
-  COLUMN SEPARATOR = ';' 
-  ENCODING = 'UTF-8' 
+  COLUMN SEPARATOR = ';'
+  ENCODING = 'UTF-8'
   ROW SEPARATOR = 'LF'
 `)
 ```
@@ -234,12 +234,10 @@ You can deactivate trace logging with
 logger.SetTraceLogger(nil)
 ```
 
-## Information for Users
+## Further Information
 
+* [User guide](doc/user_guide.md)
+* [Developer guide](doc/developer_guide.md)
 * [Examples](examples)
 * [Changelog](doc/changes/changelog.md)
 * [Dependencies](dependencies.md)
-
-## Information for Developers
-
-* [Developer guide](doc/developer_guide.md)
