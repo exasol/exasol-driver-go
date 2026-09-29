@@ -84,6 +84,19 @@ func createTableForLocalParquetImport(
 	return nil
 }
 
+func verifyInputParameters(schema string, table string, filePath string) error {
+	if !regularIdentifier.MatchString(schema) {
+		return fmt.Errorf("invalid schema name %q", schema)
+	}
+	if !regularIdentifier.MatchString(table) {
+		return fmt.Errorf("invalid table name %q", table)
+	}
+	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {
+		return fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
+	}
+	return nil
+}
+
 // ImportParquetWithInferredSchema imports a local Parquet file incl.
 // creating the target SQL table based on the column definitions retrieved
 // from the Parquet file.
@@ -101,14 +114,8 @@ func ImportParquetWithInferredSchema(
 	filePath string,
 	options ParquetImportOptions,
 ) (rowsCount int64, err error) {
-	if !regularIdentifier.MatchString(schema) {
-		return 0, fmt.Errorf("invalid schema name %q", schema)
-	}
-	if !regularIdentifier.MatchString(table) {
-		return 0, fmt.Errorf("invalid table name %q", table)
-	}
-	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {
-		return 0, fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
+	if err := verifyInputParameters(schema, table, filePath); err != nil {
+		return 0, err
 	}
 	tableFqn := QuoteIdentifier(schema) + "." + QuoteIdentifier(table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)
@@ -129,6 +136,10 @@ func ImportParquetWithInferredSchema(
 	LOG.Print(statement)
 	// suppress sonar findings as values are sanitized at the beginning of the function
 	result, err := database.ExecContext(ctx, statement) // NOSONAR
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute import statement %s: %w",
+			statement, err)
+	}
 	rowsCount, err = result.RowsAffected()
 	if err != nil {
 		return 0, fmt.Errorf("failed to retrieve number of affected rows: %w", err)
