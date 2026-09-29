@@ -211,20 +211,6 @@ func TestImportInvalidFileFormat(t *testing.T) {
 	assert.ErrorContains(t, err, "could not open file with Parquet reader")
 }
 
-type EConf struct {
-	port int
-	host string
-}
-func (c EConf) Port(port int) EConf{ c.port = port; return c }
-func (c EConf) Host(host string) EConf{ c.host = host; return c }
-
-func TestX1(t *testing.T) {
-	port := 0
-	_ = EConf{}.Port(port).
-		Host("host")
-	//	 .Host("<host>") .Autocommit(false) .String()
-}
-
 func TestImportIllegalCharacters(t *testing.T) {
 	for _, tt := range []struct {
 		schema        string
