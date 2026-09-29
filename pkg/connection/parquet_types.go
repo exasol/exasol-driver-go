@@ -180,7 +180,8 @@ func createTableStatement(tableFqn string, columns []parquetColumn) (result stri
 		if err != nil {
 			return "", err
 		}
-		decl := fmt.Sprintf("%q %s", strings.Join(col.path, "_"), sqlType)
+		colname := QuoteIdentifier(strings.Join(col.path, "_"))
+		decl := fmt.Sprintf("%s %s", colname, sqlType)
 		sql = append(sql, decl)
 	}
 	result = fmt.Sprintf("CREATE TABLE %s (%s)", tableFqn, strings.Join(sql, ", "))
