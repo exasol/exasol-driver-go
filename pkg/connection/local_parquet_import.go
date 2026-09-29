@@ -128,5 +128,8 @@ func ImportParquetWithInferredSchema(
 	// suppress sonar findings as values are sanitized at the beginning of the function
 	// result, err = database.ExecContext(ctx, statement) // NOSONAR
 	// rowsCount, err := result.RowsAffected()
+	// if err != nil {
+	// 	return 0, fmt.Errorf("failed to retrieve number of affected rows: %w", err)
+	// }
 	return database.ExecContext(ctx, statement) // NOSONAR
 }

@@ -33,6 +33,6 @@ func ToResult(result *types.SqlQueriesResponse) (driver.Result, error) {
 // duplicating them and returns the result enclosed in additional double quote
 // characters.
 func QuoteIdentifier(raw string) string {
-	escaped := strings.Replace(raw, `"`, `""`, -1)
+	escaped := strings.ReplaceAll(raw, `"`, `""`)
 	return fmt.Sprintf(`"%s"`, escaped)
 }
