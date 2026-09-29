@@ -89,10 +89,10 @@ func ImportParquetWithInferredSchema(
 		logger.WarningLogger.Printf("The specified table %s already exists", tableFqn)
 	} else {
 		file, err := os.Open(filePath)
-		defer file.Close()
 		if err != nil {
 			return result, fmt.Errorf("failed to open Parquet file %s for import %w", filePath, err)
 		}
+		defer file.Close()
 		columns, err := retrieveParquetColumns(file)
 		if err != nil {
 			return result,
