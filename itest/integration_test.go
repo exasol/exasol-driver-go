@@ -36,13 +36,13 @@ import (
 // driver and server disagree about who acts first, so a call still running
 // after this deadline is stuck waiting on a peer that will never answer.
 const (
-	importDeadline                  = 30 * time.Second
+	importDeadline			= 30 * time.Second
 	generateParquetFileErrorMessage = "should generate parquet file"
-	generateCSVFileErrorMessage     = "should generate csv file"
-	smallParquetRowCount            = 3
-	largeParquetRowCount            = 20000
-	aIntBVarchar20                  = "a int, b VARCHAR(20)"
-	multipleColumns                 = "a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)"
+	generateCSVFileErrorMessage	= "should generate csv file"
+	smallParquetRowCount		= 3
+	largeParquetRowCount		= 20000
+	aIntBVarchar20			= "a int, b VARCHAR(20)"
+	multipleColumns			= "a int, b VARCHAR(100), c VARCHAR(100), d VARCHAR(100), e VARCHAR(100), f VARCHAR(100), g VARCHAR(100)"
 )
 
 func parquetVersionErrorMessage(serverVersion string) string {
@@ -116,7 +116,7 @@ func (suite *IntegrationTestSuite) TestConnectionParameters() {
 
 	for i, testCase := range []struct {
 		description   string
-		config        *dsn.DSNConfigBuilder
+		config	      *dsn.DSNConfigBuilder
 		expectedError string
 	}{
 		{"wrong port", suite.createDefaultConfig().Port(1234), "connect: connection refuse"},
@@ -181,8 +181,8 @@ func insertInto(table string) string {
 }
 
 type tableSpec struct {
-	schema  string
-	name    string
+	schema	string
+	name	string
 	columns string
 }
 
@@ -209,8 +209,8 @@ func (t *tableSpec) selectX(where any) string {
 
 func xIntTable(schema string) tableSpec {
 	return tableSpec{
-		schema:  schema,
-		name:    "TEST_TABLE",
+		schema:	 schema,
+		name:	 "TEST_TABLE",
 		columns: "x INT",
 	}
 }
@@ -333,11 +333,11 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 
 	for i, testCase := range []struct {
 		testDescription string
-		sqlValue        string
-		sqlType         string
-		scanDest        any
-		expectedValue   any
-		dereference     func(any) any
+		sqlValue	string
+		sqlType		string
+		scanDest	any
+		expectedValue	any
+		dereference	func(any) any
 	}{
 		// DECIMAL
 		{"decimal to int64", "1", "DECIMAL(18,0)", new(int64), int64(1), dereferenceInt64},
@@ -361,7 +361,7 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 		{"double to string", "3.3", "DOUBLE PRECISION", new(string), "3.3", dereferenceString},
 
 		{"varchar to string", "'text'", "VARCHAR(10)", new(string), "text", dereferenceString},
-		{"char to string", "'text'", "CHAR(10)", new(string), "text      ", dereferenceString},
+		{"char to string", "'text'", "CHAR(10)", new(string), "text	 ", dereferenceString},
 		{"date to string", "'2024-06-18'", "DATE", new(string), "2024-06-18", dereferenceString},
 		{"timestamp to string", "'2024-06-18 17:22:13.123456'", "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
 		{"timestamp with local time zone to string", "'2024-06-18 17:22:13.123456'", "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
@@ -393,7 +393,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 
 	type TestCase struct {
 		sqlValue      any
-		sqlType       string
+		sqlType	      string
 		scanDest      any
 		expectedValue any
 		dereference   func(any) any
@@ -516,7 +516,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 
 	for i, testCase := range []struct {
 		sqlValue      any
-		sqlType       string
+		sqlType	      string
 		scanDest      any
 		expectedError string
 	}{
@@ -1163,7 +1163,7 @@ func (suite *IntegrationTestSuite) generateExampleCSVFile(exampleData string, am
 }
 
 type exampleParquetRow struct {
-	A int64  `parquet:"a"`
+	A int64	 `parquet:"a"`
 	B string `parquet:"b"`
 }
 
@@ -1182,16 +1182,16 @@ func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) *os.Fi
 // related SQL table but does not support actual data import, yet:
 // fixedlenbytearray, list, map.
 type enhancedParquetRow struct {
-	Int32     int32     `parquet:"int32"`
-	Int64     int64     `parquet:"int64"`
+	Int32	  int32	    `parquet:"int32"`
+	Int64	  int64	    `parquet:"int64"`
 	Timestamp time.Time `parquet:"timestamp"`
-	Boolean   bool      `parquet:"boolean"`
+	Boolean	  bool	    `parquet:"boolean"`
 	ByteArray string    `parquet:"bytearray"`
-	Float     float32   `parquet:"float"`
-	Double    float64   `parquet:"double"`
-	// FixedLenByteArray [30]byte  	   `parquet:"fixedlenbytearray"`
-	// List              []string  	   `parquet:"list"`
-	// Map               map[string]int32 `parquet:"map"`
+	Float	  float32   `parquet:"float"`
+	Double	  float64   `parquet:"double"`
+	// FixedLenByteArray [30]byte	   `parquet:"fixedlenbytearray"`
+	// List		     []string	   `parquet:"list"`
+	// Map		     map[string]int32 `parquet:"map"`
 }
 
 func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() {
@@ -1206,16 +1206,16 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 	var array [30]byte
 	_ = copy(array[:], "fixed length byte array")
 	rows := []enhancedParquetRow{{
-		Int32:     33,
-		Int64:     65,
+		Int32:	   33,
+		Int64:	   65,
 		Timestamp: timestamp,
 		Boolean:   true,
 		ByteArray: "A byte array of variable length",
-		Float:     1.123,
-		Double:    123456789.987654321,
+		Float:	   1.123,
+		Double:	   123456789.987654321,
 		// FixedLenByteArray: array,
-		// List:              []string{"a", "b", "c"},
-		// Map:               map[string]int32{"a": 1, "b": 2},
+		// List:	      []string{"a", "b", "c"},
+		// Map:		      map[string]int32{"a": 1, "b": 2},
 	}}
 	return writeSampleParquetFile(suite, rows)
 }
@@ -1346,12 +1346,13 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	schema := "TEST_SCHEMA_11"
 	table := "TEST_TABLE"
-	_, _ = database.ExecContext(suite.ctx, "CREATE SCHEMA "+schema)
+	_, err := database.ExecContext(suite.ctx, "CREATE SCHEMA "+schema)
+	suite.NoError(err)
 	defer suite.cleanup(database, schema)
 	file := suite.createEnhancedParquetSampleFile()
 	file.Close()
 	path := file.Name()
-	_, err := connection.ImportParquetWithInferredSchema(
+	_, err = connection.ImportParquetWithInferredSchema(
 		suite.ctx,
 		database,
 		schema,
