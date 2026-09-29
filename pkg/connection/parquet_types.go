@@ -157,10 +157,10 @@ func mapPhysicalType(physical parquet.Kind, size int64) (result string, err erro
 }
 
 type parquetColumn struct {
-	path     []string
-	logical  format.LogicalTypeValue
+	path	 []string
+	logical	 format.LogicalTypeValue
 	physical parquet.Kind
-	length   int
+	length	 int
 }
 
 // createTableStatement returns the SQL statement to create a table based on
@@ -202,6 +202,7 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 		return empty, fmt.Errorf("could not open file with Parquet reader %s", filePath)
 	}
 
+	defer f.Close()
 	schema := f.Schema()
 	result = make([]parquetColumn, 0, len(schema.Columns()))
 	for _, path := range schema.Columns() {
@@ -217,10 +218,10 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 			logical = lType.Value
 		}
 		result = append(result, parquetColumn{
-			path:     path,
+			path:	  path,
 			logical:  logical,
 			physical: nodeType.Kind(),
-			length:   nodeType.Length(),
+			length:	  nodeType.Length(),
 		})
 	}
 	return
