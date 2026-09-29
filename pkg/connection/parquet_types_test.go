@@ -218,9 +218,9 @@ func TestImportIllegalCharacters(t *testing.T) {
 		path          string
 		expectedError string
 	}{
-		{"\"S1", "T1", "path", "invalid schema name"},
+		{`"S1`, "T1", "path", "invalid schema name"},
 		{"S1", ".T1", "path", "invalid table name"},
-		{"S1", "T1", "pa'th", "file path contains illegal character \"'\""},
+		{"S1", "T1", "pa'th", `file path contains illegal character "'"`},
 	} {
 		t.Run(tt.expectedError, func(t *testing.T) {
 			var ctx context.Context

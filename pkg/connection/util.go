@@ -3,6 +3,8 @@ package connection
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/exasol/exasol-driver-go/pkg/types"
 )
@@ -25,4 +27,12 @@ func ToResult(result *types.SqlQueriesResponse) (driver.Result, error) {
 	}
 
 	return &RowCount{affectedRows: int64(rowCountResult.RowCount)}, nil
+}
+
+// quoteIdentifier escapes double quotes in the specified identifier by
+// duplicating them and returns the result enclosed in additional double quote
+// characters.
+func quoteIdentifier(raw string) string {
+	escaped := strings.Replace(raw, `"`, `""`, -1)
+	return fmt.Sprintf(`"%s"`, escaped)
 }
