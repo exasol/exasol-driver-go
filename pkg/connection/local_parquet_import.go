@@ -10,7 +10,7 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 )
 
-var LOG logger.Logger = logger.DebugLogger
+var LOG logger.Logger = logger.TraceLogger
 
 type ParquetImportOptions struct {
 	Name string
