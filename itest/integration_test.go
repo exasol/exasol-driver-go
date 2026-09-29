@@ -357,7 +357,7 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 		{"double to string", "3.3", "DOUBLE PRECISION", new(string), "3.3", dereferenceString},
 
 		{"varchar to string", "'text'", "VARCHAR(10)", new(string), "text", dereferenceString},
-		{"char to string", "'text'", "CHAR(10)", new(string), "text	 ", dereferenceString},
+		{"char to string", "'text'", "CHAR(10)", new(string), "text      ", dereferenceString},
 		{"date to string", "'2024-06-18'", "DATE", new(string), "2024-06-18", dereferenceString},
 		{"timestamp to string", "'2024-06-18 17:22:13.123456'", "TIMESTAMP", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
 		{"timestamp with local time zone to string", "'2024-06-18 17:22:13.123456'", "TIMESTAMP WITH LOCAL TIME ZONE", new(string), "2024-06-18 17:22:13.123000", dereferenceString},
