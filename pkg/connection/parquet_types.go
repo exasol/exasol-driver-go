@@ -202,7 +202,6 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 		return empty, fmt.Errorf("could not open file with Parquet reader %s", filePath)
 	}
 
-	defer f.Close()
 	schema := f.Schema()
 	result = make([]parquetColumn, 0, len(schema.Columns()))
 	for _, path := range schema.Columns() {
