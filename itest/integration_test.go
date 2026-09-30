@@ -21,6 +21,7 @@ import (
 	"github.com/exasol/exasol-driver-go/pkg/connection"
 	"github.com/exasol/exasol-driver-go/pkg/dsn"
 	"github.com/exasol/exasol-driver-go/pkg/integrationTesting"
+	"github.com/exasol/exasol-driver-go/pkg/logger"
 	"github.com/parquet-go/parquet-go"
 
 	"github.com/stretchr/testify/assert"
@@ -222,7 +223,7 @@ func xIntTable(schema string) tableSpec {
 func (suite *IntegrationTestSuite) TestExecAndQuery() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := xIntTable("TEST_SCHEMA_1")
-	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	_ = suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 	database.ExecContext(suite.ctx, table.insert(15))
 	rows, _ := database.Query(table.selectX(""))
@@ -232,7 +233,7 @@ func (suite *IntegrationTestSuite) TestExecAndQuery() {
 func (suite *IntegrationTestSuite) TestFetch() {
 	database := suite.openConnection(suite.createDefaultConfig().FetchSize(20))
 	table := xIntTable("TEST_SCHEMA_FETCH")
-	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	_ = suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 	data := make([]string, 0)
 	for i := 0; i < 10000; i++ {
@@ -282,7 +283,7 @@ func (suite *IntegrationTestSuite) TestExecuteWithError() {
 func (suite *IntegrationTestSuite) TestQueryWithError() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := xIntTable("TEST_SCHEMA_2")
-	_ = suite.createDbSchema(database, table.schema, "", "")
+	_ = suite.createDbSchema(database, table.schema)
 	defer suite.cleanup(database, table.schema)
 	_, err := database.Query(table.selectX(""))
 	suite.Error(err)
@@ -292,7 +293,7 @@ func (suite *IntegrationTestSuite) TestQueryWithError() {
 func (suite *IntegrationTestSuite) TestPreparedStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := xIntTable("TEST_SCHEMA_3")
-	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	_ = suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 
 	preparedStatement, _ := database.Prepare(table.insert("?"))
@@ -305,7 +306,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatement() {
 func (suite *IntegrationTestSuite) TestPreparedStatementWithoutArgs() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := xIntTable("TEST_SCHEMA_3_1")
-	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	_ = suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 
 	preparedStatement, _ := database.Prepare(table.insert(25))
@@ -384,7 +385,7 @@ func (suite *IntegrationTestSuite) TestQueryDataTypesCast() {
 func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "DATATYPE_TEST"
-	_ = suite.createDbSchema(database, schemaName, "", "")
+	_ = suite.createDbSchema(database, schemaName)
 	defer suite.cleanup(database, schemaName)
 
 	type TestCase struct {
@@ -496,7 +497,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConverted() {
 func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	table := tableSpec{schema: "DATATYPE_TEST", name: "TAB", columns: "col TIMESTAMP"}
-	fqn := suite.createDbSchema(database, table.schema, table.name, table.columns)
+	fqn := suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 	stmt, err := database.Prepare(insertInto(fqn) + " values (?)")
 	suite.NoError(err, "failed to insert into table "+fqn)
@@ -507,7 +508,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementArgsConversionFails() {
 func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 	database := suite.openConnection(suite.createDefaultConfig().Autocommit(false))
 	schemaName := "DATATYPE_TEST"
-	_ = suite.createDbSchema(database, schemaName, "", "")
+	_ = suite.createDbSchema(database, schemaName)
 	defer suite.cleanup(database, schemaName)
 
 	for i, testCase := range []struct {
@@ -542,7 +543,7 @@ func (suite *IntegrationTestSuite) TestScanTypeUnsupported() {
 func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := tableSpec{schema: "TEST_SCHEMA_3_2", name: "DUMMY", columns: "a integer, b float"}
-	fqn := suite.createDbSchema(database, table.schema, table.name, table.columns)
+	fqn := suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 	stmt, err := database.Prepare(insertInto(fqn) + " values(?,?)")
 	suite.NoError(err, "failed to insert values")
@@ -556,7 +557,7 @@ func (suite *IntegrationTestSuite) TestPreparedStatementIntConvertedToFloat() {
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := xIntTable("TEST_SCHEMA_3_3")
-	_ = suite.createDbSchema(database, table.schema, table.name, table.columns)
+	_ = suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 
 	result, _ := database.ExecContext(suite.ctx, table.insert("?"), 25)
@@ -569,7 +570,7 @@ func (suite *IntegrationTestSuite) TestQueryWithValuesAndContext() {
 func (suite *IntegrationTestSuite) TestQueryWithValuesAndNoContext() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := xIntTable("TEST_SCHEMA_3_4")
-	_ = suite.createDbSchema(database, table.schema, "", "")
+	_ = suite.createDbSchema(database, table.schema)
 	database.ExecContext(suite.ctx, table.create())
 	defer suite.cleanup(database, table.schema)
 	result, _ := database.Exec(table.insert(15))
@@ -642,7 +643,7 @@ func (suite *IntegrationTestSuite) TestBeginWithCancelledContext() {
 func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	table := tableSpec{schema: "TEST_SCHEMA_8", name: "TEST_TABLE", columns: aIntBVarchar20}
-	fqn := suite.createDbSchema(database, table.schema, table.name, table.columns)
+	fqn := suite.createSqlTable(database, table)
 	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(
@@ -668,11 +669,11 @@ func (suite *IntegrationTestSuite) TestSimpleImportStatement() {
 
 func (suite *IntegrationTestSuite) TestSimpleParquetImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	file := suite.generateExampleParquetFile(smallParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(smallParquetRowCount)
 	defer file.Close()
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_1", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(
 		suite.ctx,
@@ -705,12 +706,12 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementBigFile() {
 	}
 
 	database := suite.openConnection(suite.createDefaultConfig())
-	file := suite.generateExampleParquetFile(largeParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(largeParquetRowCount)
 	defer file.Close()
 
-	schemaName := "TEST_SCHEMA_LARGE_PARQUET"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_LARGE_PARQUET", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	affectedRows, err := suite.execImportWithinDeadline(
 		database,
@@ -737,11 +738,11 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementBigFile() {
 
 func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	file := suite.generateExampleParquetFile(smallParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(smallParquetRowCount)
 	defer file.Close()
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20), c int")
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_2", name: "TEST_TABLE", columns: "a int, b VARCHAR(20), c int"}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'`, fqn, file.Name()))
 
 	if suite.exasol.SupportsNativeParquetImport() {
@@ -753,9 +754,9 @@ func (suite *IntegrationTestSuite) TestParquetImportWrongColumns() {
 
 func (suite *IntegrationTestSuite) TestParquetImportNotExistentFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int")
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_3", name: "TEST_TABLE", columns: "a int"}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE 'wrong.parquet'`, fqn))
 
 	if suite.exasol.SupportsNativeParquetImport() {
@@ -767,9 +768,9 @@ func (suite *IntegrationTestSuite) TestParquetImportNotExistentFile() {
 
 func (suite *IntegrationTestSuite) TestParquetImportStatementInString() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "text VARCHAR(200)")
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_4", name: "TEST_TABLE", columns: "text VARCHAR(200)"}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(
 		suite.ctx,
@@ -790,11 +791,11 @@ func (suite *IntegrationTestSuite) TestParquetImportStatementInString() {
 
 func (suite *IntegrationTestSuite) TestParquetImportMultipleFilesRejected() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	file := suite.generateExampleParquetFile(smallParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(smallParquetRowCount)
 	defer file.Close()
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_5", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE '%s' FILE '%s'`, fqn, file.Name(), file.Name()))
 	suite.EqualError(err, "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files")
@@ -824,10 +825,10 @@ func (suite *IntegrationTestSuite) execImportWithinDeadline(database *sql.DB, st
 // deadlock that would cause into a test failure rather than a job that hangs.
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	file := suite.generateExampleParquetFile(smallParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(smallParquetRowCount)
 	defer file.Close()
 	schemaName := "TEST_SCHEMA_LEAK_PARQUET"
-	_ = suite.createDbSchema(database, schemaName, "", "")
+	_ = suite.createDbSchema(database, schemaName)
 	defer suite.cleanup(database, schemaName)
 
 	_, err := suite.execImportWithinDeadline(
@@ -844,11 +845,11 @@ func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringParquetImport() {
 // asserts a valid import raises no E-EGOD-31 error at all.
 func (suite *IntegrationTestSuite) TestParquetImportServerVersionGate() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	file := suite.generateExampleParquetFile(smallParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(smallParquetRowCount)
 	defer file.Close()
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_6", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'`, fqn, file.Name()))
 
@@ -892,11 +893,11 @@ func (suite *IntegrationTestSuite) TestServerVersionCapturedAtLogin() {
 // handshake regressions from hanging the integration suite.
 func (suite *IntegrationTestSuite) TestParquetImportWithEncryptedProxy() {
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
-	file := suite.generateExampleParquetFile(smallParquetRowCount)
+	file := suite.openDefaultSampleParquetFile(smallParquetRowCount)
 	defer file.Close()
-	schemaName := "TEST_SCHEMA_ENCRYPTED_PARQUET"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_ENCRYPTED_PARQUET", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 	suite.assertImportsAreEncrypted(database)
 
 	affectedRows, err := suite.execImportWithinDeadline(database, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL PARQUET FILE '%s'`, fqn, file.Name()))
@@ -961,9 +962,9 @@ func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
 	}
 
 	database := suite.openConnection(suite.createDefaultConfig().LocalImportEncryption(true))
-	schemaName := "TEST_SCHEMA_ENCRYPTED_CSV"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_ENCRYPTED_CSV", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 	suite.assertImportsAreEncrypted(database)
 
 	affectedRows, err := suite.execImportWithinDeadline(
@@ -990,9 +991,9 @@ func (suite *IntegrationTestSuite) TestCsvImportWithEncryptedProxy() {
 
 func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int, b VARCHAR(20), c int")
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_7", name: "TEST_TABLE", columns: "a int, b VARCHAR(20), c int"}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	_, err := database.ExecContext(
 		suite.ctx,
@@ -1006,9 +1007,9 @@ func (suite *IntegrationTestSuite) TestImportStatementWrongColumns() {
 
 func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "a int")
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_8", name: "TEST_TABLE", columns: "a int"}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	_, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL CSV FILE 'wrong.csv'`, fqn))
 	suite.ErrorContains(err, "E-EGOD-11: execution failed with SQL error code '42636' and message"+
@@ -1017,9 +1018,9 @@ func (suite *IntegrationTestSuite) TestImportStatementNotExistentFile() {
 
 func (suite *IntegrationTestSuite) TestImportStatementInString() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_8"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", "text VARCHAR(200)")
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_9", name: "TEST_TABLE", columns: "text VARCHAR(200)"}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(
 		suite.ctx,
@@ -1040,14 +1041,14 @@ func (suite *IntegrationTestSuite) TestImportStatementInString() {
 
 func (suite *IntegrationTestSuite) TestSimpleImportStatementBigFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_8"
 	exampleData := time.Now().Format(time.RFC3339)
 	file, err := suite.generateExampleCSVFile(exampleData, 20000)
 	suite.NoError(err, generateCSVFileErrorMessage)
 	defer os.Remove(file.Name())
 
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE_HUGE", multipleColumns)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_8_10", name: "TEST_TABLE_HUGE", columns: multipleColumns}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(
 		suite.ctx,
@@ -1089,9 +1090,9 @@ func (suite *IntegrationTestSuite) TestCancelRunningImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
 	defer database.Close()
 
-	schemaName := "TEST_SCHEMA_CANCEL_IMPORT"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", multipleColumns)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_CANCEL_IMPORT", name: "TEST_TABLE", columns: multipleColumns}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	file, err := suite.generateExampleCSVFile(time.Now().Format(time.RFC3339), 200000)
 	suite.NoError(err, generateCSVFileErrorMessage)
@@ -1125,9 +1126,9 @@ func (suite *IntegrationTestSuite) TestCancelRunningImport() {
 // See https://github.com/exasol/exasol-driver-go/issues/79
 func (suite *IntegrationTestSuite) TestNoLeakingGoRoutineDuringFileImport() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_LEAK"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", multipleColumns)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_LEAK", name: "TEST_TABLE", columns: multipleColumns}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	exampleData := time.Now().Format(time.RFC3339)
 	file, err := suite.generateExampleCSVFile(exampleData, 20000)
@@ -1162,7 +1163,14 @@ type exampleParquetRow struct {
 	B string `parquet:"b"`
 }
 
-func (suite *IntegrationTestSuite) generateExampleParquetFile(amount int) *os.File {
+func (suite *IntegrationTestSuite) openDefaultSampleParquetFile(amount int) *os.File {
+	path := suite.createDefaultSampleParquetFile(amount)
+	file, err := os.Open(path)
+	suite.NoError(err, "failed to open sample parquet file for reading "+path)
+	return file
+}
+
+func (suite *IntegrationTestSuite) createDefaultSampleParquetFile(amount int) string {
 	rows := make([]exampleParquetRow, 0, amount)
 	for i := 0; i < amount; i++ {
 		rows = append(rows, exampleParquetRow{
@@ -1189,14 +1197,7 @@ type enhancedParquetRow struct {
 	// Map		     map[string]int32 `parquet:"map"`
 }
 
-func (suite *IntegrationTestSuite) TestCreateEnhancedParquetSampleFile() {
-	file := suite.createEnhancedParquetSampleFile()
-	defer file.Close()
-}
-
-// Fails on Exasol 8.29.13 as timestamp(9) is not supported there
-// see https://github.com/xitongsys/parquet-go/blob/master/example/type.go
-func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
+func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() string {
 	timestamp := time.Date(2024, time.June, 18, 17, 22, 13, 123456789, time.UTC)
 	var array [30]byte
 	_ = copy(array[:], "fixed length byte array")
@@ -1216,20 +1217,18 @@ func (suite *IntegrationTestSuite) createEnhancedParquetSampleFile() *os.File {
 }
 
 // Cannot use a method, as methods do not allow type parameters in go.
-func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) *os.File {
+func writeSampleParquetFile[T any](suite *IntegrationTestSuite, rows []T) string {
 	path := filepath.Join(suite.T().TempDir(), "sample.parquet")
 	err := parquet.WriteFile(path, rows)
 	suite.NoError(err, "failed to write sample parquet file "+path)
-	file, err := os.Open(path)
-	suite.NoError(err, "failed to open sample parquet file for reading "+path)
-	return file
+	return path
 }
 
 func (suite *IntegrationTestSuite) TestMultiImportStatement() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_9"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_9", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(suite.ctx, fmt.Sprintf(`IMPORT INTO %s FROM LOCAL CSV FILE '../testData/data.csv' `+
 		`FILE '../testData/data_part2.csv' COLUMN SEPARATOR = ';' ENCODING = 'UTF-8' ROW SEPARATOR = 'LF'`, fqn))
@@ -1270,9 +1269,9 @@ func (suite *IntegrationTestSuite) assertTableResult(rows *sql.Rows, expectedCol
 
 func (suite *IntegrationTestSuite) TestImportStatementWithCRFile() {
 	database := suite.openConnection(suite.createDefaultConfig())
-	schemaName := "TEST_SCHEMA_10"
-	fqn := suite.createDbSchema(database, schemaName, "TEST_TABLE", aIntBVarchar20)
-	defer suite.cleanup(database, schemaName)
+	table := tableSpec{schema: "TEST_SCHEMA_10", name: "TEST_TABLE", columns: aIntBVarchar20}
+	fqn := suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
 
 	result, err := database.ExecContext(
 		suite.ctx,
@@ -1338,16 +1337,47 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 			"which is required for ImportParquetWithInferredSchema()",
 			suite.exasol.DbVersion)
 	}
+	path := suite.createEnhancedParquetSampleFile()
+	table := tableSpec{schema: "test_SCHEMA_11", name: "TEST_table"}
+	suite.importParquetWithInferredSchema(path, table)
+}
+
+type loggerMock struct {
+	messages []string
+}
+
+func (m *loggerMock) Print(v ...interface{}) { /* no-op */ }
+func (m *loggerMock) Printf(format string, v ...interface{}) {
+	m.messages = append(m.messages, fmt.Sprintf(format, v...))
+}
+
+func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
+	if !suite.exasol.SupportsNativeParquetImport() {
+		suite.T().Skipf("Exasol %s does not support TIMESTAMP(9) "+
+			"which is required for ImportParquetWithInferredSchema()",
+			suite.exasol.DbVersion)
+	}
+	path := suite.createDefaultSampleParquetFile(1)
+	table := tableSpec{schema: "test_SCHEMA_11", name: "TEST_table", columns: aIntBVarchar20}
+	mock := loggerMock{messages: make([]string, 0)}
+	logger.WarningLogger = &mock
+	suite.importParquetWithInferredSchema(path, table)
+	expected := fmt.Sprintf(
+		`The specified table %s already exists. Import may fail if columns do not match.`,
+		table.fqn())
+	suite.Equal(expected, mock.messages[0])
+}
+
+func (suite *IntegrationTestSuite) importParquetWithInferredSchema(path string, table tableSpec) {
 	database := suite.openConnection(suite.createDefaultConfig())
 	// This test deliberately uses mixed case names for schema and table to
 	// verify proper quoting.
-	table := tableSpec{schema: "test_SCHEMA_11", name: "TEST_table"}
-	_, err := database.ExecContext(suite.ctx, table.createSchema())
-	suite.NoError(err)
+	if table.columns != "" {
+		_ = suite.createSqlTable(database, table)
+	} else {
+		_ = suite.createDbSchema(database, table.schema)
+	}
 	defer suite.cleanup(database, table.schema)
-	file := suite.createEnhancedParquetSampleFile()
-	file.Close()
-	path := file.Name()
 	rowsCount, err := connection.ImportParquetWithInferredSchema(
 		suite.ctx,
 		database,
@@ -1372,26 +1402,28 @@ func assertSingleValueResult[T any](suite *IntegrationTestSuite, rows *sql.Rows,
 	suite.Equal(expected, testValue)
 }
 
-// createDbSchema creates a database schema for the current test. If parameter
-// table is not an empty string, then also create a table with the specified
-// column declaration.
+// createDbSchema creates a database schema for the current test.
+//
+// Returns the quoted name of the schema.
+func (suite *IntegrationTestSuite) createDbSchema(db *sql.DB, schema string) string {
+	fqn := connection.QuoteIdentifier(schema)
+	_, err := db.ExecContext(suite.ctx, "CREATE SCHEMA IF NOT EXISTS "+fqn)
+	suite.NoError(err, "Failed to create database schema "+schema)
+	return fqn
+}
+
+// createSqlTable creates a database schema and the specified SQL table for
+// the current test.
 //
 // Returns the fully qualified and quoted name of the database object:
 // schema.table.
-func (suite *IntegrationTestSuite) createDbSchema(
-	db *sql.DB,
-	schema string,
-	table string,
-	columns string,
-) string {
-	_, err := db.ExecContext(suite.ctx, "CREATE SCHEMA IF NOT EXISTS "+schema)
-	suite.NoError(err, "Failed to create database schema "+schema)
-	if table != "" {
-		statement := fmt.Sprintf("CREATE TABLE %q.%q (%s)", schema, table, columns)
-		_, err = db.ExecContext(suite.ctx, statement)
-		suite.NoError(err, "Failed to create database table "+table)
-	}
-	return fmt.Sprintf("%q.%q", schema, table)
+func (suite *IntegrationTestSuite) createSqlTable(db *sql.DB, table tableSpec) string {
+	schemaFqn := suite.createDbSchema(db, table.schema)
+	tableFqn := connection.QuoteIdentifier(table.name)
+	statement := fmt.Sprintf("CREATE TABLE %s.%s (%s)", schemaFqn, tableFqn, table.columns)
+	_, err := db.ExecContext(suite.ctx, statement)
+	suite.NoError(err, "Failed to create database table "+table.name)
+	return schemaFqn + "." + tableFqn
 }
 
 func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {

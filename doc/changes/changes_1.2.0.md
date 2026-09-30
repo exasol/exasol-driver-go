@@ -21,3 +21,4 @@ Code name:
 
 * #170: Refactored `mapPhysicalType` to return data type `string`
 * #176: Enabled creating multiple sample files for integration tests
+* #187: Added test for table already exists in `ImportParquetWithInferredSchema`

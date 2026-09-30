@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"testing"
 
@@ -50,4 +51,20 @@ func TestSetTraceLogger(t *testing.T) {
 func TestDefaultTraceLogger(t *testing.T) {
 	TraceLogger.Print("ignored")
 	TraceLogger.Print("ignored %s", "arg")
+}
+
+type loggerMock struct {
+	messages []string
+}
+
+func (m *loggerMock) Print(v ...interface{}) { /* no-op */ }
+func (m *loggerMock) Printf(format string, v ...interface{}) {
+	m.messages = append(m.messages, fmt.Sprintf(format, v...))
+}
+
+func TestX1(t *testing.T) {
+	mock := loggerMock{messages: make([]string, 0)}
+	TraceLogger = &mock
+	TraceLogger.Printf("Hello")
+	fmt.Printf("Saved Messages: %s\n", mock.messages[0])
 }
