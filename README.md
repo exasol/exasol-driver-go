@@ -20,7 +20,7 @@ To use the Exasol Go Driver you need a supported Exasol database release: 2025.1
 
 ## Further Information
 
-* [User guide](doc/user_guide.md)
+* [User guide](doc/user_guide/user_guide.md)
 * [Developer guide](doc/developer_guide.md)
 * [Examples](examples)
 * [Changelog](doc/changes/changelog.md)

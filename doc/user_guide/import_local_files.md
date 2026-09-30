@@ -9,7 +9,7 @@ Use the Exasol Go SQL Driver to load data from one or more CSV files into your E
 * The driver does not support the SQL `SECURE` option. Instead, it encrypts the proxy connection that transfers a local CSV or Parquet file by default when the server supports it. Exasol 8 does not support encrypted local imports, so the driver automatically uses plaintext there. The [`localimportencryption`](#connection-string) driver property is deprecated; set it to `0` only when plaintext is explicitly required.
 
 ```go
-result, err := exasol.Exec(`
+result, err := database.Exec(`
 IMPORT INTO CUSTOMERS FROM LOCAL CSV FILE './testData/data.csv' FILE './testData/data_part2.csv'
   COLUMN SEPARATOR = ';'
   ENCODING = 'UTF-8'
@@ -24,7 +24,7 @@ See also the [usage notes](https://docs.exasol.com/db/latest/sql/import.htm#Usag
 Use the Exasol Go SQL Driver to load data from a local Parquet file into your Exasol Database:
 
 ```go
-result, err := exasol.Exec(`
+result, err := database.Exec(`
 IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE '../testData/data.parquet'
 `)
 ```

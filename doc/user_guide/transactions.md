@@ -16,7 +16,7 @@ database, err := sql.Open("exasol", config)
 
 After that you can begin a transaction:
 ```go
-transaction, err := exasol.Begin()
+transaction, err := database.Begin()
 result, err := transaction.Exec( ... )
 result2, err := transaction.Exec( ... )
 ```
