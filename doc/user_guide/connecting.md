@@ -24,9 +24,11 @@ func main() {
 
 If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`. See the [documentation](https://docs.exasol.com/db/latest/sql/create_user.htm#AuthenticationusingOpenID) about how to configure OpenID authentication in Exasol.
 
-## With Exasol DSN
+## With an Exasol DSN
 
-You can also create a connection replacing the builder with a simple string:
+An [ODBC Data Source Name](https://en.wikipedia.org/wiki/Data_source_name) (DSN) is a string identifying a database connection incl. the detailed protocol, i.e.  the type of the database for selecting the appropriate database driver.
+
+You can create a connection by using a simple string representing the DSN:
 
 ```go
 package main

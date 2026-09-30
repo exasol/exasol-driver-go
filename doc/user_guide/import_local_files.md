@@ -1,12 +1,12 @@
 # Importing Local Files
 
-## Importing Local CSV Files
-
-Use the Exasol Go SQL Driver to load data from one or more CSV files into your Exasol Database. These files must be local to the machine where you execute the `IMPORT` statement.
-
 **Limitations:**
 * The driver supports only CSV and Parquet files. It does not support FBV.
 * The driver does not support the SQL `SECURE` option. Instead, it encrypts the proxy connection that transfers a local CSV or Parquet file by default when the server supports it. Exasol 8 does not support encrypted local imports, so the driver automatically uses plaintext there. The [`localimportencryption`](#connection-string) driver property is deprecated; set it to `0` only when plaintext is explicitly required.
+
+## Importing Local CSV Files
+
+Use the Exasol Go SQL Driver to load data from one or more CSV files into your Exasol Database. These files must be local to the machine where you execute the `IMPORT` statement.
 
 ```go
 result, err := database.Exec(`
