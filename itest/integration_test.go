@@ -1338,7 +1338,7 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 			suite.exasol.DbVersion)
 	}
 	path := suite.createEnhancedParquetSampleFile()
-	table := tableSpec{schema: "test_SCHEMA_11", name: "TEST_table"}
+	table := tableSpec{schema: "test_SCHEMA_11_1", name: "TEST_table"}
 	suite.importParquetWithInferredSchema(path, table)
 }
 
@@ -1358,7 +1358,7 @@ func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 			suite.exasol.DbVersion)
 	}
 	path := suite.createDefaultSampleParquetFile(1)
-	table := tableSpec{schema: "test_SCHEMA_11", name: "TEST_table", columns: aIntBVarchar20}
+	table := tableSpec{schema: "test_SCHEMA_11_2", name: "TEST_table", columns: aIntBVarchar20}
 	mock := loggerMock{messages: make([]string, 0)}
 	logger.WarningLogger = &mock
 	suite.importParquetWithInferredSchema(path, table)
