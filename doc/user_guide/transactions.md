@@ -3,14 +3,13 @@
 To control the transaction state manually, you need to disable autocommit (enabled by default):
 
 ```go
-database, err := sql.Open("exasol",
-   "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
-// or
-config := exasol.NewConfig("<username>", "<password>").
-  Port(int(port)).
-  Host("<host>").
-  Autocommit(false).
-  String()
+database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=<password>;autocommit=0")
+```
+
+or
+
+```go
+config := exasol.NewConfig("<username>", "<password>").Port(int(port)).Host("<host>").Autocommit(false).String()
 database, err := sql.Open("exasol", config)
 ```
 

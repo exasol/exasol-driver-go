@@ -7,6 +7,9 @@ There are two driver properties that control how TLS certificates are verified: 
 * With `validateservercertificate=1` (or `config.ValidateServerCertificate(true)`) the driver will return an error for any TLS errors (e.g., unknown certificate or invalid hostname).
 
     Use this when the database has a CA-signed certificate. This is the default behavior.
+
+    You should also use this for self-signed certificates. In this case you only need to [install the certificates into Exasol](https://docs.exasol.com/db/latest/administration/on-premise/access_management/tls_certificate.htm).
+
 * With `validateservercertificate=1;certificatefingerprint=<fingerprint>` (or `config.ValidateServerCertificate(true).CertificateFingerprint("<fingerprint>")`) you can specify the fingerprint (i.e. the SHA256 checksum) of the server's certificate.
 
     This is useful when the database has a self-signed certificate with invalid hostname but you still want to verify connecting to the correct host.

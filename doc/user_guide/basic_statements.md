@@ -29,3 +29,5 @@ result, err = preparedStatement.Exec("Bob", "Berlin")
 preparedStatement, err := database.Prepare("SELECT * FROM CUSTOMERS WHERE NAME = ?")
 rows, err := preparedStatement.Query("Bob")
 ```
+
+Please note: You can only use positional `?` placeholders as Exasol Go SQL Driver does not support named parameters in prepared statements.
