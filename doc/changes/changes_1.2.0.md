@@ -4,7 +4,7 @@ Code name: Schema Inference
 
 ## Summary
 
-This release adds the feature when importing a local Parquet file, to create the SQL table on the fly based on the column declarations from the Parquet metadata.
+When importing a local Parquet file, it is now possible to create the SQL table on the fly based on the column declarations from the Parquet metadata.
 
 See the [User Guide](../user_guide/import_local_files.md#automated-table-schema-inference) for details.
 

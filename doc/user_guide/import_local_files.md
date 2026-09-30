@@ -30,7 +30,7 @@ IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE '../testData/data.parquet'
 ```
 
 **Limitations:**
-* A statement can name exactly one Parquet file. A CSV import can still name several files.
+* A statement can name exactly one Parquet file.
 * The statement requires Exasol 2025.1.11 or later. Against an older server, the import fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 * The driver streams the byte ranges requested by Exasol without loading the whole file into memory.
 * By default, the proxy connection that carries the file is encrypted when the server supports it. Exasol 8 does not support encrypted local imports, so the driver automatically uses plaintext there. The `localimportencryption` driver property is deprecated; set it to `0` only when plaintext is explicitly required.

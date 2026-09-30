@@ -4,7 +4,7 @@ We recommend to always enable TLS encryption. This is on by default, but you can
 
 There are two driver properties that control how TLS certificates are verified: `validateservercertificate` and `certificatefingerprint`. You have these three options depending on your setup:
 
-* With `validateservercertificate=1` (or `config.ValidateServerCertificate(true)`) the driver will return an error for any TLS errors (e.g. unknown certificate or invalid hostname).
+* With `validateservercertificate=1` (or `config.ValidateServerCertificate(true)`) the driver will return an error for any TLS errors (e.g., unknown certificate or invalid hostname).
 
     Use this when the database has a CA-signed certificate. This is the default behavior.
 * With `validateservercertificate=1;certificatefingerprint=<fingerprint>` (or `config.ValidateServerCertificate(true).CertificateFingerprint("<fingerprint>")`) you can specify the fingerprint (i.e. the SHA256 checksum) of the server's certificate.
