@@ -48,7 +48,7 @@ See comments and open questions regarding `localimportencryption` above.
 
 ### Automated Table Schema Inference
 
-When importing a local Parquet file, Exasol Go SQL Driver supports creating the SQL table on the fly based on the column declaration contained in the Parquet file.
+When importing a local Parquet file, Exasol Go SQL Driver supports creating the SQL table on the fly based on the column declarations contained in the Parquet file.
 
 This feature has been added with version 1.2.0 and requires using the following function:
 

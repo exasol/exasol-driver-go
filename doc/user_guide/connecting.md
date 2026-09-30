@@ -22,7 +22,7 @@ func main() {
 }
 ```
 
-If you want to login via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`. See the [documentation](https://docs.exasol.com/db/latest/sql/create_user.htm#AuthenticationusingOpenID) about how to configure OpenID authentication in Exasol.
+If you want to log in via [OpenID tokens](https://github.com/exasol/websocket-api/blob/master/docs/commands/loginTokenV3.md) use `exasol.NewConfigWithRefreshToken("token")` or `exasol.NewConfigWithAccessToken("token")`. See the [documentation](https://docs.exasol.com/db/latest/sql/create_user.htm#AuthenticationusingOpenID) about how to configure OpenID authentication in Exasol.
 
 ## With an Exasol DSN
 
