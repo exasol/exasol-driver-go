@@ -9,7 +9,7 @@ database, err := sql.Open("exasol", "exa:<host>:<port>;user=<username>;password=
 or
 
 ```go
-config := exasol.NewConfig("<username>", "<password>").Port(int(port)).Host("<host>").Autocommit(false).String()
+config := exasol.NewConfig("<username>", "<password>").Port(int(<port>)).Host("<host>").Autocommit(false).String()
 database, err := sql.Open("exasol", config)
 ```
 
