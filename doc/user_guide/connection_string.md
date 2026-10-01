@@ -16,7 +16,7 @@ Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exaso
 | `clientversion`             |  string       |             | Tell the server the version of the application. |
 | `compression`               |  0=off, 1=on  | `0`         | Switch data compression on or off.              |
 | `encryption`                |  0=off, 1=on  | `1`         | Switch automatic encryption on or off.          |
-| `fetchsize`                 | numeric, >0   | `128`       | Amount of data in kB which should be obtained by Exasol during a fetch. The application can run out of memory if the value is too high. |
+| `fetchsize`                 | numeric, >0   | `2000`      | Amount of data in kB which should be obtained by Exasol during a fetch. The application can run out of memory if the value is too high. |
 | `localimportencryption`     |  0=off, 1=on  | `1`         | Encrypt the proxy connection used for a local CSV or Parquet import, see notes below |
 | `password`                  |  string       |             | Exasol password.                                |
 | `resultsetmaxrows`          |  numeric      |             | Set the max amount of rows in the result set.   |

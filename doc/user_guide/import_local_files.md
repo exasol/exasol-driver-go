@@ -6,10 +6,7 @@
 
 Encrypting the proxy connection used for a local CSV or Parquet import:
 * Encrypted import from local is only supported by Exasol &ge; 2025.1.11.
-* For older versions set driver property `localimportencryption` to `0`
-
-Open questions:
-* What is a SQL `SECURE` option?
+* For older versions set [driver property](connection_string.md) `localimportencryption` to `0`
 
 ## Importing Local CSV Files
 
