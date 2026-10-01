@@ -38,7 +38,7 @@ IMPORT INTO CUSTOMERS FROM LOCAL PARQUET FILE '../testData/data.parquet'
 * The statement requires Exasol 2025.1.11 or later. Against an older server, the import fails at once with error `E-EGOD-31`. This error names the required version and the reported version.
 * The driver streams the byte ranges requested by Exasol without loading the whole file into memory.
 
-See comments and open questions regarding `localimportencryption` above.
+See comments regarding `localimportencryption` above.
 
 ### Automated Table Schema Inference
 
