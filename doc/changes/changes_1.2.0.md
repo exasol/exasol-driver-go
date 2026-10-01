@@ -1,8 +1,12 @@
 # Exasol Driver go 1.2.0, released 2026-??-??
 
-Code name:
+Code name: Schema Inference
 
 ## Summary
+
+When importing a local Parquet file, it is now possible to create the SQL table on the fly based on the column declarations from the Parquet metadata.
+
+See the [User Guide](../user_guide/import_local_files.md#automated-table-schema-inference) for details.
 
 ## Features
 
@@ -16,6 +20,7 @@ Code name:
 ## Documentation
 
 * #162: Described executing single tests and added file `error_code_config.yml`
+* #182: Described `ImportParquetWithInferredSchema` in the User Guide
 
 ## Refactorings
 
