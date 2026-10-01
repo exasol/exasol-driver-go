@@ -1361,9 +1361,9 @@ func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 	table := tableSpec{schema: "test_SCHEMA_11_2", name: "TEST_table", columns: aIntBVarchar20}
 	mock := loggerMock{messages: make([]string, 0)}
 	original := logger.WarningLogger
-	logger.WarningLogger = &mock
 	resetLogger := func() { logger.WarningLogger = original }
 	defer resetLogger()
+	logger.WarningLogger = &mock
 	suite.importParquetWithInferredSchema(path, table)
 	expected := fmt.Sprintf(
 		`The specified table %s already exists. Import may fail if columns do not match.`,
