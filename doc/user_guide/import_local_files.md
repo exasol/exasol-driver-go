@@ -2,17 +2,14 @@
 
 **Limitations:**
 * The driver supports only CSV and Parquet files. It does not support FBV.
-* The driver does not support the SQL `SECURE` option. Instead, it encrypts the proxy connection that transfers a local CSV or Parquet file by default when the server supports it. Exasol 8 does not support encrypted local imports, so the driver automatically uses plaintext there. The [`localimportencryption`](#connection-string) driver property is deprecated; set it to `0` only when plaintext is explicitly required.
+* The driver does not support the SQL `SECURE` option. Instead, it encrypts the proxy connection that transfers a local CSV or Parquet file by default when the server supports it.
 
-The current understanding is
-* Exasol &le; `2025.1.10` did not support encrypted import from local
-* Hence for older Exasol versions the Go driver should set `localimportencryption` to `0` Otherwise the import will fail.
-* Exasol &ge; `2025.1.11` either always uses encrypted local import or leaves the decision up to the user.
+Encrypting the proxy connection used for a local CSV or Parquet import:
+* Encrypted import from local is only supported by Exasol &ge; 2025.1.11.
+* For older versions set driver property `localimportencryption` to `0`
 
 Open questions:
 * What is a SQL `SECURE` option?
-* How to detect whether the server supports encryption for import from local?
-* Can EGOD detect this?
 
 ## Importing Local CSV Files
 
