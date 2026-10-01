@@ -1430,7 +1430,8 @@ func (suite *IntegrationTestSuite) createSqlTable(db *sql.DB, table tableSpec) s
 }
 
 func (suite *IntegrationTestSuite) cleanup(db *sql.DB, schemaName string) {
-	_, err := db.Exec("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE")
+	statement := Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", connection.QuoteIdentifier(schemaName))
+	_, err := db.Exec(statement)
 	suite.NoError(err, "Failed to drop schema "+schemaName)
 	suite.NoError(db.Close(), "Failed to close driver ")
 }
