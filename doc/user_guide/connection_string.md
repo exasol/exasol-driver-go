@@ -25,7 +25,7 @@ Host-Range-Syntax is supported (e.g. `exasol1..3`). A range like `exasol1..exaso
 | `validateservercertificate` |  0=off, 1=on  | `1`         | TLS certificate verification. Disable it if you want to use a self-signed or invalid certificate (server side). |
 
 Encrypting the proxy connection used for a local CSV or Parquet import:
-* Encrypted import from local is only supported by Exasol &le; 2025.1.11.
+* Encrypted import from local is only supported by Exasol &ge; 2025.1.11.
 * EGOD encrypts import from local if Exasol &ge; 2025 and driver property `localimportencryption` is not `0`
 * For older versions set `localimportencryption` to `0`
 * See also [Import Local Files](import_local_files.md).
