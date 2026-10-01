@@ -1332,11 +1332,7 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 }
 
 func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
-	if !suite.exasol.SupportsNativeParquetImport() {
-		suite.T().Skipf("Exasol %s does not support TIMESTAMP(9) "+
-			"which is required for ImportParquetWithInferredSchema()",
-			suite.exasol.DbVersion)
-	}
+	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createEnhancedParquetSampleFile()
 	table := tableSpec{schema: "test_SCHEMA_11_1", name: "TEST_table"}
 	suite.importParquetWithInferredSchema(path, table)
@@ -1351,12 +1347,16 @@ func (m *loggerMock) Printf(format string, v ...interface{}) {
 	m.messages = append(m.messages, fmt.Sprintf(format, v...))
 }
 
-func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
+func (suite *IntegrationTestSuite) assumeDbSupportsNativeParquetImport() {
 	if !suite.exasol.SupportsNativeParquetImport() {
 		suite.T().Skipf("Exasol %s does not support TIMESTAMP(9) "+
 			"which is required for ImportParquetWithInferredSchema()",
 			suite.exasol.DbVersion)
 	}
+}
+
+func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
+	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createDefaultSampleParquetFile(1)
 	table := tableSpec{schema: "test_SCHEMA_11_2", name: "TEST_table", columns: aIntBVarchar20}
 	mock := loggerMock{messages: make([]string, 0)}
