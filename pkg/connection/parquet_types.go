@@ -242,6 +242,9 @@ func renameColumns(orig []parquetColumn) (result []parquetColumn) {
 	names := make(map[string]bool)
 	for _, col := range orig {
 		name := strings.Join(col.path, "_")
+		if name == "" {
+			name = "_"
+		}
 		name = special.ReplaceAllString(name, "_")
 		name = digitPrefix.ReplaceAllString(name, "")
 		name = strings.ToUpper(name)

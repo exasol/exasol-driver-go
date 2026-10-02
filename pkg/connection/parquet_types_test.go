@@ -239,6 +239,7 @@ func TestRenameSingleColumn(t *testing.T) {
 		colName  string
 		expected string
 	}{
+		{"empty_name", "", "_"},
 		{"lowercase", "abc", "ABC"},
 		{"digit_prefix", "123abc", "ABC"},
 		{"underscores", "_123abc_", "_123ABC_"},
