@@ -7,6 +7,20 @@ The version in the following places must be identical
 * File `.project-keeper.yml`
 * Directory `doc/changes/`: File `changelog.md` and latest file `changes_*.md`
 
+## Releasing
+
+EGOD supports releases with [release-droid](https://github.com/exasol/release-droid) with the following limitations:
+* File `release_config.yml` specifies
+  * only release platform `GitHub` and
+  * language `Generic`.
+* No artifacts will be uploaded, i.e. the GitHub release will not have any assets.
+
+Example command lines:
+```shell
+java -jar .../release-droid-*.jar -n exasol-driver-go --local . --goal validate
+java -jar .../release-droid-*.jar -n exasol-driver-go --goal release --skipvalidation
+```
+
 ## Testing
 
 Run unit tests only:
