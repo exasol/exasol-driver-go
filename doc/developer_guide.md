@@ -9,7 +9,7 @@ The version in the following places must be identical
 
 ## Releasing
 
-PO supports releases with [release-droid](https://github.com/exasol/release-droid) with the following limitations:
+EGOD supports releases with [release-droid](https://github.com/exasol/release-droid) with the following limitations:
 * File `release_config.yml` specifies
   * only release platform `GitHub` and
   * language `Generic`.
