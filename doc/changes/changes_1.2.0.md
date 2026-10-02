@@ -1,4 +1,4 @@
-# Exasol Driver go 1.2.0, released 2026-??-??
+# Exasol Driver go 1.2.0, released 2026-10-02
 
 Code name: Schema Inference
 
