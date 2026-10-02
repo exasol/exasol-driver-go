@@ -1331,13 +1331,6 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 	suite.Nil(rows)
 }
 
-func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
-	suite.assumeDbSupportsNativeParquetImport()
-	path := suite.createEnhancedParquetSampleFile()
-	table := tableSpec{schema: "test_SCHEMA_11_1", name: "TEST_table"}
-	suite.importParquetWithInferredSchema(path, table)
-}
-
 type loggerMock struct {
 	messages []string
 }
@@ -1355,6 +1348,49 @@ func (suite *IntegrationTestSuite) assumeDbSupportsNativeParquetImport() {
 	}
 }
 
+func (suite *IntegrationTestSuite) importParquetWithInferredSchema(
+	database *sql.DB,
+	path string,
+	table tableSpec,
+	options connection.ParquetImportOptions,
+) {
+	// database := suite.openConnection(suite.createDefaultConfig())
+	// // This test deliberately uses mixed case names for schema and table to
+	// // verify proper quoting.
+	// if table.columns != "" {
+	// 	_ = suite.createSqlTable(database, table)
+	// } else {
+	// 	_ = suite.createDbSchema(database, table.schema)
+	// }
+	// defer suite.cleanup(database, table.schema)
+	rowsCount, err := connection.ImportParquetWithInferredSchema(
+		suite.ctx,
+		database,
+		table.schema,
+		table.name,
+		path,
+		options, // connection.ParquetImportOptions{},
+	)
+	suite.NoError(err, "Import local Parquet file")
+	suite.Equal(int64(1), rowsCount)
+	rows, err := database.QueryContext(
+		suite.ctx, fmt.Sprintf("SELECT count(1) from %s", table.fqn()))
+	suite.NoError(err)
+	assertSingleValueResult(suite, rows, 1)
+}
+
+func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
+	suite.assumeDbSupportsNativeParquetImport()
+	path := suite.createEnhancedParquetSampleFile()
+	table := tableSpec{schema: "test_SCHEMA_11_1", name: "TEST_table"}
+	options := connection.ParquetImportOptions{}
+
+	database := suite.openConnection(suite.createDefaultConfig())
+	defer suite.cleanup(database, table.schema)
+	_ = suite.createDbSchema(database, table.schema)
+	suite.importParquetWithInferredSchema(database, path, table, options)
+}
+
 func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createDefaultSampleParquetFile(1)
@@ -1364,37 +1400,46 @@ func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 	resetLogger := func() { logger.WarningLogger = original }
 	defer resetLogger()
 	logger.WarningLogger = &mock
-	suite.importParquetWithInferredSchema(path, table)
+	options := connection.ParquetImportOptions{}
+
+	database := suite.openConnection(suite.createDefaultConfig())
+	suite.createSqlTable(database, table)
+	defer suite.cleanup(database, table.schema)
+
+	suite.importParquetWithInferredSchema(database, path, table, options)
 	expected := fmt.Sprintf(
 		`The specified table %s already exists. Import may fail if columns do not match.`,
 		table.fqn())
 	suite.Equal(expected, mock.messages[0])
 }
 
-func (suite *IntegrationTestSuite) importParquetWithInferredSchema(path string, table tableSpec) {
+func (suite *IntegrationTestSuite) TestInferSchemaRenameColumns() {
+	suite.assumeDbSupportsNativeParquetImport()
+	path := suite.createDefaultSampleParquetFile(1)
+	table := tableSpec{schema: "TEST_SCHEMA_11_3", name: "TEST_TABLE", columns: aIntBVarchar20}
+	options := connection.ParquetImportOptions{ColumnNames: connection.UpperSnakeCase}
+
 	database := suite.openConnection(suite.createDefaultConfig())
-	// This test deliberately uses mixed case names for schema and table to
-	// verify proper quoting.
-	if table.columns != "" {
-		_ = suite.createSqlTable(database, table)
-	} else {
-		_ = suite.createDbSchema(database, table.schema)
-	}
+	suite.createDbSchema(database, table.schema)
 	defer suite.cleanup(database, table.schema)
-	rowsCount, err := connection.ImportParquetWithInferredSchema(
-		suite.ctx,
-		database,
-		table.schema,
-		table.name,
-		path,
-		connection.ParquetImportOptions{},
-	)
-	suite.NoError(err, "Import local Parquet file")
-	suite.Equal(int64(1), rowsCount)
+
+	suite.importParquetWithInferredSchema(database, path, table, options)
 	rows, err := database.QueryContext(
-		suite.ctx, fmt.Sprintf("SELECT count(1) from %s", table.fqn()))
+		suite.ctx,
+		"SELECT COLUMN_NAME FROM SYS.EXA_ALL_COLUMNS "+
+			"WHERE COLUMN_SCHEMA = ? AND COLUMN_TABLE = ?",
+		table.schema, table.name,
+	)
 	suite.NoError(err)
-	assertSingleValueResult(suite, rows, 1)
+	var name string
+
+	rows.Next()
+	suite.NoError(rows.Scan(&name))
+	suite.Equal("A", name)
+
+	rows.Next()
+	suite.NoError(rows.Scan(&name))
+	suite.Equal("B", name)
 }
 
 func assertSingleValueResult[T any](suite *IntegrationTestSuite, rows *sql.Rows, expected T) {
