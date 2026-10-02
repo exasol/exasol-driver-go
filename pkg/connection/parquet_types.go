@@ -246,7 +246,9 @@ func renameColumns(orig []parquetColumn) (result []parquetColumn) {
 			name = "_"
 		}
 		name = special.ReplaceAllString(name, "_")
-		name = digitPrefix.ReplaceAllString(name, "")
+		if digitPrefix.MatchString(name) {
+			name = "_" + name
+		}
 		name = strings.ToUpper(name)
 		i := 1
 		candidate := name

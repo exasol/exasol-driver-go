@@ -241,8 +241,8 @@ func TestRenameSingleColumn(t *testing.T) {
 	}{
 		{"empty_name", "", "_"},
 		{"lowercase", "abc", "ABC"},
-		{"digit_prefix", "123abc", "ABC"},
-		{"underscores", "_123abc_", "_123ABC_"},
+		{"digit_prefix", "123abc", "_123ABC"},
+		{"underscores", "_abc_", "_ABC_"},
 		{"multiple_special", "__a,.-b___c", "_A_B_C"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -252,6 +252,14 @@ func TestRenameSingleColumn(t *testing.T) {
 			assert.Equal(t, tt.expected, actual[0].path[0])
 		})
 	}
+}
+
+func TestIterateCreatedCopies(t *testing.T) {
+	columns := []parquetColumn{{path: []string{"a"}}}
+	for _, col := range columns {
+		col.path = []string{"b"}
+	}
+	assert.Equal(t, "a", columns[0].path[0])
 }
 
 func TestRenameDuplicates(t *testing.T) {
