@@ -272,7 +272,7 @@ func TestRenameDuplicates(t *testing.T) {
 		{"single_column", []string{"a"}, []string{"A"}},
 		{"two_columns", []string{"a", "b"}, []string{"A", "B"}},
 		{"duplicate", []string{"a", "a"}, []string{"A", "A_1"}},
-		{"duplicate_2", []string{"a", "1a"}, []string{"A", "A_1"}},
+		{"duplicate_2", []string{"1a", "_1a"}, []string{"_1A", "_1A_1"}},
 		{"duplicate_3", []string{"a_b", "a__b"}, []string{"A_B", "A_B_1"}},
 		{"duplicate_4", []string{"a", "a_1", "a_1"}, []string{"A", "A_1", "A_1_1"}},
 	} {
