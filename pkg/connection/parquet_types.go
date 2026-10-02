@@ -252,7 +252,7 @@ func renameColumns(orig []parquetColumn) (result []parquetColumn) {
 			i++
 		}
 		names[candidate] = true
-		col.path = []string{ candidate }
+		col.path = []string{candidate}
 		result = append(result, col)
 	}
 	return result

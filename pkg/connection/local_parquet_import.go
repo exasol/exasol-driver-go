@@ -18,7 +18,7 @@ type ParquetImportOptions struct {
 
 const (
 	RawParquetNames = 0
-	UpperSnakeCase = 1
+	UpperSnakeCase  = 1
 )
 
 // regularIdentifier matches an Exasol regular (unquoted) identifier.
