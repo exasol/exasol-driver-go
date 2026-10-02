@@ -13,8 +13,13 @@ import (
 var LOG logger.Logger = logger.TraceLogger
 
 type ParquetImportOptions struct {
-	Name string
+	ColumnNames int
 }
+
+const (
+	RawParquetNames = 0
+	UpperSnakeCase  = 1
+)
 
 // regularIdentifier matches an Exasol regular (unquoted) identifier.
 // See https://docs.exasol.com/db/latest/sql_references/basiclanguageelements.htm
@@ -71,6 +76,9 @@ func createTableForLocalParquetImport(
 	columns, err := retrieveParquetColumns(file)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve column declarations from Parquet file %s: %w", filePath, err)
+	}
+	if options.ColumnNames == UpperSnakeCase {
+		columns = renameColumns(columns)
 	}
 	statement, err := createTableStatement(tableFqn, columns)
 	if err != nil {

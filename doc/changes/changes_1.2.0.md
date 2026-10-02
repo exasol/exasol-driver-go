@@ -16,6 +16,7 @@ See the [User Guide](../user_guide/import_local_files.md#automated-table-schema-
 * #174: Added support to map Parquet logical types
 * #178: Combined logical and physical types of Parquet columns
 * #180: Added top-level function `ImportParquetWithInferredSchema` incl. integration test
+* #183: Supported option for friendly column names when infering table schema from Parquet
 
 ## Documentation
 
