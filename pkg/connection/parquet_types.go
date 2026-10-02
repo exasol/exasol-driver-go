@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/parquet-go/parquet-go"
@@ -225,4 +226,34 @@ func retrieveParquetColumns(file *os.File) (result []parquetColumn, err error) {
 		})
 	}
 	return
+}
+
+// renameColumns renames the original columns retrieved from the metadata of a
+// Parquet file by friendly names for Exasol and returns a list of the renamed
+// columns.
+//
+// Friendly names do not start with a digit and contain only upper case
+// characters and underscores.
+func renameColumns(orig []parquetColumn) (result []parquetColumn) {
+	var special = regexp.MustCompile("[^a-zA-Z0-9]+")
+	var digitPrefix = regexp.MustCompile("^[0-9]+")
+
+	result = make([]parquetColumn, 0, len(orig))
+	names := make(map[string]bool)
+	for _, col := range orig {
+		name := strings.Join(col.path, "_")
+		name = special.ReplaceAllString(name, "_")
+		name = digitPrefix.ReplaceAllString(name, "")
+		name = strings.ToUpper(name)
+		i := 1
+		candidate := name
+		for names[candidate] {
+			candidate = fmt.Sprintf("%s_%d", name, i)
+			i++
+		}
+		names[candidate] = true
+		col.path = []string{ candidate }
+		result = append(result, col)
+	}
+	return result
 }

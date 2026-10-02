@@ -124,7 +124,7 @@ func TestCreateTableStatement(t *testing.T) {
 		expected      string
 		expectedError string
 	}{
-		{"empty_list", make([]parquetColumn, 0), "", "empty list of columns"},
+		{"empty_list", []parquetColumn{}, "", "empty list of columns"},
 		{
 			"decimal_logical", []parquetColumn{{
 				path:     []string{"dL"},
@@ -229,6 +229,56 @@ func TestImportIllegalCharacters(t *testing.T) {
 			_, err := ImportParquetWithInferredSchema(ctx, db, tt.schema, tt.table, tt.path, options)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedError)
+		})
+	}
+}
+
+func TestRenameSingleColumn(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		colName  string
+		expected string
+	}{
+		{"lowercase", "abc", "ABC"},
+		{"digit_prefix", "123abc", "ABC"},
+		{"underscores", "_123abc_", "_123ABC_"},
+		{"multiple_special", "__a,.-b___c", "_A_B_C"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			columns := []parquetColumn{{path: []string{tt.colName}}}
+			actual := renameColumns(columns)
+			assert.Equal(t, 1, len(actual[0].path))
+			assert.Equal(t, tt.expected, actual[0].path[0])
+		})
+	}
+}
+
+func TestRenameDuplicates(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		columnNames []string
+		expected    []string
+	}{
+		{"empty_list", []string{}, []string{}},
+		{"single_column", []string{"a"}, []string{"A"}},
+		{"two_columns", []string{"a", "b"}, []string{"A", "B"}},
+		{"duplicate", []string{"a", "a"}, []string{"A", "A_1"}},
+		{"duplicate_2", []string{"a", "1a"}, []string{"A", "A_1"}},
+		{"duplicate_3", []string{"a_b", "a__b"}, []string{"A_B", "A_B_1"}},
+		{"duplicate_4", []string{"a", "a_1", "a_1"}, []string{"A", "A_1", "A_1_1"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			columns := make([]parquetColumn, 0, len(tt.columnNames))
+			for _, name := range tt.columnNames {
+				columns = append(columns, parquetColumn{path: []string{name}})
+			}
+			result := renameColumns(columns)
+			actual := make([]string, 0, len(result))
+			for _, col := range result {
+				assert.Equal(t, 1, len(col.path))
+				actual = append(actual, col.path[0])
+			}
+			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }

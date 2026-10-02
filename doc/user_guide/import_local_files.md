@@ -56,3 +56,11 @@ func ImportParquetWithInferredSchema(
     options ParquetImportOptions,
 ) (rowCount int64, err error)
 ```
+
+If attribute `options.columnNames` is set to `UpperSnakeCase` then the
+function will rename the input columns to friendly names:
+
+* Upper case
+* Remove leading digits
+* Replace consecutive spaces and other special chars by a single underscore
+* For non-unique names append a counter
