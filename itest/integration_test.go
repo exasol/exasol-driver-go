@@ -1354,23 +1354,8 @@ func (suite *IntegrationTestSuite) importParquetWithInferredSchema(
 	table tableSpec,
 	options connection.ParquetImportOptions,
 ) {
-	// database := suite.openConnection(suite.createDefaultConfig())
-	// // This test deliberately uses mixed case names for schema and table to
-	// // verify proper quoting.
-	// if table.columns != "" {
-	// 	_ = suite.createSqlTable(database, table)
-	// } else {
-	// 	_ = suite.createDbSchema(database, table.schema)
-	// }
-	// defer suite.cleanup(database, table.schema)
 	rowsCount, err := connection.ImportParquetWithInferredSchema(
-		suite.ctx,
-		database,
-		table.schema,
-		table.name,
-		path,
-		options, // connection.ParquetImportOptions{},
-	)
+		suite.ctx, database, table.schema, table.name, path, options)
 	suite.NoError(err, "Import local Parquet file")
 	suite.Equal(int64(1), rowsCount)
 	rows, err := database.QueryContext(
@@ -1380,6 +1365,8 @@ func (suite *IntegrationTestSuite) importParquetWithInferredSchema(
 }
 
 func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
+	// This test deliberately uses mixed case names for schema and table to
+	// verify proper quoting.
 	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createEnhancedParquetSampleFile()
 	table := tableSpec{schema: "test_SCHEMA_11_1", name: "TEST_table"}
@@ -1394,7 +1381,7 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createDefaultSampleParquetFile(1)
-	table := tableSpec{schema: "test_SCHEMA_11_2", name: "TEST_table", columns: aIntBVarchar20}
+	table := tableSpec{schema: "TEST_SCHEMA_11_2", name: "TEST_TABLE", columns: aIntBVarchar20}
 	mock := loggerMock{messages: make([]string, 0)}
 	original := logger.WarningLogger
 	resetLogger := func() { logger.WarningLogger = original }
