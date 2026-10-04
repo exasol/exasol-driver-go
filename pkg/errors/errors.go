@@ -143,7 +143,7 @@ func NewFileNotFound(path string) DriverErr {
 }
 
 func NewCouldNotGetOsUser(err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-28").
+	return NewDriverErr(exaerror.New("W-EGOD-33").
 		Message("could not get current OS user: {{error}}").
 		Parameter("error", err))
 }
@@ -175,47 +175,49 @@ func NewParquetImportMultipleFiles(fileCount int) DriverErr {
 		Parameter("file count", fileCount))
 }
 
+// errors for infer schema
+
 func OpenParquetFile(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-33").
+	return NewDriverErr(exaerror.New("E-EGOD-34").
 		Message("failed to open Parquet file {{parquet file|uq}}: {{error|uq}}").
 		Parameter("parquet file", parquetFile).
 		Parameter("error", err))
 }
 
 func RetrieveParqueColumns(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-34").
+	return NewDriverErr(exaerror.New("E-EGOD-35").
 		Message("failed to retrieve column declarations from Parquet file {{parquet file|uq}}: {{error|uq}}").
 		Parameter("parquet file", parquetFile).
 		Parameter("error", err))
 }
 
 func InferSqlColumns(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-35").
+	return NewDriverErr(exaerror.New("E-EGOD-36").
 		Message("failed to infer SQL columns from Parquet file {{parquet file|uq}}: {{error|uq}}").
 		Parameter("parquet file", parquetFile).
 		Parameter("error", err))
 }
 
 func CreateSqlTable(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-36").
+	return NewDriverErr(exaerror.New("E-EGOD-37").
 		Message("failed to create the SQL table for Parquet file {{parquet file|uq}}: {{error|uq}}").
 		Parameter("parquet file", parquetFile).
 		Parameter("error", err))
 }
 
 func SqlSchemaName(name string) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-37").Message("invalid schema name {{name}}").Parameter("name", name))
+	return NewDriverErr(exaerror.New("E-EGOD-38").Message("invalid schema name {{name}}").Parameter("name", name))
 }
 
 func SqlTableName(name string) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-38").Message("invalid table name {{name}}").Parameter("name", name))
+	return NewDriverErr(exaerror.New("E-EGOD-39").Message("invalid table name {{name}}").Parameter("name", name))
 }
 
 // ParquetFilePath deliberately formats parameter char as unquoted, expecting
 // the caller to quote the character appropriately, e.g. single char ['] in
 // double quotes "'".
 func ParquetFilePath(parquetFile string, char string) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-39").
+	return NewDriverErr(exaerror.New("E-EGOD-40").
 		Message("file path contains illegal character {{char|uq}}: {{parquet file|uq}}").
 		Parameter("parquet file", parquetFile).
 		Parameter("char", char))
@@ -225,7 +227,7 @@ func ParquetFilePath(parquetFile string, char string) DriverErr {
 // the caller to pass a fully qualified table name, prefixed by the database
 // schema and in double quotes.
 func CheckTable(tableFqn string) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-40").
+	return NewDriverErr(exaerror.New("E-EGOD-41").
 		Message("failed to check if table {{table|uq}} exists").
 		Parameter("table", tableFqn))
 }
@@ -234,21 +236,21 @@ func CheckTable(tableFqn string) DriverErr {
 // the caller to pass a fully qualified table name, prefixed by the database
 // schema and in double quotes.
 func TableExists(tableFqn string) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-41").
+	return NewDriverErr(exaerror.New("W-EGOD-42").
 		Message("The specified table {{table|uq}} already exists. "+
 			"Import may fail if columns do not match.").
 		Parameter("table", tableFqn))
 }
 
 func ImportStatement(statement string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-42").
+	return NewDriverErr(exaerror.New("E-EGOD-43").
 		Message("failed to execute import statement {{statement|uq}}: {{error|uq}}").
 		Parameter("statement", statement).
 		Parameter("error", err))
 }
 
 func RetrieveAffectedRows(err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-43").
+	return NewDriverErr(exaerror.New("E-EGOD-44").
 		Message("failed to retrieve number of affected rows: {{error|uq}}").
 		Parameter("error", err))
 }

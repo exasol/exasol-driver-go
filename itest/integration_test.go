@@ -1395,7 +1395,7 @@ func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 
 	suite.importParquetWithInferredSchema(database, path, table, options)
 	expected := fmt.Sprintf(
-		`W-EGOD-41: The specified table %s already exists. `+
+		`W-EGOD-42: The specified table %s already exists. `+
 			`Import may fail if columns do not match.`,
 		table.fqn())
 	suite.Equal(expected, mock.messages[0])
