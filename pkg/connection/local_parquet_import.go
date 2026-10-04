@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/logger"
 )
 
@@ -70,37 +71,37 @@ func createTableForLocalParquetImport(
 ) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to open Parquet file %s for import: %w", filePath, err)
+		return errors.OpenParquetFile(filePath, err)
 	}
 	defer file.Close()
 	columns, err := retrieveParquetColumns(file)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve column declarations from Parquet file %s: %w", filePath, err)
+		return errors.RetrieveParqueColumns(filePath, err)
 	}
 	if options.ColumnNames == UpperSnakeCase {
 		columns = renameColumns(columns)
 	}
 	statement, err := createTableStatement(tableFqn, columns)
 	if err != nil {
-		return fmt.Errorf("failed to build the CREATE TABLE statement for Parquet file %s: %w", filePath, err)
+		return errors.InferSqlColumns(filePath, err)
 	}
 	LOG.Print(statement)
 	_, err = database.ExecContext(ctx, statement)
 	if err != nil {
-		return fmt.Errorf("failed to create the SQL table for Parquet file %s: %w", filePath, err)
+		return errors.CreateSqlTable(filePath, err)
 	}
 	return nil
 }
 
 func verifyInputParameters(schema, table, filePath string) error {
 	if !regularIdentifier.MatchString(schema) {
-		return fmt.Errorf("invalid schema name %q", schema)
+		return errors.SqlSchemaName(schema)
 	}
 	if !regularIdentifier.MatchString(table) {
-		return fmt.Errorf("invalid table name %q", table)
+		return errors.SqlTableName(table)
 	}
 	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {
-		return fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
+		return errors.ParquetFilePath(filePath, `"`+illegal+`"`)
 	}
 	return nil
 }
@@ -128,12 +129,10 @@ func ImportParquetWithInferredSchema(
 	tableFqn := QuoteIdentifier(schema) + "." + QuoteIdentifier(table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)
 	if err != nil {
-		return 0, fmt.Errorf("failed to check if table %s exists", tableFqn)
+		return 0, errors.CheckTable(tableFqn)
 	}
 	if exists {
-		logger.WarningLogger.Printf(
-			"The specified table %s already exists. Import may fail if columns do not match.",
-			tableFqn)
+		logger.WarningLogger.Print(errors.TableExists(tableFqn).Error())
 	} else {
 		err = createTableForLocalParquetImport(ctx, database, tableFqn, filePath, options)
 		if err != nil {
@@ -145,12 +144,11 @@ func ImportParquetWithInferredSchema(
 	// suppress sonar findings as values are sanitized at the beginning of the function
 	result, err := database.ExecContext(ctx, statement) // NOSONAR
 	if err != nil {
-		return 0, fmt.Errorf("failed to execute import statement %s: %w",
-			statement, err)
+		return 0, errors.ImportStatement(statement, err)
 	}
 	rowsCount, err = result.RowsAffected()
 	if err != nil {
-		return 0, fmt.Errorf("failed to retrieve number of affected rows: %w", err)
+		return 0, errors.RetrieveAffectedRows(err)
 	}
 	return rowsCount, nil
 }

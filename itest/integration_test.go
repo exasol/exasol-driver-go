@@ -1331,15 +1331,6 @@ func (suite *IntegrationTestSuite) TestQueryTimeoutExpired() {
 	suite.Nil(rows)
 }
 
-type loggerMock struct {
-	messages []string
-}
-
-func (m *loggerMock) Print(v ...interface{}) { /* no-op */ }
-func (m *loggerMock) Printf(format string, v ...interface{}) {
-	m.messages = append(m.messages, fmt.Sprintf(format, v...))
-}
-
 func (suite *IntegrationTestSuite) assumeDbSupportsNativeParquetImport() {
 	if !suite.exasol.SupportsNativeParquetImport() {
 		suite.T().Skipf("Exasol %s does not support TIMESTAMP(9) "+
@@ -1378,6 +1369,15 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 	suite.importParquetWithInferredSchema(database, path, table, options)
 }
 
+type loggerMock struct {
+	messages []string
+}
+
+func (m *loggerMock) Print(v ...interface{}) {
+	m.messages = append(m.messages, fmt.Sprint(v...))
+}
+func (m *loggerMock) Printf(format string, v ...interface{}) {/* noop */}
+
 func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createDefaultSampleParquetFile(1)
@@ -1395,7 +1395,8 @@ func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 
 	suite.importParquetWithInferredSchema(database, path, table, options)
 	expected := fmt.Sprintf(
-		`The specified table %s already exists. Import may fail if columns do not match.`,
+		`W-EGOD-41: The specified table %s already exists. `+
+			`Import may fail if columns do not match.`,
 		table.fqn())
 	suite.Equal(expected, mock.messages[0])
 }
