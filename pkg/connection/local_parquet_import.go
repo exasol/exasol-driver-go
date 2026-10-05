@@ -76,7 +76,7 @@ func createTableForLocalParquetImport(
 	defer file.Close()
 	columns, err := retrieveParquetColumns(file)
 	if err != nil {
-		return errors.RetrieveParqueColumns(filePath, err)
+		return errors.RetrieveParquetColumns(filePath, err)
 	}
 	if options.ColumnNames == UpperSnakeCase {
 		columns = renameColumns(columns)
@@ -129,7 +129,7 @@ func ImportParquetWithInferredSchema(
 	tableFqn := QuoteIdentifier(schema) + "." + QuoteIdentifier(table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)
 	if err != nil {
-		return 0, errors.CheckTable(tableFqn)
+		return 0, errors.CheckTable(tableFqn, err)
 	}
 	if exists {
 		logger.WarningLogger.Print(errors.TableExists(tableFqn).Error())

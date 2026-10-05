@@ -183,7 +183,7 @@ func OpenParquetFile(parquetFile string, cause error) DriverErr {
 		Parameter("parquet file", parquetFile), cause)
 }
 
-func RetrieveParqueColumns(parquetFile string, cause error) DriverErr {
+func RetrieveParquetColumns(parquetFile string, cause error) DriverErr {
 	return NewDriverErrWithCause(exaerror.New("E-EGOD-35").
 		Message("failed to retrieve column declarations from Parquet file {{parquet file|uq}}").
 		Parameter("parquet file", parquetFile), cause)
@@ -210,10 +210,10 @@ func InferInvalidParameter(cause error) DriverErr {
 // CheckTable deliberately formats parameter tableFqn as unquoted, expecting
 // the caller to pass a fully qualified table name, prefixed by the database
 // schema and in double quotes.
-func CheckTable(tableFqn string) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-39").
+func CheckTable(tableFqn string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-39").
 		Message("failed to check if table {{table|uq}} exists").
-		Parameter("table", tableFqn))
+		Parameter("table", tableFqn), cause)
 }
 
 // TableExists deliberately formats parameter tableFqn as unquoted, expecting
