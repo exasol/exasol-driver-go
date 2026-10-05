@@ -143,7 +143,7 @@ func NewFileNotFound(path string) DriverErr {
 }
 
 func NewCouldNotGetOsUser(err error) DriverErr {
-	return NewDriverErr(exaerror.New("W-EGOD-28").
+	return NewDriverErr(exaerror.New("W-EGOD-33").
 		Message("could not get current OS user: {{error}}").
 		Parameter("error", err))
 }
@@ -173,6 +173,75 @@ func NewParquetImportMultipleFiles(fileCount int) DriverErr {
 	return NewDriverErr(exaerror.New("E-EGOD-32").
 		Message("local Parquet import supports exactly one file, but the statement named {{file count|uq}} files").
 		Parameter("file count", fileCount))
+}
+
+// errors for infer schema
+
+func OpenParquetFile(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-34").
+		Message("failed to open Parquet file {{parquet file|uq}}: {{error|uq}}").
+		Parameter("parquet file", parquetFile).
+		Parameter("error", cause), cause)
+}
+
+func RetrieveParquetColumns(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-35").
+		Message("failed to retrieve column declarations from Parquet file {{parquet file|uq}}: {{error|uq}}").
+		Parameter("parquet file", parquetFile).
+		Parameter("error", cause), cause)
+}
+
+func InferSqlColumns(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-36").
+		Message("failed to infer SQL columns from Parquet file {{parquet file|uq}}: {{error|uq}}").
+		Parameter("parquet file", parquetFile).
+		Parameter("error", cause), cause)
+}
+
+func CreateSqlTable(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-37").
+		Message("failed to create the SQL table for Parquet file {{parquet file|uq}}: {{error|uq}}").
+		Parameter("parquet file", parquetFile).
+		Parameter("error", cause), cause)
+}
+
+func InferInvalidParameter(cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-38").
+		Message("Parquet import with schema inference called with invalid parameter: {{error|uq}}").
+		Parameter("error", cause), cause)
+}
+
+// CheckTable deliberately formats parameter tableFqn as unquoted, expecting
+// the caller to pass a fully qualified table name, prefixed by the database
+// schema and in double quotes.
+func CheckTable(tableFqn string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-39").
+		Message("failed to check if table {{table|uq}} exists: {{error|uq}}").
+		Parameter("table", tableFqn).
+		Parameter("error", cause), cause)
+}
+
+// TableExists deliberately formats parameter tableFqn as unquoted, expecting
+// the caller to pass a fully qualified table name, prefixed by the database
+// schema and in double quotes.
+func TableExists(tableFqn string) DriverErr {
+	return NewDriverErr(exaerror.New("W-EGOD-40").
+		Message("The specified table {{table|uq}} already exists. "+
+			"Import may fail if columns do not match.").
+		Parameter("table", tableFqn))
+}
+
+func ImportStatement(statement string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-41").
+		Message("failed to execute import statement {{statement|uq}}: {{error|uq}}").
+		Parameter("statement", statement).
+		Parameter("error", cause), cause)
+}
+
+func RetrieveAffectedRows(cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-42").
+		Message("failed to retrieve number of affected rows: {{error|uq}}").
+		Parameter("error", cause), cause)
 }
 
 // DriverErr This type represents an error that can occur when working with a database connection.

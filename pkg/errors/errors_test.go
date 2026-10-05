@@ -161,3 +161,57 @@ func (suite *ErrorsTestSuite) TestNewParquetImportNotSupported() {
 func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
 	suite.EqualError(NewParquetImportMultipleFiles(2), "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files")
 }
+
+const tableFqn = `"schema"."table"`
+
+var errCause = fmt.Errorf("original error")
+
+func (suite *ErrorsTestSuite) TestCreateTableErrors() {
+	for _, tt := range []struct {
+		code    string
+		builder func(string, error) DriverErr
+	}{
+		{"E-EGOD-34", OpenParquetFile},
+		{"E-EGOD-35", RetrieveParquetColumns},
+		{"E-EGOD-36", InferSqlColumns},
+		{"E-EGOD-37", CreateSqlTable},
+		{"E-EGOD-41", ImportStatement},
+	} {
+		file := "/path/to/file"
+		suite.verifyErrorCode(tt.code, tt.builder(file, errCause), errCause, file)
+	}
+}
+
+func (suite *ErrorsTestSuite) TestCheckTable() {
+	suite.verifyErrorCode("E-EGOD-39", CheckTable(tableFqn, errCause), errCause, tableFqn)
+}
+
+func (suite *ErrorsTestSuite) TestTableExists() {
+	suite.verifyErrorCode("W-EGOD-40", TableExists(tableFqn), nil, tableFqn)
+}
+
+func (suite *ErrorsTestSuite) TestErrorsWithErrArg() {
+	for _, tt := range []struct {
+		code    string
+		builder func(error) DriverErr
+	}{
+		{"E-EGOD-38", InferInvalidParameter},
+		{"E-EGOD-42", RetrieveAffectedRows},
+	} {
+		suite.verifyErrorCode(tt.code, tt.builder(errCause), errCause, "")
+	}
+}
+
+func (suite *ErrorsTestSuite) verifyErrorCode(
+	code string,
+	err error,
+	cause error,
+	expected string,
+) {
+	suite.ErrorContains(err, code+": ")
+	suite.ErrorContains(err, expected)
+	if cause != nil {
+		suite.True(errors.Is(err, cause))
+		suite.Contains(err.Error(), cause.Error())
+	}
+}
