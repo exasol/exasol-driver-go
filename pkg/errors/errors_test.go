@@ -163,7 +163,7 @@ func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
 }
 
 func (suite *ErrorsTestSuite) TestCreateTableErrors() {
-	for _, tt := range []struct{
+	for _, tt := range []struct {
 		code    string
 		builder func(string, error) DriverErr
 	}{
@@ -180,7 +180,7 @@ func (suite *ErrorsTestSuite) TestCreateTableErrors() {
 }
 
 func (suite *ErrorsTestSuite) TestStringErrors() {
-	for _, tt := range []struct{
+	for _, tt := range []struct {
 		code    string
 		builder func(string) DriverErr
 	}{
@@ -192,7 +192,7 @@ func (suite *ErrorsTestSuite) TestStringErrors() {
 }
 
 func (suite *ErrorsTestSuite) TestErrorsWithErrArg() {
-	for _, tt := range []struct{
+	for _, tt := range []struct {
 		code    string
 		builder func(error) DriverErr
 	}{
