@@ -1376,7 +1376,7 @@ type loggerMock struct {
 func (m *loggerMock) Print(v ...interface{}) {
 	m.messages = append(m.messages, fmt.Sprint(v...))
 }
-func (m *loggerMock) Printf(format string, v ...interface{}) {/* noop */}
+func (m *loggerMock) Printf(format string, v ...interface{}) { /* noop */ }
 
 func (suite *IntegrationTestSuite) TestParquetInferSchemaExists() {
 	suite.assumeDbSupportsNativeParquetImport()
