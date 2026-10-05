@@ -163,7 +163,8 @@ func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
 }
 
 const tableFqn = `"schema"."table"`
-var cause = fmt.Errorf("original error")
+
+var errCause = fmt.Errorf("original error")
 
 func (suite *ErrorsTestSuite) TestCreateTableErrors() {
 	for _, tt := range []struct {
@@ -177,12 +178,12 @@ func (suite *ErrorsTestSuite) TestCreateTableErrors() {
 		{"E-EGOD-41", ImportStatement},
 	} {
 		file := "/path/to/file"
-		suite.verifyErrorCode(tt.code, tt.builder(file, cause), cause, file)
+		suite.verifyErrorCode(tt.code, tt.builder(file, errCause), errCause, file)
 	}
 }
 
 func (suite *ErrorsTestSuite) TestCheckTable() {
-	suite.verifyErrorCode("E-EGOD-39", CheckTable(tableFqn, cause), cause, tableFqn)
+	suite.verifyErrorCode("E-EGOD-39", CheckTable(tableFqn, errCause), errCause, tableFqn)
 }
 
 func (suite *ErrorsTestSuite) TestTableExists() {
@@ -197,7 +198,7 @@ func (suite *ErrorsTestSuite) TestErrorsWithErrArg() {
 		{"E-EGOD-38", InferInvalidParameter},
 		{"E-EGOD-42", RetrieveAffectedRows},
 	} {
-		suite.verifyErrorCode(tt.code, tt.builder(cause), cause, "")
+		suite.verifyErrorCode(tt.code, tt.builder(errCause), errCause, "")
 	}
 }
 
