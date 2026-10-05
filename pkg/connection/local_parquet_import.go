@@ -95,13 +95,13 @@ func createTableForLocalParquetImport(
 
 func verifyInputParameters(schema, table, filePath string) error {
 	if !regularIdentifier.MatchString(schema) {
-		return errors.SqlSchemaName(schema)
+		return fmt.Errorf("invalid schema name %q", schema)
 	}
 	if !regularIdentifier.MatchString(table) {
-		return errors.SqlTableName(table)
+		return fmt.Errorf("invalid table name %q", table)
 	}
 	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {
-		return errors.ParquetFilePath(filePath, `"`+illegal+`"`)
+		return fmt.Errorf("file path contains illegal character %q: %s", illegal, filePath)
 	}
 	return nil
 }
@@ -124,7 +124,7 @@ func ImportParquetWithInferredSchema(
 	options ParquetImportOptions,
 ) (rowsCount int64, err error) {
 	if err := verifyInputParameters(schema, table, filePath); err != nil {
-		return 0, err
+		return 0, errors.InferInvalidParameter(err)
 	}
 	tableFqn := QuoteIdentifier(schema) + "." + QuoteIdentifier(table)
 	exists, err := checkIfTableExists(ctx, database, schema, table)

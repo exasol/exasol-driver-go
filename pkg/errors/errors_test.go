@@ -162,11 +162,6 @@ func (suite *ErrorsTestSuite) TestNewParquetImportMultipleFiles() {
 	suite.EqualError(NewParquetImportMultipleFiles(2), "E-EGOD-32: local Parquet import supports exactly one file, but the statement named 2 files")
 }
 
-var (
-	file = "/path/to/file"
-	err  = fmt.Errorf("original error")
-)
-
 func (suite *ErrorsTestSuite) TestCreateTableErrors() {
 	for _, tt := range []struct{
 		code    string
@@ -176,11 +171,11 @@ func (suite *ErrorsTestSuite) TestCreateTableErrors() {
 		{"E-EGOD-35", RetrieveParqueColumns},
 		{"E-EGOD-36", InferSqlColumns},
 		{"E-EGOD-37", CreateSqlTable},
-		{"E-EGOD-43", ImportStatement},
+		{"E-EGOD-41", ImportStatement},
 	} {
-		suite.Run(tt.code, func() {
-			suite.ErrorContains(tt.builder(file, err), tt.code+": ")
-		})
+		file := "/path/to/file"
+		err := fmt.Errorf("original error")
+		suite.verifyErrorCode(tt.code, tt.builder(file, err))
 	}
 }
 
@@ -189,24 +184,28 @@ func (suite *ErrorsTestSuite) TestStringErrors() {
 		code    string
 		builder func(string) DriverErr
 	}{
-		{"E-EGOD-38", SqlSchemaName},
-		{"E-EGOD-39", SqlTableName},
-		{"E-EGOD-41", CheckTable},
-		{"W-EGOD-42", TableExists},
+		{"E-EGOD-39", CheckTable},
+		{"W-EGOD-40", TableExists},
 	} {
-		suite.Run(tt.code, func() {
-			suite.ErrorContains(tt.builder("sample_arg"), tt.code+": ")
-		})
+		suite.verifyErrorCode(tt.code, tt.builder("sample_arg"))
 	}
 }
 
-func (suite *ErrorsTestSuite) TestParquetFilePath() {
-	char := `"x"`
-	suite.EqualError(ParquetFilePath(file, char),
-		fmt.Sprintf("E-EGOD-40: file path contains illegal character %s: %s",
-			char, file))
+func (suite *ErrorsTestSuite) TestErrorsWithErrArg() {
+	for _, tt := range []struct{
+		code    string
+		builder func(error) DriverErr
+	}{
+		{"E-EGOD-38", InferInvalidParameter},
+		{"E-EGOD-42", RetrieveAffectedRows},
+	} {
+		err := fmt.Errorf("original error")
+		suite.verifyErrorCode(tt.code, tt.builder(err))
+	}
 }
 
-func (suite *ErrorsTestSuite) TestRetrieveAffectedRows() {
-	suite.ErrorContains(RetrieveAffectedRows(err), "E-EGOD-44: ")
+func (suite *ErrorsTestSuite) verifyErrorCode(code string, err error) {
+	suite.Run(code, func() {
+		suite.ErrorContains(err, code+": ")
+	})
 }

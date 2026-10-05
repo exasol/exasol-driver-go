@@ -28,3 +28,4 @@ See the [User Guide](../user_guide/import_local_files.md#automated-table-schema-
 * #170: Refactored `mapPhysicalType` to return data type `string`
 * #176: Enabled creating multiple sample files for integration tests
 * #187: Added test for table already exists in `ImportParquetWithInferredSchema`
+* #192: Used `error-reporting-go` for error messages
