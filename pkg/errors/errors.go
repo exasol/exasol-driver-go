@@ -177,38 +177,34 @@ func NewParquetImportMultipleFiles(fileCount int) DriverErr {
 
 // errors for infer schema
 
-func OpenParquetFile(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-34").
-		Message("failed to open Parquet file {{parquet file|uq}}: {{error|uq}}").
-		Parameter("parquet file", parquetFile).
-		Parameter("error", err))
+func OpenParquetFile(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-34").
+		Message("failed to open Parquet file {{parquet file|uq}}").
+		Parameter("parquet file", parquetFile), cause)
 }
 
-func RetrieveParqueColumns(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-35").
-		Message("failed to retrieve column declarations from Parquet file {{parquet file|uq}}: {{error|uq}}").
-		Parameter("parquet file", parquetFile).
-		Parameter("error", err))
+func RetrieveParqueColumns(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-35").
+		Message("failed to retrieve column declarations from Parquet file {{parquet file|uq}}").
+		Parameter("parquet file", parquetFile), cause)
 }
 
-func InferSqlColumns(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-36").
-		Message("failed to infer SQL columns from Parquet file {{parquet file|uq}}: {{error|uq}}").
-		Parameter("parquet file", parquetFile).
-		Parameter("error", err))
+func InferSqlColumns(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-36").
+		Message("failed to infer SQL columns from Parquet file {{parquet file|uq}}").
+		Parameter("parquet file", parquetFile), cause)
 }
 
-func CreateSqlTable(parquetFile string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-37").
-		Message("failed to create the SQL table for Parquet file {{parquet file|uq}}: {{error|uq}}").
-		Parameter("parquet file", parquetFile).
-		Parameter("error", err))
+func CreateSqlTable(parquetFile string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-37").
+		Message("failed to create the SQL table for Parquet file {{parquet file|uq}}").
+		Parameter("parquet file", parquetFile), cause)
 }
 
-func InferInvalidParameter(err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-38").
-		Message("Parquet import with schema inference called with invalid parameter: {{error|uq}}").
-		Parameter("error", err))
+func InferInvalidParameter(cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-38").
+		Message("Parquet import with schema inference called with invalid parameter"),
+		cause)
 }
 
 // CheckTable deliberately formats parameter tableFqn as unquoted, expecting
@@ -230,17 +226,15 @@ func TableExists(tableFqn string) DriverErr {
 		Parameter("table", tableFqn))
 }
 
-func ImportStatement(statement string, err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-41").
-		Message("failed to execute import statement {{statement|uq}}: {{error|uq}}").
-		Parameter("statement", statement).
-		Parameter("error", err))
+func ImportStatement(statement string, cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-41").
+		Message("failed to execute import statement {{statement|uq}}").
+		Parameter("statement", statement), cause)
 }
 
-func RetrieveAffectedRows(err error) DriverErr {
-	return NewDriverErr(exaerror.New("E-EGOD-42").
-		Message("failed to retrieve number of affected rows: {{error|uq}}").
-		Parameter("error", err))
+func RetrieveAffectedRows(cause error) DriverErr {
+	return NewDriverErrWithCause(exaerror.New("E-EGOD-42").
+		Message("failed to retrieve number of affected rows"), cause)
 }
 
 // DriverErr This type represents an error that can occur when working with a database connection.
