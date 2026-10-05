@@ -177,17 +177,16 @@ func (suite *ErrorsTestSuite) TestCreateTableErrors() {
 		{"E-EGOD-41", ImportStatement},
 	} {
 		file := "/path/to/file"
-		suite.verifyErrorCode(tt.code, tt.builder(file, cause))
+		suite.verifyErrorCode(tt.code, tt.builder(file, cause), cause, file)
 	}
 }
 
-
 func (suite *ErrorsTestSuite) TestCheckTable() {
-	suite.verifyErrorCode("E-EGOD-39", CheckTable(tableFqn, cause))
+	suite.verifyErrorCode("E-EGOD-39", CheckTable(tableFqn, cause), cause, tableFqn)
 }
 
 func (suite *ErrorsTestSuite) TestTableExists() {
-	suite.verifyErrorCode("W-EGOD-40", TableExists(tableFqn))
+	suite.verifyErrorCode("W-EGOD-40", TableExists(tableFqn), nil, tableFqn)
 }
 
 func (suite *ErrorsTestSuite) TestErrorsWithErrArg() {
@@ -198,12 +197,20 @@ func (suite *ErrorsTestSuite) TestErrorsWithErrArg() {
 		{"E-EGOD-38", InferInvalidParameter},
 		{"E-EGOD-42", RetrieveAffectedRows},
 	} {
-		suite.verifyErrorCode(tt.code, tt.builder(cause))
+		suite.verifyErrorCode(tt.code, tt.builder(cause), cause, "")
 	}
 }
 
-func (suite *ErrorsTestSuite) verifyErrorCode(code string, err error) {
-	suite.Run(code, func() {
-		suite.ErrorContains(err, code+": ")
-	})
+func (suite *ErrorsTestSuite) verifyErrorCode(
+	code string,
+	err error,
+	cause error,
+	expected string,
+) {
+	suite.ErrorContains(err, code+": ")
+	suite.ErrorContains(err, expected)
+	if cause != nil {
+		suite.True(errors.Is(err, cause))
+		suite.Contains(err.Error(), cause.Error())
+	}
 }
