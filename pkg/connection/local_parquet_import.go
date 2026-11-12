@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"unicode/utf8"
 
 	"github.com/exasol/exasol-driver-go/pkg/errors"
 	"github.com/exasol/exasol-driver-go/pkg/logger"
@@ -22,14 +23,10 @@ const (
 	UpperSnakeCase  = 1
 )
 
-// regularIdentifier matches an Exasol regular (unquoted) identifier.
+// maxIdentifierLength is the maximum length of an Exasol identifier.
+// Schema and table names are always quoted, so any other name is valid.
 // See https://docs.exasol.com/db/latest/sql_references/basiclanguageelements.htm
-//
-// First character:  Unicode classes Lu, Ll, Lt, Lm, Lo (all covered by \p{L}) and Nl.
-// Later characters: the same, plus Mn, Mc, Nd, Pc, Cf and U+00B7 (middle dot).
-// Length:           1 to 128 characters.
-var regularIdentifier = regexp.MustCompile(
-	`\A[\p{L}\p{Nl}][\p{L}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\p{Cf}\x{00B7}]{0,127}\z`)
+const maxIdentifierLength = 128
 
 // illegalPathCharacters defines a regular expression for illegal characters
 // in the path of a file to be imported via ImportParquetWithInferredSchema.
@@ -93,11 +90,16 @@ func createTableForLocalParquetImport(
 	return nil
 }
 
+func validIdentifier(name string) bool {
+	length := utf8.RuneCountInString(name)
+	return length > 0 && length <= maxIdentifierLength
+}
+
 func verifyInputParameters(schema, table, filePath string) error {
-	if !regularIdentifier.MatchString(schema) {
+	if !validIdentifier(schema) {
 		return fmt.Errorf("invalid schema name %q", schema)
 	}
-	if !regularIdentifier.MatchString(table) {
+	if !validIdentifier(table) {
 		return fmt.Errorf("invalid table name %q", table)
 	}
 	if illegal := illegalPathCharacters.FindString(filePath); illegal != "" {

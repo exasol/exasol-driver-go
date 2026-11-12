@@ -1369,6 +1369,18 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 	suite.importParquetWithInferredSchema(database, path, table, options)
 }
 
+func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchemaNamesWithSpaces() {
+	suite.assumeDbSupportsNativeParquetImport()
+	path := suite.createEnhancedParquetSampleFile()
+	table := tableSpec{schema: "Test Schema 11_4", name: "Test Table"}
+	options := connection.ParquetImportOptions{}
+
+	database := suite.openConnection(suite.createDefaultConfig())
+	defer suite.cleanup(database, table.schema)
+	_ = suite.createDbSchema(database, table.schema)
+	suite.importParquetWithInferredSchema(database, path, table, options)
+}
+
 type loggerMock struct {
 	messages []string
 }
