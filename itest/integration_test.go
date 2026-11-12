@@ -188,7 +188,7 @@ type tableSpec struct {
 }
 
 func (t *tableSpec) fqn() string {
-	return fmt.Sprintf("%q.%q", t.schema, t.name)
+	return connection.QuoteIdentifier(t.schema) + "." + connection.QuoteIdentifier(t.name)
 }
 
 func (t *tableSpec) create() string {
@@ -1372,7 +1372,7 @@ func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchema() {
 func (suite *IntegrationTestSuite) TestImportParquetWithInferredSchemaNamesWithSpaces() {
 	suite.assumeDbSupportsNativeParquetImport()
 	path := suite.createEnhancedParquetSampleFile()
-	table := tableSpec{schema: "Test Schema 11_4", name: "Test Table"}
+	table := tableSpec{schema: "Test Schema '\" 11_4", name: "Test '\" Table"}
 	options := connection.ParquetImportOptions{}
 
 	database := suite.openConnection(suite.createDefaultConfig())
