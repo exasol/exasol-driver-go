@@ -174,7 +174,7 @@ func (c *Connection) executePreparedStatement(ctx context.Context, s *types.Crea
 		return nil, err
 	}
 	if result.NumResults == 0 {
-		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
+		logger.ErrorLogger.Printf("Got empty result of type %T: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, c.closePreparedStatement(ctx, s)
@@ -338,7 +338,7 @@ func (c *Connection) SimpleExec(ctx context.Context, query string) (*types.SqlQu
 		return nil, err
 	}
 	if result.NumResults == 0 {
-		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
+		logger.ErrorLogger.Printf("Got empty result of type %T: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, err
@@ -452,7 +452,7 @@ func (c *Connection) prepareLoginViaPassword(ctx context.Context) (string, error
 		E: int(pubKeyExp),
 	}
 	password := []byte(c.Config.Password)
-	encPass, err := rsa.EncryptPKCS1v15(rand.Reader, &pubKey, password)
+	encPass, err := rsa.EncryptPKCS1v15(rand.Reader, &pubKey, password) //nolint:staticcheck // Exasol login protocol requires PKCS #1 v1.5
 	if err != nil {
 		logger.ErrorLogger.Print(errors.NewPasswordEncryptionError(err))
 		return "", driver.ErrBadConn
