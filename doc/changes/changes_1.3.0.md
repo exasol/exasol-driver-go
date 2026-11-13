@@ -1,4 +1,4 @@
-# Exasol Driver go 1.3.0, released 2026-11-12
+# Exasol Driver go 1.3.0, released 2026-11-13
 
 Code name: Quoted identifiers in Parquet import and vulnerability fixes
 
