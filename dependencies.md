@@ -25,5 +25,5 @@
 [3]: https://github.com/parquet-go/parquet-go/blob/v0.32.0/LICENSE
 [4]: https://github.com/stretchr/testify/blob/v1.12.1/LICENSE
 [5]: https://github.com/uber-go/goleak/blob/v1.3.0/LICENSE
-[6]: https://cs.opensource.google/go/x/sync/+/v0.22.0:LICENSE
+[6]: https://cs.opensource.google/go/x/sync/+/v0.25.0:LICENSE
 [7]: https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE

@@ -122,7 +122,7 @@ func (s *Statement) executePreparedStatement(ctx context.Context, args []driver.
 		return nil, err
 	}
 	if result.NumResults == 0 {
-		logger.ErrorLogger.Printf("Got empty result of type %t: %v", result, result)
+		logger.ErrorLogger.Printf("Got empty result of type %T: %v", result, result)
 		return nil, errors.ErrMalformedData
 	}
 	return result, err

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/parquet-go/parquet-go"
@@ -218,8 +219,8 @@ func TestImportIllegalCharacters(t *testing.T) {
 		path          string
 		expectedError string
 	}{
-		{`"S1`, "T1", "path", "invalid schema name"},
-		{"S1", ".T1", "path", "invalid table name"},
+		{"", "T1", "path", "invalid schema name"},
+		{"S1", strings.Repeat("T", 129), "path", "invalid table name"},
 		{"S1", "T1", "pa'th", `file path contains illegal character "'"`},
 	} {
 		t.Run(tt.expectedError, func(t *testing.T) {
@@ -229,6 +230,16 @@ func TestImportIllegalCharacters(t *testing.T) {
 			_, err := ImportParquetWithInferredSchema(ctx, db, tt.schema, tt.table, tt.path, options)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedError)
+		})
+	}
+}
+
+func TestVerifyInputParametersAcceptsQuotedIdentifiers(t *testing.T) {
+	for _, name := range []string{
+		"Sales", "My Schema", `a"b`, ".T1", strings.Repeat("T", 128),
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.NoError(t, verifyInputParameters(name, name, "path"))
 		})
 	}
 }

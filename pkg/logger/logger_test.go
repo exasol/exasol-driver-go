@@ -49,5 +49,5 @@ func TestSetTraceLogger(t *testing.T) {
 
 func TestDefaultTraceLogger(t *testing.T) {
 	TraceLogger.Print("ignored")
-	TraceLogger.Print("ignored %s", "arg")
+	TraceLogger.Printf("ignored %s", "arg")
 }
